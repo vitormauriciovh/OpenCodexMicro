@@ -534,7 +534,21 @@ export class CodexCdpClient {
       const item = [...document.querySelectorAll("[data-app-action-sidebar-thread-id]")]
         .find((el) => normalize(el.getAttribute("data-app-action-sidebar-thread-id")) === normalize(key));
       if (!item) throw new Error("Task is not loaded in the Codex sidebar");
-      (item.querySelector("button,a,[role=button],[role=link]") ?? item).click();
+      const pinLabels = new Set(${JSON.stringify(PIN_ACTION_LABELS)});
+      const isPinControl = (element) =>
+        element.matches(
+          "[data-app-action-sidebar-thread-pin],[data-app-action-sidebar-thread-unpin]"
+        ) || [
+          element.getAttribute("aria-label"),
+          element.getAttribute("title")
+        ].some((label) => pinLabels.has(label));
+      const isTaskNavigation =
+        item.matches("[data-app-action-sidebar-thread-id][role=button]") ||
+        item.matches("a[data-app-action-sidebar-thread-id][href]");
+      if (!isTaskNavigation || isPinControl(item)) {
+        throw new Error("Task navigation control is not available");
+      }
+      item.click();
       return true;
     })()`);
   }

@@ -11,7 +11,7 @@ const navigateAction = manifest.Actions.find(action =>
 );
 assert.deepEqual(navigateAction?.Controllers, ["Encoder"]);
 assert.equal(navigateAction?.Encoder?.layout, "$UA1");
-assert.equal(manifest.Version, "0.4.0");
+assert.equal(manifest.Version, "0.4.1");
 assert.equal(manifest.Software?.MinVersion, "3.0.1");
 assert.equal(manifest.OS?.find(item => item.Platform === "mac")?.MinimumVersion, "13.0");
 assert.ok(
@@ -41,7 +41,7 @@ assert.match(manifest.Description, /MANUAL INSTALLATION/);
 assert.match(manifest.Description, /Latest Task & Scroll Encoder/);
 assert.match(
   manifest.Description,
-  /Install the Ulanzi Studio plugin for me: \[https:\/\/github\.com\/UlanziTechnology\/OpenCodexMicro#1-llm--agent-installation\]\(https:\/\/github\.com\/UlanziTechnology\/OpenCodexMicro#1-llm--agent-installation\)/
+  /Install the Ulanzi Studio plugin for me: https:\/\/github\.com\/UlanziTechnology\/OpenCodexMicro#1-llm--agent-installation/
 );
 assert.match(manifest.Description, /always launch Codex through ~\/Applications\/Codex Bridge\.app/i);
 assert.match(manifest.Description, /open ~\/Applications\/Codex\\ Bridge\.app$/);
@@ -69,8 +69,7 @@ const localizedInstallPrompts = {
 };
 
 const llmInstallationLink =
-  "[https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation]" +
-  "(https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation)";
+  "https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation";
 
 for (const locale of [
   "en.json",
@@ -184,7 +183,7 @@ try {
   );
   assert.equal(setupStatus?.payload?.status?.serviceOnline, true);
   assert.equal(setupStatus?.payload?.status?.cdpConnected, true);
-  assert.equal(setupStatus?.payload?.status?.bundledVersion, "0.4.0");
+  assert.equal(setupStatus?.payload?.status?.bundledVersion, "0.4.1");
 
   const taskPaths = [
     "assets/icons/task-working.png",

@@ -148,6 +148,64 @@ test("pin renderer action accepts the current localized Pin chat control", () =>
   assert.equal(clicks, 1);
 });
 
+test("task DOM fallback clicks the thread row instead of nested Pin or Unpin controls", async () => {
+  let taskClicks = 0;
+  let pinClicks = 0;
+  const pinButton = {
+    getAttribute(name) {
+      return name === "aria-label" ? "置顶聊天" : null;
+    },
+    click() { pinClicks += 1; }
+  };
+  const item = {
+    getAttribute(name) {
+      if (name === "data-app-action-sidebar-thread-id") return `local:${UUID}`;
+      if (name === "role") return "button";
+      return null;
+    },
+    matches(selector) {
+      return selector === "[data-app-action-sidebar-thread-id][role=button]";
+    },
+    querySelector() { return pinButton; },
+    click() { taskClicks += 1; }
+  };
+  const document = {
+    querySelector() { return null; },
+    querySelectorAll(selector) {
+      assert.equal(selector, "[data-app-action-sidebar-thread-id]");
+      return [item];
+    }
+  };
+  const client = new CodexCdpClient();
+  client.evaluate = expression => vm.runInNewContext(expression, { document });
+
+  await client.activateThread(`local:${UUID}`);
+
+  assert.equal(taskClicks, 1);
+  assert.equal(pinClicks, 0, "Task navigation must never click a nested Pin control");
+
+  const pinControl = {
+    ...item,
+    getAttribute(name) {
+      if (name === "data-app-action-sidebar-thread-id") return `local:${UUID}`;
+      if (name === "role") return "button";
+      if (name === "aria-label") return "置顶聊天";
+      return null;
+    },
+    click() { pinClicks += 1; }
+  };
+  const pinDocument = {
+    querySelector() { return null; },
+    querySelectorAll() { return [pinControl]; }
+  };
+  client.evaluate = expression => vm.runInNewContext(expression, { document: pinDocument });
+  await assert.rejects(
+    client.activateThread(`local:${UUID}`),
+    /Task navigation control is not available/
+  );
+  assert.equal(pinClicks, 0, "Pin and Unpin controls must be explicitly rejected");
+});
+
 test("steer renderer action accepts the current localized control", () => {
   let focused = 0;
   let clicks = 0;
