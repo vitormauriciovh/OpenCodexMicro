@@ -12,7 +12,7 @@ import {
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { homedir } from "node:os";
-import { delimiter, join, resolve } from "node:path";
+import { delimiter, isAbsolute, join, resolve } from "node:path";
 
 const execFileAsync = promisify(execFile);
 
@@ -90,7 +90,7 @@ export async function selectBridgeNodeRuntime({
     // The fallback availability check below will provide the final result.
   }
   for (const executable of [...new Set(candidates)]) {
-    if (!executable.startsWith("/")) continue;
+    if (!isAbsolute(executable)) continue;
     if (!await exists(executable, fsConstants.X_OK)) continue;
     const resolvedExecutable = await realpath(executable);
     if (resolvedExecutable === resolvedFallback) continue;

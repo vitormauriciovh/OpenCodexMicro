@@ -14,14 +14,19 @@ assert.equal(navigateAction?.Encoder?.layout, "$UA1");
 assert.equal(manifest.Version, "0.4.0");
 assert.equal(manifest.Software?.MinVersion, "3.0.1");
 assert.equal(manifest.OS?.find(item => item.Platform === "mac")?.MinimumVersion, "13.0");
+assert.equal(manifest.OS?.find(item => item.Platform === "win")?.MinimumVersion, "10.0");
 assert.ok(
   manifest.Actions.every(action => action.PropertyInspectorPath === "property-inspector/setup.html"),
   "every action must expose the shared Bridge setup inspector"
 );
 const setupInspector = await readFile(new URL("property-inspector/setup.html", packageRootUrl), "utf8");
-assert.match(setupInspector, /Codex Bridge Setup/);
-assert.match(setupInspector, /Install \/ Repair/);
+assert.match(setupInspector, /PlatformSetupTitleWindows/);
+assert.match(setupInspector, /ExperimentalActionTitle/);
+assert.match(setupInspector, /LocalTrustTitle/);
+assert.match(setupInspector, /secureBootGuide/);
+assert.match(setupInspector, /status\.phase === "secure-boot-blocked"/);
 assert.match(setupInspector, /bridgeSetup/);
+assert.doesNotMatch(setupInspector, /\bconfirm\(/);
 const setupScript = setupInspector.match(/<script>([\s\S]*)<\/script>/)?.[1];
 assert.ok(setupScript, "setup inspector must contain its client script");
 assert.doesNotThrow(() => new Function(setupScript), "setup inspector script must parse");
@@ -34,6 +39,35 @@ for (const asset of [
 ]) {
   assert.ok((await readFile(new URL(asset, packageRootUrl))).length > 0, `${asset} must be bundled`);
 }
+for (const asset of [
+  "installer/windows/Launch-Elevated.ps1",
+  "installer/windows/Install-Windows.ps1",
+  "installer/windows/Uninstall-Windows.ps1",
+  "installer/windows/payload/payload.json",
+  "installer/windows/payload/OpenCodexMicroUde.inf",
+  "installer/windows/payload/OpenCodexMicroUde.sys",
+  "installer/windows/payload/OpenCodexMicroUde.cat",
+  "installer/windows/payload/OpenCodexMicroVirtualDevice.exe",
+  "installer/windows/payload/OpenCodexMicroDriverInstaller.exe",
+  "installer/windows/payload/OpenCodexMicroVirtualUsb.cer"
+]) {
+  assert.ok((await readFile(new URL(asset, packageRootUrl))).length > 0, `${asset} must be bundled`);
+}
+const windowsRuntime = await readFile(new URL(
+  "installer/windows/payload/OpenCodexMicroVirtualDevice.exe",
+  packageRootUrl
+));
+const peHeaderOffset = windowsRuntime.readUInt32LE(0x3c);
+assert.equal(
+  windowsRuntime.readUInt16LE(peHeaderOffset + 24 + 68),
+  2,
+  "the bundled Windows runtime must use the GUI subsystem and remain windowless"
+);
+const windowsInstaller = await readFile(new URL("installer/windows/Install-Windows.ps1", packageRootUrl), "utf8");
+assert.ok(
+  windowsInstaller.indexOf("Stop-Process -Force") < windowsInstaller.indexOf("Start-ScheduledTask"),
+  "Windows repair must stop an old virtual-device process before starting the scheduled runtime"
+);
 assert.match(manifest.Overview, /Ulanzi D200 Series/);
 assert.match(manifest.Description, /INSTALLATION ENVIRONMENT/);
 assert.match(manifest.Description, /LLM \/ AGENT INSTALLATION/);
@@ -96,6 +130,13 @@ for (const locale of [
   assert.ok(messages.Localization?.BackgroundActivityTitle?.length > 0, `${locale} must explain background activity`);
   assert.ok(messages.Localization?.NodeSelectionStrategy?.length > 0, `${locale} must explain Node selection`);
   assert.ok(messages.Localization?.UlanziNodeSignatureNotice?.length > 0, `${locale} must explain the Ulanzi Node signature`);
+  assert.ok(messages.Localization?.PlatformSetupTitleWindows?.length > 0, `${locale} must localize Windows setup`);
+  assert.ok(messages.Localization?.LocalTrustDescription?.length > 0, `${locale} must explain local trust mode`);
+  assert.ok(messages.Localization?.LocalTrustTestSigning?.length > 0, `${locale} must explain Test Signing`);
+  assert.ok(messages.Localization?.ExperimentalActionDescription?.length > 0, `${locale} must explain experimental UI Automation`);
+  assert.ok(messages.Localization?.PhaseNeedsRestart?.length > 0, `${locale} must explain required restart`);
+  assert.ok(messages.Localization?.SecureBootWarning?.length > 0, `${locale} must warn about BitLocker before UEFI changes`);
+  assert.ok(messages.Localization?.SecureBootStep4?.length > 0, `${locale} must explain the firmware Secure Boot setting`);
   assert.ok(
     messages.Description.includes(`${localizedInstallPrompts[locale]}${
       locale.startsWith("zh_") || locale === "ja_JP.json" ? "" : " "
@@ -155,7 +196,12 @@ const nodeBinary = process.env.PLUGIN_NODE_BINARY || process.execPath;
 const pluginRoot = process.env.PLUGIN_RUNTIME_ROOT || new URL("..", import.meta.url);
 const child = spawn(nodeBinary, ["dist/app.js", "127.0.0.1", String(hostPort), "en-US", "3.0.0"], {
   cwd: pluginRoot,
-  env: { ...process.env, CODEX_BRIDGE_URL: `http://127.0.0.1:${bridgePort}` },
+  env: {
+    ...process.env,
+    CODEX_BRIDGE_URL: `http://127.0.0.1:${bridgePort}`,
+    CODEX_SETUP_PLATFORM: "darwin",
+    CODEX_SETUP_UID: "501"
+  },
   stdio: ["ignore", "pipe", "pipe"]
 });
 
@@ -166,8 +212,27 @@ try {
     child.once("exit", code => reject(new Error(`Plugin exited before connecting with code ${code}: ${child.stderr.read() || "no stderr"}`)));
   });
   client.on("message", raw => messages.push(JSON.parse(String(raw))));
-  await new Promise(resolve => setTimeout(resolve, 100));
+  while (messages[0]?.cmd !== "connected") await new Promise(resolve => setTimeout(resolve, 5));
   assert.equal(messages[0]?.cmd, "connected");
+
+  const earlyTask = {
+    uuid: "com.ulanzi.ulanzistudio.codexmicro.task2",
+    actionid: "early-task",
+    key: "0_1",
+    param: {}
+  };
+  client.send(JSON.stringify({ cmd: "add", ...earlyTask }));
+  client.send(JSON.stringify({ cmd: "keydown", ...earlyTask }));
+  await new Promise(resolve => setTimeout(resolve, 150));
+  assert.equal(
+    messages.some(message => message.cmd === "showAlert" && message.actionid === earlyTask.actionid),
+    false,
+    "Task presses before the first poll must refresh state instead of showing Alert"
+  );
+  assert.ok(
+    bridgeRequests.some(item => item.includes("/thread/22222222-2222-2222-2222-222222222222/click?slot=1")),
+    "an early Task press must still open its slot"
+  );
 
   client.send(JSON.stringify({
     cmd: "sendToPlugin",
@@ -182,9 +247,10 @@ try {
     message.actionid === "setup-action" &&
     message.payload?.type === "bridgeSetupStatus"
   );
-  assert.equal(setupStatus?.payload?.status?.serviceOnline, true);
-  assert.equal(setupStatus?.payload?.status?.cdpConnected, true);
-  assert.equal(setupStatus?.payload?.status?.bundledVersion, "0.4.0");
+  assert.equal(setupStatus?.payload?.status?.platform, "macos");
+  assert.equal(setupStatus?.payload?.status?.detail?.serviceOnline, true);
+  assert.equal(setupStatus?.payload?.status?.detail?.cdpConnected, true);
+  assert.equal(setupStatus?.payload?.status?.setup?.bundledVersion, "0.4.0");
 
   const taskPaths = [
     "assets/icons/task-working.png",
@@ -205,7 +271,7 @@ try {
   await new Promise(resolve => setTimeout(resolve, 700));
   for (let index = 0; index < taskPaths.length; index += 1) {
     const taskUuid = `com.ulanzi.ulanzistudio.codexmicro.task${index + 1}`;
-    const state = messages.find(message =>
+    const state = messages.findLast(message =>
       message.cmd === "state" && message.param?.statelist?.[0]?.uuid === taskUuid
     );
     const item = state?.param?.statelist?.[0];

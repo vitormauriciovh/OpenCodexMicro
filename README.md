@@ -141,6 +141,8 @@ The repository includes two reusable Codex skills:
 - [Setup and operations](docs/setup-and-operations.md)
 - [Architecture](docs/architecture.md)
 - [Engineering constraints](docs/errors.md)
+- [Windows Codex Micro tracing](docs/windows-micro-tracing.md)
+- [Windows virtual Codex Micro prototype](docs/windows-virtual-hid.md)
 
 ## License
 

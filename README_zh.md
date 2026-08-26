@@ -132,6 +132,8 @@ Action 行为和布局建议见[配置详解](docs/configuration.md)。
 - [安装与运行](docs/setup-and-operations.md)
 - [架构说明](docs/architecture.md)
 - [工程约束](docs/errors.md)
+- [Windows Codex Micro 通信追踪](docs/windows-micro-tracing.md)
+- [Windows 虚拟 Codex Micro 原型](docs/windows-virtual-hid.md)
 
 ## License
 

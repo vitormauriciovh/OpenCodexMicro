@@ -1,0 +1,56 @@
+#pragma once
+
+#include <ntddk.h>
+#include <wdf.h>
+#include <usb.h>
+#include <usbioctl.h>
+#include <wdfusb.h>
+#include <wdmguid.h>
+#include <wdmsec.h>
+#include <udecx.h>
+
+#define OCM_REPORT_ID 0x06
+#define OCM_REPORT_SIZE 64
+#define OCM_REPORT_QUEUE_CAPACITY 32
+
+#define OCM_ENDPOINT_OUT 0x01
+#define OCM_ENDPOINT_IN 0x81
+
+#define IOCTL_OCM_SUBMIT_INPUT_REPORT CTL_CODE(FILE_DEVICE_UNKNOWN, 0x800, METHOD_BUFFERED, FILE_WRITE_DATA)
+#define IOCTL_OCM_GET_OUTPUT_REPORT CTL_CODE(FILE_DEVICE_UNKNOWN, 0x801, METHOD_BUFFERED, FILE_READ_DATA)
+
+DEFINE_GUID(
+    GUID_DEVINTERFACE_OPEN_CODEX_MICRO_VHF,
+    0x73d3dc5e, 0xc3b1, 0x4d2f, 0x99, 0x20, 0x26, 0x54, 0x94, 0x8d, 0xb8, 0x7f);
+
+typedef struct _OCM_REPORT_QUEUE {
+    ULONG Head;
+    ULONG Tail;
+    ULONG Count;
+    UCHAR Reports[OCM_REPORT_QUEUE_CAPACITY][OCM_REPORT_SIZE];
+} OCM_REPORT_QUEUE, *POCM_REPORT_QUEUE;
+
+typedef struct _DEVICE_CONTEXT {
+    WDFSPINLOCK ReportLock;
+    WDFQUEUE InputEndpointQueue;
+    WDFQUEUE OutputEndpointQueue;
+    UDECXUSBDEVICE UsbDevice;
+    UDECXUSBENDPOINT ControlEndpoint;
+    UDECXUSBENDPOINT InputEndpoint;
+    UDECXUSBENDPOINT OutputEndpoint;
+    BOOLEAN PluggedIn;
+    OCM_REPORT_QUEUE InputReports;
+    OCM_REPORT_QUEUE OutputReports;
+} DEVICE_CONTEXT, *PDEVICE_CONTEXT;
+
+WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(DEVICE_CONTEXT, OcmGetDeviceContext)
+
+DRIVER_INITIALIZE DriverEntry;
+EVT_WDF_DRIVER_DEVICE_ADD OcmEvtDeviceAdd;
+EVT_WDF_DEVICE_D0_ENTRY OcmEvtDeviceD0Entry;
+EVT_WDF_IO_QUEUE_IO_DEVICE_CONTROL OcmEvtIoDeviceControl;
+EVT_WDF_IO_QUEUE_IO_INTERNAL_DEVICE_CONTROL OcmEvtControlUrb;
+EVT_WDF_IO_QUEUE_IO_INTERNAL_DEVICE_CONTROL OcmEvtOutputUrb;
+EVT_WDF_IO_QUEUE_STATE OcmEvtInputQueueReady;
+EVT_UDECX_USB_ENDPOINT_RESET OcmEvtEndpointReset;
+EVT_UDECX_WDF_DEVICE_QUERY_USB_CAPABILITY OcmEvtQueryUsbCapability;

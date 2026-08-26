@@ -1,19 +1,31 @@
 import WebSocket from "ws";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { createBridgeInstaller } from "./bridge-installer.js";
+import { createPlatformSetup } from "./platform-profile.js";
+import { invokeWindowsCodexAction } from "./windows-codex-action.js";
+import { focusWindowsCodex } from "./windows-codex-focus.js";
+import { createWindowsCodexUsageProvider } from "./windows-codex-usage.js";
+import { normalizeWindowsHidState } from "./windows-hid-state.js";
 
 const PLUGIN_UUID = "com.ulanzi.ulanzistudio.codexmicro";
-const BRIDGE_URL = process.env.CODEX_BRIDGE_URL || "http://127.0.0.1:17373";
+const BRIDGE_URL = process.env.CODEX_BRIDGE_URL || (
+  process.platform === "win32"
+    ? "http://127.0.0.1:17374"
+    : "http://127.0.0.1:17373"
+);
+const WINDOWS_HID_BRIDGE = process.platform === "win32" && new URL(BRIDGE_URL).port === "17374";
+const windowsUsage = WINDOWS_HID_BRIDGE ? createWindowsCodexUsageProvider() : null;
 const [address = "127.0.0.1", port = "3906"] = process.argv.slice(2);
 const HOST_URL = `ws://${address}:${port}`;
 const instances = new Map();
 const PLUGIN_ROOT = resolve(dirname(resolve(process.argv[1])), "..");
 const MANIFEST = JSON.parse(readFileSync(resolve(PLUGIN_ROOT, "manifest.json"), "utf8"));
-const bridgeSetup = createBridgeInstaller({
+const bridgeSetup = createPlatformSetup({
   pluginRoot: PLUGIN_ROOT,
   bridgeUrl: BRIDGE_URL,
-  version: MANIFEST.Version
+  version: MANIFEST.Version,
+  platform: process.env.CODEX_SETUP_PLATFORM || process.platform,
+  uid: process.env.CODEX_SETUP_UID ? Number(process.env.CODEX_SETUP_UID) : process.getuid?.()
 });
 const USAGE_BASE64 = readFileSync(
   resolve(PLUGIN_ROOT, "assets/icons/usage-base.png")
@@ -44,6 +56,15 @@ let pollInFlight = false;
 let latestState = null;
 let setupOperation = null;
 
+function refreshWindowsUsage(options) {
+  if (!windowsUsage) return;
+  void windowsUsage.getUsage(options).then(usage => {
+    if (!latestState?.connected || !usage) return;
+    latestState.usage = usage;
+    renderAll();
+  });
+}
+
 function contextOf(message) {
   return String(message.actionid || `${message.uuid}___${message.key}`);
 }
@@ -65,6 +86,85 @@ function usageRemaining(usage) {
   return Number.isFinite(remaining)
     ? Math.max(0, Math.min(100, Math.round(remaining)))
     : null;
+}
+
+async function sendWindowsHid(key, act, agent = null) {
+  const query = new URLSearchParams({ key, act: String(act) });
+  if (agent !== null) query.set("agent", String(agent));
+  const response = await fetch(`${BRIDGE_URL}/notify/hid?${query}`, {
+    method: "POST",
+    signal: AbortSignal.timeout(1200)
+  });
+  const payload = await response.json();
+  if (!response.ok || payload.ok === false) {
+    throw new Error(payload.error || `Bridge HTTP ${response.status}`);
+  }
+  return payload;
+}
+
+async function windowsHidBridgeRequest(path, method) {
+  if (method === "GET" && path === "/state") {
+    const response = await fetch(`${BRIDGE_URL}/state`, {
+      signal: AbortSignal.timeout(1200)
+    });
+    const payload = await response.json();
+    if (!response.ok || payload.ok === false) {
+      throw new Error(payload.error || `Bridge HTTP ${response.status}`);
+    }
+    const state = normalizeWindowsHidState(payload);
+    state.usage = windowsUsage.getCachedUsage();
+    refreshWindowsUsage();
+    return state;
+  }
+
+  const url = new URL(path, BRIDGE_URL);
+  const thread = method === "POST" && url.pathname.match(/^\/thread\/[^/]+\/click$/);
+  if (thread) {
+    const slot = Number(url.searchParams.get("slot"));
+    if (!Number.isInteger(slot) || slot < 0 || slot > 5) {
+      throw new Error("Invalid Codex Micro slot");
+    }
+    await sendWindowsHid(`AG0${slot}`, 1, slot);
+    await new Promise(resolve => setTimeout(resolve, 35));
+    await sendWindowsHid(`AG0${slot}`, 0, slot);
+    return { ok: true, bridge: true };
+  }
+
+  const action = method === "POST" && url.pathname.match(
+    /^\/action\/(fast|approve|reject|pin|new|fork|mic|steer|submit)\/(down|up)$/
+  );
+  if (action) {
+    if (["pin", "new", "steer"].includes(action[1])) {
+      if (action[2] === "up") return { ok: true };
+      let result;
+      try {
+        result = await invokeWindowsCodexAction(action[1]);
+      } catch (error) {
+        if (action[1] !== "steer" || error.exitCode !== 4) throw error;
+        await sendWindowsHid("ACT12", 1);
+        await new Promise(resolve => setTimeout(resolve, 35));
+        await sendWindowsHid("ACT12", 0);
+        result = { ok: true, fallback: "submit" };
+      }
+      try {
+        await focusWindowsCodex();
+      } catch {}
+      return result;
+    }
+    const key = {
+      fast: "ACT06",
+      approve: "ACT07",
+      reject: "ACT08",
+      fork: "ACT09",
+      mic: "ACT10",
+      submit: "ACT12"
+    }[action[1]];
+    if (!key) throw new Error(`Codex ${action[1]} requires the CDP Bridge`);
+    return sendWindowsHid(key, action[2] === "down" ? 1 : 0);
+  }
+
+  if (method === "POST" && path === "/focus") return focusWindowsCodex();
+  throw new Error(`Unsupported Windows HID Bridge request: ${method} ${path}`);
 }
 
 function usageIconData(usage) {
@@ -142,12 +242,20 @@ async function sendBridgeSetupStatus(message, extra = {}) {
 async function handleBridgeSetupMessage(message) {
   const action = message.payload?.action;
   if (action === "openGuide") {
+    const status = await bridgeSetup.status();
     send({
       cmd: "openurl",
-      url: "https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation",
+      url: status.platform === "windows"
+        ? "https://github.com/UlanziTechnology/OpenCodexMicro/blob/main/docs/windows-virtual-hid.md"
+        : "https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation",
       local: false
     });
-    await sendBridgeSetupStatus(message);
+    sendToInspector(message, {
+      type: "bridgeSetupStatus",
+      status,
+      busy: Boolean(setupOperation),
+      operation: setupOperation
+    });
     return;
   }
   if (action === "status" || !action) {
@@ -308,6 +416,7 @@ function renderAll() {
 }
 
 async function bridgeRequest(path, method = "GET") {
+  if (WINDOWS_HID_BRIDGE) return windowsHidBridgeRequest(path, method);
   const response = await fetch(`${BRIDGE_URL}${path}`, {
     method,
     signal: AbortSignal.timeout(1200)
@@ -320,9 +429,22 @@ async function bridgeRequest(path, method = "GET") {
 }
 
 async function openTaskSlot(slot) {
-  const task = latestState?.slots?.[slot];
+  let task = latestState?.slots?.[slot];
+  if (!task?.threadKey) {
+    const refreshedState = await bridgeRequest("/state");
+    if (refreshedState?.connected) {
+      latestState = refreshedState;
+      renderAll();
+      task = latestState.slots?.[slot];
+    }
+  }
   if (!task?.threadKey) throw new Error(`Codex task slot ${slot + 1} is empty`);
   await bridgeRequest(`/thread/${encodeURIComponent(task.threadKey)}/click?slot=${slot}`, "POST");
+  if (WINDOWS_HID_BRIDGE) {
+    try {
+      await bridgeRequest("/focus", "POST");
+    } catch {}
+  }
 }
 
 async function pollBridge() {
@@ -349,7 +471,19 @@ async function invoke(instance, pressed) {
     const action = actionName(instance.uuid);
     if (!action) throw new Error(`Unknown Codex action: ${instance.uuid}`);
     if (action === "usage") {
-      if (pressed) await bridgeRequest("/focus", "POST");
+      if (pressed && WINDOWS_HID_BRIDGE) {
+        latestState.usage = await windowsUsage.getUsage({ force: true });
+        renderAll();
+      }
+      if (pressed) {
+        if (WINDOWS_HID_BRIDGE) {
+          try {
+            await bridgeRequest("/focus", "POST");
+          } catch {}
+        } else {
+          await bridgeRequest("/focus", "POST");
+        }
+      }
       return;
     }
     await bridgeRequest(`/action/${action}/${pressed ? "down" : "up"}`, "POST");

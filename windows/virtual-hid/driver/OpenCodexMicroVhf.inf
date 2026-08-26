@@ -1,0 +1,57 @@
+[Version]
+Signature="$WINDOWS NT$"
+Class=System
+ClassGuid={4d36e97d-e325-11ce-bfc1-08002be10318}
+Provider=%ProviderName%
+CatalogFile=OpenCodexMicroVhf.cat
+DriverVer=08/20/2026,0.1.0.0
+PnpLockdown=1
+
+[DestinationDirs]
+DefaultDestDir = 12
+
+[SourceDisksNames]
+1=%DiskName%,,
+
+[SourceDisksFiles]
+OpenCodexMicroVhf.sys=1
+
+[Manufacturer]
+%ProviderName%=Standard,NTamd64
+
+[Standard.NTamd64]
+%DeviceDescription%=OpenCodexMicroVhf_Install,Root\OpenCodexMicroVhf
+
+[OpenCodexMicroVhf_Install.NT]
+CopyFiles=DriverCopyFiles
+
+[DriverCopyFiles]
+OpenCodexMicroVhf.sys
+
+[OpenCodexMicroVhf_Install.NT.HW]
+AddReg=OpenCodexMicroVhf_AddReg
+
+[OpenCodexMicroVhf_AddReg]
+HKR,,LowerFilters,0x00010000,"vhf"
+
+[OpenCodexMicroVhf_Install.NT.Services]
+AddService=OpenCodexMicroVhf,0x00000002,OpenCodexMicroVhf_Service
+
+[OpenCodexMicroVhf_Service]
+DisplayName=%ServiceDescription%
+ServiceType=1
+StartType=3
+ErrorControl=1
+ServiceBinary=%12%\OpenCodexMicroVhf.sys
+
+[OpenCodexMicroVhf_Install.NT.Wdf]
+KmdfService=OpenCodexMicroVhf,OpenCodexMicroVhf_Wdf
+
+[OpenCodexMicroVhf_Wdf]
+KmdfLibraryVersion=1.31
+
+[Strings]
+ProviderName="OpenCodexMicro"
+DeviceDescription="OpenCodexMicro Virtual Codex Micro"
+ServiceDescription="OpenCodexMicro Virtual HID Source Driver"
+DiskName="OpenCodexMicro Virtual HID Driver Installation Media"

@@ -43,6 +43,23 @@
     "UlanziNode": "Node de Ulanzi Studio",
     "UnknownNode": "No instalado o sin registrar",
     "CheckAgain": "Comprobar de nuevo",
-    "InstallationGuide": "Guía de instalación"
+    "InstallationGuide": "Guía de instalación",
+    "PlatformSetupTitleMac": "Configuración de Codex Bridge", "PlatformSetupTitleWindows": "Configuración de Codex Micro para Windows",
+    "PlatformSetupIntroMac": "Instala, inicia y comprueba la conexión local de Codex.", "PlatformSetupIntroWindows": "Instala y comprueba la conexión HID virtual local que usa Codex Desktop.",
+    "ExperimentalActionTitle": "Acción experimental de Windows", "ExperimentalActionDescription": "Esta acción usa Windows UI Automation y puede verse afectada por actualizaciones de Codex Desktop, el foco o restricciones de accesibilidad.",
+    "LocalTrustTitle": "Modo de confianza local de Windows", "LocalTrustDescription": "El controlador HID virtual incluido usa un certificado de desarrollo del proyecto que solo se considera de confianza en este PC.",
+    "LocalTrustAdmin": "La instalación abre una ventana visible de PowerShell como administrador.", "LocalTrustTestSigning": "Debe activarse el modo de firma de prueba de Windows.",
+    "LocalTrustSecureBoot": "Puede ser necesario desactivar manualmente el Arranque seguro.", "LocalTrustRestart": "Esta página solo avisa cuando es necesario reiniciar Windows.",
+    "SecureBootGuideTitle": "Cómo desactivar temporalmente el Arranque seguro", "SecureBootWarning": "Aviso de seguridad: guarda tu trabajo y confirma que tienes la clave de recuperación de BitLocker antes de cambiar UEFI.",
+    "SecureBootStep1": "Windows 11: Configuración > Sistema > Recuperación. Windows 10: Configuración > Actualización y seguridad > Recuperación.", "SecureBootStep2": "En Inicio avanzado, selecciona Reiniciar ahora.",
+    "SecureBootStep3": "Selecciona Solucionar problemas > Opciones avanzadas > Configuración de firmware UEFI > Reiniciar.", "SecureBootStep4": "En UEFI/BIOS, busca Secure Boot en Security, Boot o Authentication, selecciona Disabled y guarda. Los nombres varían según el fabricante.",
+    "SecureBootStep5": "Cuando se inicie Windows, vuelve aquí y selecciona de nuevo Instalar / Reparar. Mantén desactivado el Arranque seguro mientras uses este controlador de confianza local.",
+    "SetupCheckPayload": "Paquete de instalación", "SetupCheckDriver": "Controlador HID virtual", "SetupCheckRuntime": "Entorno del dispositivo virtual", "SetupCheckCodex": "Conexión con Codex",
+    "Ready": "Listo", "NotReady": "No está listo", "UpdateAvailable": "Actualización disponible", "Checking": "Comprobando…", "ContinueInstallation": "Continuar instalación", "StartRuntime": "Iniciar entorno", "Uninstall": "Desinstalar configuración de plataforma", "Installing": "Instalando…", "Uninstalling": "Desinstalando…",
+    "PhaseReady": "Codex Micro está listo.", "PhaseNotInstalled": "Instala la configuración de plataforma necesaria.", "PhaseNeedsRestart": "Reinicia Windows y vuelve aquí para continuar la instalación.",
+    "PhaseSecureBootBlocked": "Desactiva manualmente el Arranque seguro y vuelve a ejecutar Instalar / Reparar.", "PhaseUpdateAvailable": "Hay una actualización de la configuración incluida.", "PhaseRuntimeOffline": "El entorno local no se está ejecutando.", "PhaseCodexOffline": "La configuración está lista; abre Codex Desktop para conectarlo.",
+    "PhaseDriverError": "El controlador HID virtual no está listo. Ejecuta Instalar / Reparar.", "PhasePayloadMissing": "El paquete de instalación de Windows no existe o está incompleto.", "PhaseUnsupported": "Esta plataforma no es compatible. Se requiere Windows 10 22H2 o Windows 11 x64.", "PhaseNewerInstalled": "Ya hay una versión más reciente instalada. Se ha bloqueado la reversión automática.",
+    "PlatformInfoMacTitle": "Acerca de Codex Bridge", "PlatformInfoWindowsTitle": "Acerca de la configuración de Windows", "PlatformInfoMac": "Codex Bridge inicia Codex Desktop con CDP solo local y ejecuta un servicio local.", "PlatformInfoWindows": "Un controlador HID virtual de confianza local y una tarea del usuario actual proporcionan la conexión de Windows. La desinstalación no cambia el modo de firma de prueba.",
+    "ConfirmInstallMac": "¿Instalar o reparar Codex Bridge para este usuario?", "ConfirmInstallWindows": "¿Abrir PowerShell como administrador para instalar o reparar el controlador HID virtual local?", "ConfirmUninstall": "¿Eliminar el entorno, el controlador, la tarea y el certificado local?", "Confirm": "Confirmar", "Cancel": "Cancelar", "Version": "Instalado {installed} · Incluido {bundled}", "Failed": "La operación ha fallado"
   }
 }

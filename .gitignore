@@ -3,6 +3,9 @@ dist/
 .DS_Store
 *.log
 CHANGELOG.md
+integration/*.ulanziPlugin.zip
+windows/virtual-hid/out/
+windows/virtual-usb/out/
 
 # Ship the prebuilt Ulanzi Studio plugin; installation only copies this output.
 !integration/com.ulanzi.codexmicro.ulanziPlugin/dist/

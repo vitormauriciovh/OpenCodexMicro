@@ -22,6 +22,10 @@
     {
       "Platform": "mac",
       "MinimumVersion": "13.0"
+    },
+    {
+      "Platform": "win",
+      "MinimumVersion": "10.0"
     }
   ],
   "Actions": [

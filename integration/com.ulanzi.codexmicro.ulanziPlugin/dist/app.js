@@ -24,9 +24,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// ../../node_modules/ws/lib/constants.js
+// node_modules/ws/lib/constants.js
 var require_constants = __commonJS({
-  "../../node_modules/ws/lib/constants.js"(exports2, module2) {
+  "node_modules/ws/lib/constants.js"(exports2, module2) {
     "use strict";
     var BINARY_TYPES = ["nodebuffer", "arraybuffer", "fragments"];
     var hasBlob = typeof Blob !== "undefined";
@@ -47,9 +47,9 @@ var require_constants = __commonJS({
   }
 });
 
-// ../../node_modules/ws/lib/buffer-util.js
+// node_modules/ws/lib/buffer-util.js
 var require_buffer_util = __commonJS({
-  "../../node_modules/ws/lib/buffer-util.js"(exports2, module2) {
+  "node_modules/ws/lib/buffer-util.js"(exports2, module2) {
     "use strict";
     var { EMPTY_BUFFER } = require_constants();
     var FastBuffer = Buffer[Symbol.species];
@@ -122,9 +122,9 @@ var require_buffer_util = __commonJS({
   }
 });
 
-// ../../node_modules/ws/lib/limiter.js
+// node_modules/ws/lib/limiter.js
 var require_limiter = __commonJS({
-  "../../node_modules/ws/lib/limiter.js"(exports2, module2) {
+  "node_modules/ws/lib/limiter.js"(exports2, module2) {
     "use strict";
     var kDone = Symbol("kDone");
     var kRun = Symbol("kRun");
@@ -172,9 +172,9 @@ var require_limiter = __commonJS({
   }
 });
 
-// ../../node_modules/ws/lib/permessage-deflate.js
+// node_modules/ws/lib/permessage-deflate.js
 var require_permessage_deflate = __commonJS({
-  "../../node_modules/ws/lib/permessage-deflate.js"(exports2, module2) {
+  "node_modules/ws/lib/permessage-deflate.js"(exports2, module2) {
     "use strict";
     var zlib = require("zlib");
     var bufferUtil = require_buffer_util();
@@ -555,9 +555,9 @@ var require_permessage_deflate = __commonJS({
   }
 });
 
-// ../../node_modules/ws/lib/validation.js
+// node_modules/ws/lib/validation.js
 var require_validation = __commonJS({
-  "../../node_modules/ws/lib/validation.js"(exports2, module2) {
+  "node_modules/ws/lib/validation.js"(exports2, module2) {
     "use strict";
     var { isUtf8 } = require("buffer");
     var { hasBlob } = require_constants();
@@ -756,9 +756,9 @@ var require_validation = __commonJS({
   }
 });
 
-// ../../node_modules/ws/lib/receiver.js
+// node_modules/ws/lib/receiver.js
 var require_receiver = __commonJS({
-  "../../node_modules/ws/lib/receiver.js"(exports2, module2) {
+  "node_modules/ws/lib/receiver.js"(exports2, module2) {
     "use strict";
     var { Writable } = require("stream");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -1379,9 +1379,9 @@ var require_receiver = __commonJS({
   }
 });
 
-// ../../node_modules/ws/lib/sender.js
+// node_modules/ws/lib/sender.js
 var require_sender = __commonJS({
-  "../../node_modules/ws/lib/sender.js"(exports2, module2) {
+  "node_modules/ws/lib/sender.js"(exports2, module2) {
     "use strict";
     var { Duplex } = require("stream");
     var { randomFillSync } = require("crypto");
@@ -1872,9 +1872,9 @@ var require_sender = __commonJS({
   }
 });
 
-// ../../node_modules/ws/lib/event-target.js
+// node_modules/ws/lib/event-target.js
 var require_event_target = __commonJS({
-  "../../node_modules/ws/lib/event-target.js"(exports2, module2) {
+  "node_modules/ws/lib/event-target.js"(exports2, module2) {
     "use strict";
     var { kForOnEventAttribute, kListener } = require_constants();
     var kCode = Symbol("kCode");
@@ -2101,9 +2101,9 @@ var require_event_target = __commonJS({
   }
 });
 
-// ../../node_modules/ws/lib/extension.js
+// node_modules/ws/lib/extension.js
 var require_extension = __commonJS({
-  "../../node_modules/ws/lib/extension.js"(exports2, module2) {
+  "node_modules/ws/lib/extension.js"(exports2, module2) {
     "use strict";
     var { tokenChars } = require_validation();
     function push(dest, name, elem) {
@@ -2254,9 +2254,9 @@ var require_extension = __commonJS({
   }
 });
 
-// ../../node_modules/ws/lib/websocket.js
+// node_modules/ws/lib/websocket.js
 var require_websocket = __commonJS({
-  "../../node_modules/ws/lib/websocket.js"(exports2, module2) {
+  "node_modules/ws/lib/websocket.js"(exports2, module2) {
     "use strict";
     var EventEmitter = require("events");
     var https = require("https");
@@ -2265,7 +2265,7 @@ var require_websocket = __commonJS({
     var tls = require("tls");
     var { randomBytes, createHash } = require("crypto");
     var { Duplex, Readable } = require("stream");
-    var { URL } = require("url");
+    var { URL: URL2 } = require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
     var Receiver2 = require_receiver();
     var Sender2 = require_sender();
@@ -2766,11 +2766,11 @@ var require_websocket = __commonJS({
         );
       }
       let parsedUrl;
-      if (address2 instanceof URL) {
+      if (address2 instanceof URL2) {
         parsedUrl = address2;
       } else {
         try {
-          parsedUrl = new URL(address2);
+          parsedUrl = new URL2(address2);
         } catch {
           throw new SyntaxError(`Invalid URL: ${address2}`);
         }
@@ -2907,7 +2907,7 @@ var require_websocket = __commonJS({
           req.abort();
           let addr;
           try {
-            addr = new URL(location, address2);
+            addr = new URL2(location, address2);
           } catch (e) {
             const err = new SyntaxError(`Invalid URL: ${location}`);
             emitErrorAndClose(websocket, err);
@@ -3150,9 +3150,9 @@ var require_websocket = __commonJS({
   }
 });
 
-// ../../node_modules/ws/lib/stream.js
+// node_modules/ws/lib/stream.js
 var require_stream = __commonJS({
-  "../../node_modules/ws/lib/stream.js"(exports2, module2) {
+  "node_modules/ws/lib/stream.js"(exports2, module2) {
     "use strict";
     var WebSocket2 = require_websocket();
     var { Duplex } = require("stream");
@@ -3248,9 +3248,9 @@ var require_stream = __commonJS({
   }
 });
 
-// ../../node_modules/ws/lib/subprotocol.js
+// node_modules/ws/lib/subprotocol.js
 var require_subprotocol = __commonJS({
-  "../../node_modules/ws/lib/subprotocol.js"(exports2, module2) {
+  "node_modules/ws/lib/subprotocol.js"(exports2, module2) {
     "use strict";
     var { tokenChars } = require_validation();
     function parse(header) {
@@ -3293,9 +3293,9 @@ var require_subprotocol = __commonJS({
   }
 });
 
-// ../../node_modules/ws/lib/websocket-server.js
+// node_modules/ws/lib/websocket-server.js
 var require_websocket_server = __commonJS({
-  "../../node_modules/ws/lib/websocket-server.js"(exports2, module2) {
+  "node_modules/ws/lib/websocket-server.js"(exports2, module2) {
     "use strict";
     var EventEmitter = require("events");
     var http = require("http");
@@ -3694,7 +3694,7 @@ var require_websocket_server = __commonJS({
   }
 });
 
-// ../../node_modules/ws/wrapper.mjs
+// node_modules/ws/wrapper.mjs
 var import_stream = __toESM(require_stream(), 1);
 var import_extension = __toESM(require_extension(), 1);
 var import_permessage_deflate = __toESM(require_permessage_deflate(), 1);
@@ -3706,8 +3706,8 @@ var import_websocket_server = __toESM(require_websocket_server(), 1);
 var wrapper_default = import_websocket.default;
 
 // plugin/app.js
-var import_node_fs2 = require("node:fs");
-var import_node_path2 = require("node:path");
+var import_node_fs4 = require("node:fs");
+var import_node_path4 = require("node:path");
 
 // plugin/bridge-installer.js
 var import_node_fs = require("node:fs");
@@ -3776,7 +3776,7 @@ async function selectBridgeNodeRuntime({
   } catch {
   }
   for (const executable of [...new Set(candidates)]) {
-    if (!executable.startsWith("/")) continue;
+    if (!(0, import_node_path.isAbsolute)(executable)) continue;
     if (!await exists(executable, import_node_fs.constants.X_OK)) continue;
     const resolvedExecutable = await (0, import_promises.realpath)(executable);
     if (resolvedExecutable === resolvedFallback) continue;
@@ -4035,21 +4035,645 @@ exit 1
   return { status, install, launch, uninstall };
 }
 
+// plugin/windows-setup.js
+var import_node_child_process2 = require("node:child_process");
+var import_node_fs2 = require("node:fs");
+var import_node_os2 = require("node:os");
+var import_node_path2 = require("node:path");
+var import_node_util2 = require("node:util");
+var execFileAsync2 = (0, import_node_util2.promisify)(import_node_child_process2.execFile);
+var TASK_NAME = "OpenCodexMicro Virtual Device";
+var PROBE_SCRIPT = `
+$ErrorActionPreference = 'Stop'
+$roots = @(Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object InstanceId -Like 'ROOT\\OPENCODEXMICROUDE*')
+$usbDevices = @(Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object InstanceId -Like 'USB\\VID_303A&PID_8360*')
+$hidDevices = @(Get-PnpDevice -Class HIDClass -PresentOnly -ErrorAction SilentlyContinue | Where-Object InstanceId -Like 'HID\\VID_303A&PID_8360*')
+$task = Get-ScheduledTask -TaskName 'OpenCodexMicro Virtual Device' -ErrorAction SilentlyContinue
+$process = Get-Process -Name OpenCodexMicroVirtualDevice -ErrorAction SilentlyContinue | Select-Object -First 1
+$secureBoot = $false
+try { $secureBoot = [bool](Confirm-SecureBootUEFI) } catch {}
+$boot = bcdedit.exe /enum '{current}' | Out-String
+$configured = $boot -match '(?im)^testsigning\\s+(Yes|On|1)\\s*$'
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class OpenCodexMicroCodeIntegrityProbe {
+  [StructLayout(LayoutKind.Sequential)] private struct Info { public uint Length; public uint Options; }
+  [DllImport("ntdll.dll")] private static extern int NtQuerySystemInformation(int c, ref Info i, uint l, IntPtr r);
+  public static bool Active() { Info i = new Info(); i.Length = (uint)Marshal.SizeOf(typeof(Info)); return NtQuerySystemInformation(103, ref i, i.Length, IntPtr.Zero) == 0 && (i.Options & 2) != 0; }
+}
+'@
+[pscustomobject]@{
+  build = [Environment]::OSVersion.Version.Build
+  architecture = $env:PROCESSOR_ARCHITECTURE
+  secureBoot = $secureBoot
+  testSigningConfigured = $configured
+  testSigningActive = [OpenCodexMicroCodeIntegrityProbe]::Active()
+  rootReady = @($roots | Where-Object Status -EQ 'OK').Count -gt 0
+  rootDeviceCount = $roots.Count
+  rootErrorCount = @($roots | Where-Object Status -NE 'OK').Count
+  usbReady = @($usbDevices | Where-Object Status -EQ 'OK').Count -gt 0
+  hidReady = @($hidDevices | Where-Object Status -EQ 'OK').Count -gt 0
+  taskInstalled = $null -ne $task
+  runtimeRunning = $null -ne $process
+} | ConvertTo-Json -Compress
+`;
+function encoded(script) {
+  return Buffer.from(script, "utf16le").toString("base64");
+}
+async function runPowerShell(script, execute = execFileAsync2) {
+  const { stdout } = await execute("powershell.exe", [
+    "-NoProfile",
+    "-NonInteractive",
+    "-EncodedCommand",
+    encoded(script)
+  ], { windowsHide: true, maxBuffer: 1024 * 1024 });
+  return stdout.trim();
+}
+async function bridgeOnline(bridgeUrl) {
+  try {
+    const response = await fetch(`${bridgeUrl}/state`, { signal: AbortSignal.timeout(1200) });
+    const payload = await response.json();
+    return response.ok && payload.connected === true;
+  } catch {
+    return false;
+  }
+}
+function readJson2(path) {
+  try {
+    return JSON.parse((0, import_node_fs2.readFileSync)(path, "utf8").replace(/^\uFEFF/, ""));
+  } catch {
+    return null;
+  }
+}
+function actions() {
+  return Object.fromEntries([
+    "task1",
+    "task2",
+    "task3",
+    "task4",
+    "task5",
+    "fast",
+    "usage",
+    "pin",
+    "new",
+    "navigate",
+    "fork",
+    "steer",
+    "mic",
+    "submit"
+  ].map((action) => [action, {
+    available: true,
+    experimental: ["pin", "new", "steer"].includes(action)
+  }]));
+}
+function compareVersions(left, right) {
+  const leftParts = String(left || "0").split(".").map(Number);
+  const rightParts = String(right || "0").split(".").map(Number);
+  const length = Math.max(leftParts.length, rightParts.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference = (leftParts[index] || 0) - (rightParts[index] || 0);
+    if (difference !== 0) return Math.sign(difference);
+  }
+  return 0;
+}
+function createWindowsSetup({
+  pluginRoot,
+  bridgeUrl,
+  version,
+  home = (0, import_node_os2.homedir)(),
+  execute = execFileAsync2
+}) {
+  const windowsRoot = (0, import_node_path2.resolve)(pluginRoot, "installer/windows");
+  const payloadRoot = (0, import_node_path2.join)(windowsRoot, "payload");
+  const payloadManifestPath = (0, import_node_path2.join)(payloadRoot, "payload.json");
+  const installRoot = (0, import_node_path2.join)(home, "AppData/Local/OpenCodexMicro");
+  const metadataPath = (0, import_node_path2.join)(installRoot, "install.json");
+  const operationStatusPath = (0, import_node_path2.join)(installRoot, "setup-status.json");
+  const launcherPath = (0, import_node_path2.join)(windowsRoot, "Launch-Elevated.ps1");
+  async function status() {
+    const payload = readJson2(payloadManifestPath);
+    const metadata = readJson2(metadataPath);
+    const operation = readJson2(operationStatusPath);
+    let probe = null;
+    let probeError = null;
+    try {
+      probe = JSON.parse(await runPowerShell(PROBE_SCRIPT, execute));
+    } catch (error) {
+      probeError = error.message;
+    }
+    const minimumBuild = Number(payload?.minimumWindowsBuild || 19045);
+    const supported = probe?.architecture === "AMD64" && payload?.architecture === "x64" && Number(probe?.build) >= minimumBuild;
+    const transportOnline = await bridgeOnline(bridgeUrl);
+    const payloadReady = Boolean(payload && (0, import_node_fs2.existsSync)((0, import_node_path2.join)(payloadRoot, "OpenCodexMicroUde.inf")));
+    const installed = Boolean(probe?.rootReady && probe?.taskInstalled && metadata);
+    const partialInstallation = Boolean(
+      metadata || probe?.rootReady || probe?.taskInstalled || probe?.runtimeRunning || ["secure-boot-blocked", "needs-restart", "error"].includes(operation?.phase)
+    );
+    const versionComparison = installed ? compareVersions(metadata?.version, payload?.version) : 0;
+    const needsUpdate = Boolean(installed && versionComparison < 0);
+    const downgradeBlocked = Boolean(installed && versionComparison > 0);
+    const requiresRestart = Boolean(
+      !probe?.testSigningActive && (probe?.testSigningConfigured || operation?.phase === "needs-restart")
+    );
+    const secureBootBlocked = Boolean(
+      !probe?.testSigningActive && (probe?.secureBoot || operation?.phase === "secure-boot-blocked") && !installed
+    );
+    const ready = Boolean(supported && installed && !needsUpdate && !downgradeBlocked && probe?.hidReady && probe?.runtimeRunning && transportOnline);
+    const phase = !supported ? "unsupported" : !payloadReady ? "payload-missing" : secureBootBlocked ? "secure-boot-blocked" : requiresRestart ? "needs-restart" : needsUpdate ? "update-available" : downgradeBlocked ? "newer-installed" : !installed ? "not-installed" : !probe?.hidReady ? "driver-error" : !probe?.runtimeRunning ? "runtime-offline" : !transportOnline ? "codex-offline" : "ready";
+    return {
+      platform: "windows",
+      mode: "windows-local-trust",
+      supported,
+      ready,
+      phase,
+      setup: {
+        installed,
+        needsUpdate,
+        installedVersion: metadata?.version || null,
+        bundledVersion: payload?.version || version,
+        canInstall: supported && payloadReady && !downgradeBlocked,
+        canLaunch: installed && !probe?.runtimeRunning,
+        canUninstall: partialInstallation,
+        requiresRestart,
+        secureBootBlocked,
+        downgradeBlocked
+      },
+      checks: [
+        { id: "payload", ready: payloadReady, level: needsUpdate ? "warn" : null },
+        { id: "driver", ready: Boolean(probe?.rootReady && probe?.hidReady) },
+        { id: "runtime", ready: Boolean(probe?.runtimeRunning && probe?.taskInstalled) },
+        { id: "codex", ready: transportOnline }
+      ],
+      actions: actions(),
+      operation,
+      detail: { ...probe, probeError, taskName: TASK_NAME }
+    };
+  }
+  async function elevated(operation) {
+    await execute("powershell.exe", [
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      launcherPath,
+      "-Operation",
+      operation,
+      "-PayloadRoot",
+      payloadRoot,
+      "-InstallRoot",
+      installRoot
+    ], { windowsHide: true });
+    return status();
+  }
+  return {
+    status,
+    install: () => elevated("install"),
+    uninstall: () => elevated("uninstall"),
+    async launch() {
+      await execute("schtasks.exe", ["/Run", "/TN", TASK_NAME], { windowsHide: true });
+      return status();
+    }
+  };
+}
+
+// plugin/platform-profile.js
+var ACTIONS = [
+  "task1",
+  "task2",
+  "task3",
+  "task4",
+  "task5",
+  "fast",
+  "usage",
+  "pin",
+  "new",
+  "navigate",
+  "fork",
+  "steer",
+  "mic",
+  "submit"
+];
+function actionCapabilities(platform) {
+  return Object.fromEntries(ACTIONS.map((action) => [action, {
+    available: true,
+    experimental: platform === "windows" && ["pin", "new", "steer"].includes(action)
+  }]));
+}
+function macProfile(status) {
+  const ready = status.supported && status.installed && status.serviceOnline && status.cdpConnected && !status.needsUpdate;
+  const phase = !status.supported ? "unsupported" : !status.installed ? "not-installed" : status.needsUpdate ? "update-available" : !status.serviceOnline ? "runtime-offline" : !status.cdpConnected ? "codex-offline" : "ready";
+  return {
+    platform: "macos",
+    mode: "macos-cdp",
+    supported: status.supported,
+    ready,
+    phase,
+    setup: {
+      installed: status.installed,
+      needsUpdate: status.needsUpdate,
+      installedVersion: status.installedVersion,
+      bundledVersion: status.bundledVersion,
+      canInstall: status.supported,
+      canLaunch: status.installed && !status.cdpConnected,
+      canUninstall: status.supported && status.installed,
+      requiresRestart: false
+    },
+    checks: [
+      { id: "payload", ready: status.installed, level: status.needsUpdate ? "warn" : null },
+      { id: "runtime", ready: status.serviceOnline },
+      { id: "codex", ready: status.cdpConnected }
+    ],
+    actions: actionCapabilities("macos"),
+    runtime: {
+      nodeSource: status.nodeSource,
+      nodeVersion: status.nodeVersion
+    },
+    detail: status
+  };
+}
+function createPlatformSetup(options) {
+  const platform = options.platform || process.platform;
+  if (platform === "win32") return createWindowsSetup(options);
+  const installer = createBridgeInstaller(options);
+  return {
+    async status() {
+      return macProfile(await installer.status());
+    },
+    install: () => installer.install(),
+    launch: () => installer.launch(),
+    uninstall: () => installer.uninstall()
+  };
+}
+
+// plugin/windows-codex-action.js
+var import_node_child_process3 = require("node:child_process");
+var ACTION_SCRIPT = `
+$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
+$processName = if ($env:CODEX_WINDOWS_PROCESS_NAME) {
+  $env:CODEX_WINDOWS_PROCESS_NAME
+} else {
+  'ChatGPT'
+}
+$process = Get-Process -Name $processName -ErrorAction SilentlyContinue |
+  Where-Object { $_.MainWindowHandle -ne 0 } |
+  Select-Object -First 1
+if (-not $process) { exit 2 }
+$root = [System.Windows.Automation.AutomationElement]::FromHandle($process.MainWindowHandle)
+$buttonCondition = [System.Windows.Automation.PropertyCondition]::new(
+  [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+  [System.Windows.Automation.ControlType]::Button
+)
+$target = $null
+if ($env:OPEN_CODEX_MICRO_ACTION -eq 'pin') {
+  $buttons = $root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $buttonCondition)
+  $active = $null
+  for ($index = 0; $index -lt $buttons.Count; $index++) {
+    $candidate = $buttons.Item($index)
+    if ($candidate.Current.ClassName -match '(^|\\s)bg-primary-ghost-hover(\\s|$)') {
+      $active = $candidate
+      break
+    }
+  }
+  if ($active) {
+    $labels = @('Pin chat', 'Unpin chat', '\u7F6E\u9876\u804A\u5929', '\u53D6\u6D88\u7F6E\u9876\u804A\u5929', '\u91D8\u9078\u804A\u5929', '\u53D6\u6D88\u91D8\u9078\u804A\u5929')
+    $children = $active.FindAll([System.Windows.Automation.TreeScope]::Descendants, $buttonCondition)
+    for ($index = 0; $index -lt $children.Count; $index++) {
+      $candidate = $children.Item($index)
+      if (-not $candidate.Current.IsOffscreen -and $labels -contains $candidate.Current.Name) {
+        $target = $candidate
+        break
+      }
+    }
+  }
+} elseif ($env:OPEN_CODEX_MICRO_ACTION -eq 'new') {
+  $labels = @('New task', 'New chat', 'New conversation', '\u65B0\u5BF9\u8BDD', '\u65B0\u5C0D\u8A71', '\u65B0\u5EFA\u4EFB\u52A1', '\u65B0\u5EFA\u804A\u5929', '\u65B0\u589E\u4EFB\u52D9', '\u65B0\u589E\u804A\u5929')
+  $buttons = $root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $buttonCondition)
+  for ($index = 0; $index -lt $buttons.Count; $index++) {
+    $candidate = $buttons.Item($index)
+    if (
+      -not $candidate.Current.IsOffscreen -and
+      $labels -contains $candidate.Current.Name -and
+      $candidate.Current.ClassName -match '(^|\\s)sidebar-item(\\s|$)'
+    ) {
+      $target = $candidate
+      break
+    }
+  }
+} elseif ($env:OPEN_CODEX_MICRO_ACTION -eq 'steer') {
+  $labels = @('Steer', '\u8C03\u6574\u65B9\u5411', '\u8ABF\u6574\u65B9\u5411', '\u5F15\u5C0E')
+  $buttons = $root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $buttonCondition)
+  for ($index = 0; $index -lt $buttons.Count; $index++) {
+    $candidate = $buttons.Item($index)
+    if (
+      -not $candidate.Current.IsOffscreen -and
+      $candidate.Current.IsEnabled -and
+      $labels -contains $candidate.Current.Name
+    ) {
+      $target = $candidate
+      break
+    }
+  }
+} else {
+  exit 3
+}
+if (-not $target) { exit 4 }
+if ($env:CODEX_WINDOWS_ACTION_DRY_RUN -eq '1') { exit 0 }
+$invoke = $null
+if (-not $target.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$invoke)) {
+  exit 5
+}
+$invoke.Invoke()
+`;
+function invokeWindowsCodexAction(action, { env = process.env } = {}) {
+  return new Promise((resolve4, reject) => {
+    const encoded2 = Buffer.from(ACTION_SCRIPT, "utf16le").toString("base64");
+    const child = (0, import_node_child_process3.spawn)("powershell.exe", [
+      "-NoProfile",
+      "-NonInteractive",
+      "-WindowStyle",
+      "Hidden",
+      "-EncodedCommand",
+      encoded2
+    ], {
+      env: { ...env, OPEN_CODEX_MICRO_ACTION: action },
+      windowsHide: true,
+      stdio: "ignore"
+    });
+    child.on("error", reject);
+    child.on("exit", (code) => {
+      if (code === 0) resolve4({ ok: true });
+      else {
+        const error = new Error(`Codex ${action} action is unavailable (PowerShell exit ${code})`);
+        error.exitCode = code;
+        reject(error);
+      }
+    });
+  });
+}
+
+// plugin/windows-codex-focus.js
+var import_node_child_process4 = require("node:child_process");
+var FOCUS_SCRIPT = `
+$ErrorActionPreference = 'Stop'
+$appId = $env:CODEX_WINDOWS_AUMID
+if (-not $appId) {
+  $app = Get-StartApps |
+    Where-Object { $_.AppID -like 'OpenAI.Codex_*!App' } |
+    Select-Object -First 1
+  if (-not $app) {
+    $app = Get-StartApps |
+      Where-Object { $_.Name -match '^(Codex|ChatGPT)$' -and $_.AppID -like '*!App' } |
+      Select-Object -First 1
+  }
+  $appId = $app.AppID
+}
+$processName = if ($env:CODEX_WINDOWS_PROCESS_NAME) {
+  $env:CODEX_WINDOWS_PROCESS_NAME
+} else {
+  'ChatGPT'
+}
+$process = Get-Process -Name $processName -ErrorAction SilentlyContinue |
+  Where-Object { $_.MainWindowHandle -ne 0 } |
+  Select-Object -First 1
+if ($process) {
+  $shell = New-Object -ComObject WScript.Shell
+  foreach ($attempt in 1..3) {
+    if ($shell.AppActivate($process.Id)) { exit 0 }
+    Start-Sleep -Milliseconds 100
+  }
+}
+if (-not $appId) { exit 2 }
+Start-Process explorer.exe "shell:AppsFolder\\$appId"
+`;
+function focusWindowsCodex({ env = process.env } = {}) {
+  return new Promise((resolve4, reject) => {
+    const encoded2 = Buffer.from(FOCUS_SCRIPT, "utf16le").toString("base64");
+    const child = (0, import_node_child_process4.spawn)("powershell.exe", [
+      "-NoProfile",
+      "-NonInteractive",
+      "-WindowStyle",
+      "Hidden",
+      "-EncodedCommand",
+      encoded2
+    ], {
+      env,
+      windowsHide: true,
+      stdio: "ignore"
+    });
+    child.on("error", reject);
+    child.on("exit", (code) => {
+      if (code === 0) resolve4({ ok: true });
+      else reject(new Error(`Could not focus Codex (PowerShell exit ${code})`));
+    });
+  });
+}
+
+// plugin/windows-codex-usage.js
+var import_node_child_process5 = require("node:child_process");
+var import_node_fs3 = require("node:fs");
+var import_node_path3 = require("node:path");
+var DEFAULT_REFRESH_MS = 6e4;
+var DEFAULT_TIMEOUT_MS = 8e3;
+function windowKind(minutes) {
+  if (Number.isFinite(minutes) && Math.abs(minutes - 300) <= 1) return "five-hour";
+  if (Number.isFinite(minutes) && Math.abs(minutes - 10080) <= 1) return "weekly";
+  return "other";
+}
+function normalizeWindow(window, role) {
+  if (!window || typeof window !== "object") return null;
+  const usedPercent = Number(window.usedPercent);
+  if (!Number.isFinite(usedPercent)) return null;
+  const minutes = Number(window.windowDurationMins);
+  const kind = windowKind(minutes);
+  const used = Math.min(100, Math.max(0, usedPercent));
+  return {
+    id: kind === "other" ? role : kind,
+    kind,
+    usedPercent: used,
+    remainingPercent: 100 - used,
+    resetsAt: Number(window.resetsAt) || null
+  };
+}
+function normalizeCodexRateLimits(result, observedAt = Date.now()) {
+  const snapshot = result?.rateLimitsByLimitId?.codex ?? result?.rateLimits;
+  if (!snapshot || typeof snapshot !== "object") return null;
+  const windows = [
+    normalizeWindow(snapshot.primary, "primary"),
+    normalizeWindow(snapshot.secondary, "secondary")
+  ].filter(Boolean);
+  return windows.length > 0 ? { windows, observedAt } : null;
+}
+function codexExecutable(env) {
+  if (env.CODEX_CLI_PATH) return env.CODEX_CLI_PATH;
+  const architecture = process.arch === "arm64" ? "aarch64" : "x86_64";
+  const packageArchitecture = process.arch === "arm64" ? "arm64" : "x64";
+  const bundled = env.APPDATA && (0, import_node_path3.join)(
+    env.APPDATA,
+    "npm",
+    "node_modules",
+    "@openai",
+    "codex",
+    "node_modules",
+    "@openai",
+    `codex-win32-${packageArchitecture}`,
+    "vendor",
+    `${architecture}-pc-windows-msvc`,
+    "bin",
+    "codex.exe"
+  );
+  return bundled && (0, import_node_fs3.existsSync)(bundled) ? bundled : "codex.exe";
+}
+function readRateLimits({ env, timeoutMs }) {
+  return new Promise((resolve4, reject) => {
+    const child = (0, import_node_child_process5.spawn)(codexExecutable(env), ["app-server", "--stdio"], {
+      env,
+      windowsHide: true,
+      stdio: ["pipe", "pipe", "ignore"]
+    });
+    let buffer = "";
+    let settled = false;
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      child.stdin.end();
+      child.kill();
+      if (error) reject(error);
+      else resolve4(value);
+    };
+    const timeout = setTimeout(
+      () => finish(new Error("Codex usage request timed out")),
+      timeoutMs
+    );
+    timeout.unref();
+    child.on("error", (error) => finish(error));
+    child.on("exit", (code) => {
+      if (!settled) finish(new Error(`Codex app-server exited with code ${code}`));
+    });
+    child.stdout.on("data", (chunk) => {
+      buffer += chunk.toString();
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        let message;
+        try {
+          message = JSON.parse(line);
+        } catch {
+          continue;
+        }
+        if (message.id === 1 && message.result) {
+          child.stdin.write(`${JSON.stringify({
+            id: 2,
+            method: "account/rateLimits/read",
+            params: null
+          })}
+`);
+        }
+        if (message.id === 2) {
+          if (message.error) {
+            finish(new Error(message.error.message || "Codex usage request failed"));
+          } else {
+            finish(null, normalizeCodexRateLimits(message.result));
+          }
+        }
+      }
+    });
+    child.stdin.write(`${JSON.stringify({
+      id: 1,
+      method: "initialize",
+      params: {
+        clientInfo: {
+          name: "open-codex-micro",
+          title: "OpenCodexMicro",
+          version: "0.4.0"
+        }
+      }
+    })}
+`);
+  });
+}
+function createWindowsCodexUsageProvider({
+  env = process.env,
+  refreshMs = DEFAULT_REFRESH_MS,
+  timeoutMs = DEFAULT_TIMEOUT_MS
+} = {}) {
+  let cached = null;
+  let lastAttempt = 0;
+  let pending = null;
+  async function getUsage({ force = false } = {}) {
+    const now = Date.now();
+    if (!force && now - lastAttempt < refreshMs) return cached;
+    if (pending) return pending;
+    lastAttempt = now;
+    pending = readRateLimits({ env, timeoutMs }).then((usage) => {
+      if (usage) cached = usage;
+      return cached;
+    }).catch(() => cached).finally(() => {
+      pending = null;
+    });
+    return pending;
+  }
+  return {
+    getCachedUsage: () => cached,
+    getUsage
+  };
+}
+
+// plugin/windows-hid-state.js
+var STATUS_BY_COLOR = /* @__PURE__ */ new Map([
+  [0, "off"],
+  [16777215, "idle"],
+  [3166206, "working"],
+  [65356, "unread"],
+  [16711731, "error"]
+]);
+function normalizeWindowsHidState(payload) {
+  const threads = Array.isArray(payload?.threads) ? payload.threads : [];
+  const slots = Array.from({ length: 6 }, (_, id) => {
+    const thread = threads.find((item) => Number(item?.id) === id);
+    const color = Number(thread?.c) || 0;
+    const active = Number(thread?.b) > 0 && color > 0;
+    const selected = active && Number(thread?.e) === 4;
+    return {
+      id,
+      threadKey: active ? `slot:${id}` : null,
+      title: active ? `Task ${id + 1}` : null,
+      status: active ? STATUS_BY_COLOR.get(color) ?? "idle" : "off",
+      selected
+    };
+  });
+  return {
+    connected: payload?.connected === true,
+    slots,
+    usage: null,
+    lighting: payload?.lighting ?? null,
+    updatedAt: payload?.updatedAt ?? null
+  };
+}
+
 // plugin/app.js
 var PLUGIN_UUID = "com.ulanzi.ulanzistudio.codexmicro";
-var BRIDGE_URL = process.env.CODEX_BRIDGE_URL || "http://127.0.0.1:17373";
+var BRIDGE_URL = process.env.CODEX_BRIDGE_URL || (process.platform === "win32" ? "http://127.0.0.1:17374" : "http://127.0.0.1:17373");
+var WINDOWS_HID_BRIDGE = process.platform === "win32" && new URL(BRIDGE_URL).port === "17374";
+var windowsUsage = WINDOWS_HID_BRIDGE ? createWindowsCodexUsageProvider() : null;
 var [address = "127.0.0.1", port = "3906"] = process.argv.slice(2);
 var HOST_URL = `ws://${address}:${port}`;
 var instances = /* @__PURE__ */ new Map();
-var PLUGIN_ROOT = (0, import_node_path2.resolve)((0, import_node_path2.dirname)((0, import_node_path2.resolve)(process.argv[1])), "..");
-var MANIFEST = JSON.parse((0, import_node_fs2.readFileSync)((0, import_node_path2.resolve)(PLUGIN_ROOT, "manifest.json"), "utf8"));
-var bridgeSetup = createBridgeInstaller({
+var PLUGIN_ROOT = (0, import_node_path4.resolve)((0, import_node_path4.dirname)((0, import_node_path4.resolve)(process.argv[1])), "..");
+var MANIFEST = JSON.parse((0, import_node_fs4.readFileSync)((0, import_node_path4.resolve)(PLUGIN_ROOT, "manifest.json"), "utf8"));
+var bridgeSetup = createPlatformSetup({
   pluginRoot: PLUGIN_ROOT,
   bridgeUrl: BRIDGE_URL,
-  version: MANIFEST.Version
+  version: MANIFEST.Version,
+  platform: process.env.CODEX_SETUP_PLATFORM || process.platform,
+  uid: process.env.CODEX_SETUP_UID ? Number(process.env.CODEX_SETUP_UID) : process.getuid?.()
 });
-var USAGE_BASE64 = (0, import_node_fs2.readFileSync)(
-  (0, import_node_path2.resolve)(PLUGIN_ROOT, "assets/icons/usage-base.png")
+var USAGE_BASE64 = (0, import_node_fs4.readFileSync)(
+  (0, import_node_path4.resolve)(PLUGIN_ROOT, "assets/icons/usage-base.png")
 ).toString("base64");
 var ACTION_LABELS = Object.freeze({
   fast: "FAST",
@@ -4075,6 +4699,14 @@ var pollTimer;
 var pollInFlight = false;
 var latestState = null;
 var setupOperation = null;
+function refreshWindowsUsage(options) {
+  if (!windowsUsage) return;
+  void windowsUsage.getUsage(options).then((usage) => {
+    if (!latestState?.connected || !usage) return;
+    latestState.usage = usage;
+    renderAll();
+  });
+}
 function contextOf(message) {
   return String(message.actionid || `${message.uuid}___${message.key}`);
 }
@@ -4091,6 +4723,81 @@ function usageRemaining(usage) {
   const window = windows.find((item) => item?.kind === "weekly") ?? windows[0];
   const remaining = Number(window?.remainingPercent);
   return Number.isFinite(remaining) ? Math.max(0, Math.min(100, Math.round(remaining))) : null;
+}
+async function sendWindowsHid(key, act, agent = null) {
+  const query = new URLSearchParams({ key, act: String(act) });
+  if (agent !== null) query.set("agent", String(agent));
+  const response = await fetch(`${BRIDGE_URL}/notify/hid?${query}`, {
+    method: "POST",
+    signal: AbortSignal.timeout(1200)
+  });
+  const payload = await response.json();
+  if (!response.ok || payload.ok === false) {
+    throw new Error(payload.error || `Bridge HTTP ${response.status}`);
+  }
+  return payload;
+}
+async function windowsHidBridgeRequest(path, method) {
+  if (method === "GET" && path === "/state") {
+    const response = await fetch(`${BRIDGE_URL}/state`, {
+      signal: AbortSignal.timeout(1200)
+    });
+    const payload = await response.json();
+    if (!response.ok || payload.ok === false) {
+      throw new Error(payload.error || `Bridge HTTP ${response.status}`);
+    }
+    const state = normalizeWindowsHidState(payload);
+    state.usage = windowsUsage.getCachedUsage();
+    refreshWindowsUsage();
+    return state;
+  }
+  const url = new URL(path, BRIDGE_URL);
+  const thread = method === "POST" && url.pathname.match(/^\/thread\/[^/]+\/click$/);
+  if (thread) {
+    const slot = Number(url.searchParams.get("slot"));
+    if (!Number.isInteger(slot) || slot < 0 || slot > 5) {
+      throw new Error("Invalid Codex Micro slot");
+    }
+    await sendWindowsHid(`AG0${slot}`, 1, slot);
+    await new Promise((resolve4) => setTimeout(resolve4, 35));
+    await sendWindowsHid(`AG0${slot}`, 0, slot);
+    return { ok: true, bridge: true };
+  }
+  const action = method === "POST" && url.pathname.match(
+    /^\/action\/(fast|approve|reject|pin|new|fork|mic|steer|submit)\/(down|up)$/
+  );
+  if (action) {
+    if (["pin", "new", "steer"].includes(action[1])) {
+      if (action[2] === "up") return { ok: true };
+      let result;
+      try {
+        result = await invokeWindowsCodexAction(action[1]);
+      } catch (error) {
+        if (action[1] !== "steer" || error.exitCode !== 4) throw error;
+        await sendWindowsHid("ACT12", 1);
+        await new Promise((resolve4) => setTimeout(resolve4, 35));
+        await sendWindowsHid("ACT12", 0);
+        result = { ok: true, fallback: "submit" };
+      }
+      try {
+        await focusWindowsCodex();
+      } catch {
+      }
+      return result;
+    }
+    const key = {
+      fast: "ACT06",
+      approve: "ACT07",
+      reject: "ACT08",
+      fork: "ACT09",
+      mic: "ACT10",
+      submit: "ACT12"
+    }[action[1]];
+    if (!key) throw new Error(`Codex ${action[1]} requires the CDP Bridge`);
+    return sendWindowsHid(key, action[2] === "down" ? 1 : 0);
+  }
+  if (method === "POST" && path === "/focus") return focusWindowsCodex();
+  throw new Error(`Unsupported Windows HID Bridge request: ${method} ${path}`);
 }
 function usageIconData(usage) {
   const remaining = usageRemaining(usage);
@@ -4156,12 +4863,18 @@ async function sendBridgeSetupStatus(message, extra = {}) {
 async function handleBridgeSetupMessage(message) {
   const action = message.payload?.action;
   if (action === "openGuide") {
+    const status = await bridgeSetup.status();
     send({
       cmd: "openurl",
-      url: "https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation",
+      url: status.platform === "windows" ? "https://github.com/UlanziTechnology/OpenCodexMicro/blob/main/docs/windows-virtual-hid.md" : "https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation",
       local: false
     });
-    await sendBridgeSetupStatus(message);
+    sendToInspector(message, {
+      type: "bridgeSetupStatus",
+      status,
+      busy: Boolean(setupOperation),
+      operation: setupOperation
+    });
     return;
   }
   if (action === "status" || !action) {
@@ -4313,6 +5026,7 @@ function renderAll() {
   for (const instance of instances.values()) renderInstance(instance);
 }
 async function bridgeRequest(path, method = "GET") {
+  if (WINDOWS_HID_BRIDGE) return windowsHidBridgeRequest(path, method);
   const response = await fetch(`${BRIDGE_URL}${path}`, {
     method,
     signal: AbortSignal.timeout(1200)
@@ -4324,9 +5038,23 @@ async function bridgeRequest(path, method = "GET") {
   return payload;
 }
 async function openTaskSlot(slot) {
-  const task = latestState?.slots?.[slot];
+  let task = latestState?.slots?.[slot];
+  if (!task?.threadKey) {
+    const refreshedState = await bridgeRequest("/state");
+    if (refreshedState?.connected) {
+      latestState = refreshedState;
+      renderAll();
+      task = latestState.slots?.[slot];
+    }
+  }
   if (!task?.threadKey) throw new Error(`Codex task slot ${slot + 1} is empty`);
   await bridgeRequest(`/thread/${encodeURIComponent(task.threadKey)}/click?slot=${slot}`, "POST");
+  if (WINDOWS_HID_BRIDGE) {
+    try {
+      await bridgeRequest("/focus", "POST");
+    } catch {
+    }
+  }
 }
 async function pollBridge() {
   if (pollInFlight) return;
@@ -4351,7 +5079,20 @@ async function invoke(instance, pressed) {
     const action = actionName(instance.uuid);
     if (!action) throw new Error(`Unknown Codex action: ${instance.uuid}`);
     if (action === "usage") {
-      if (pressed) await bridgeRequest("/focus", "POST");
+      if (pressed && WINDOWS_HID_BRIDGE) {
+        latestState.usage = await windowsUsage.getUsage({ force: true });
+        renderAll();
+      }
+      if (pressed) {
+        if (WINDOWS_HID_BRIDGE) {
+          try {
+            await bridgeRequest("/focus", "POST");
+          } catch {
+          }
+        } else {
+          await bridgeRequest("/focus", "POST");
+        }
+      }
       return;
     }
     await bridgeRequest(`/action/${action}/${pressed ? "down" : "up"}`, "POST");

@@ -1,0 +1,14 @@
+﻿{
+    "version":  "0.4.0",
+    "architecture":  "x64",
+    "minimumWindowsBuild":  19045,
+    "certificateThumbprint":  "66FEE7B574BAA56AC6CA732FD6FC615880EFD58E",
+    "files":  {
+                  "OpenCodexMicroDriverInstaller.exe":  "8ca89aea163f03045ac43fb5aaeb1dd5ea4e29191c08babc32dd318231bfc71d",
+                  "OpenCodexMicroUde.cat":  "d091403c8b0b9ec39646dc88dbcc6210c164c6adb112738740b9751c4ac2ca05",
+                  "OpenCodexMicroUde.inf":  "2cd598da420274cce5e2bbf39aef24d9b0c90d8bc50083d6723b703a80dbe63e",
+                  "OpenCodexMicroUde.sys":  "ed0c5bc22d563c259d5814956c48b4bc5f4ab8d9056fbdcbadbb2269b39de334",
+                  "OpenCodexMicroVirtualDevice.exe":  "278d172c210bb234f7ea93f19e69b43ebadd819ceb6dd928aaedfc53d2c7afdb",
+                  "OpenCodexMicroVirtualUsb.cer":  "82552dd64cc3958695e7f4306ab681b5fedd9c0ce1a2472e72080cef4f72e289"
+              }
+}

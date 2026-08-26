@@ -43,6 +43,23 @@
     "UlanziNode": "Ulanzi Studio Node",
     "UnknownNode": "설치되지 않았거나 기록 없음",
     "CheckAgain": "다시 확인",
-    "InstallationGuide": "설치 안내"
+    "InstallationGuide": "설치 안내",
+    "PlatformSetupTitleMac": "Codex Bridge 설정", "PlatformSetupTitleWindows": "Codex Micro Windows 설정",
+    "PlatformSetupIntroMac": "로컬 Codex 연결을 설치하고 실행한 뒤 확인합니다.", "PlatformSetupIntroWindows": "Codex Desktop이 사용하는 로컬 가상 HID 연결을 설치하고 확인합니다.",
+    "ExperimentalActionTitle": "실험적 Windows 작업", "ExperimentalActionDescription": "이 작업은 Windows UI Automation을 사용하므로 Codex Desktop 업데이트, 창 포커스 또는 접근성 제한의 영향을 받을 수 있습니다.",
+    "LocalTrustTitle": "Windows 로컬 신뢰 모드", "LocalTrustDescription": "포함된 가상 HID 드라이버는 이 PC에서만 신뢰하는 프로젝트 개발 인증서를 사용합니다.",
+    "LocalTrustAdmin": "설치 시 관리자 PowerShell 창이 표시됩니다.", "LocalTrustTestSigning": "Windows 테스트 서명 모드를 사용해야 합니다.",
+    "LocalTrustSecureBoot": "계속하기 전에 보안 부팅을 수동으로 꺼야 할 수 있습니다.", "LocalTrustRestart": "Windows 재시작이 필요한 경우에만 이 페이지에서 안내합니다.",
+    "SecureBootGuideTitle": "보안 부팅을 일시적으로 끄는 방법", "SecureBootWarning": "보안 안내: UEFI 설정을 변경하기 전에 작업을 저장하고 BitLocker 복구 키를 확인하세요.",
+    "SecureBootStep1": "Windows 11: 설정 > 시스템 > 복구. Windows 10: 설정 > 업데이트 및 보안 > 복구를 엽니다.", "SecureBootStep2": "고급 시작 옵션에서 지금 다시 시작을 선택합니다.",
+    "SecureBootStep3": "문제 해결 > 고급 옵션 > UEFI 펌웨어 설정 > 다시 시작을 선택합니다.", "SecureBootStep4": "UEFI/BIOS의 Security, Boot 또는 Authentication에서 Secure Boot를 찾아 Disabled로 설정한 후 저장하고 종료합니다. 명칭은 제조사마다 다릅니다.",
+    "SecureBootStep5": "Windows가 시작되면 이 페이지로 돌아와 설치 / 복구를 다시 선택합니다. 이 로컬 신뢰 드라이버를 사용하는 동안 보안 부팅을 꺼 두어야 합니다.",
+    "SetupCheckPayload": "설치 파일", "SetupCheckDriver": "가상 HID 드라이버", "SetupCheckRuntime": "가상 장치 런타임", "SetupCheckCodex": "Codex 연결",
+    "Ready": "준비됨", "NotReady": "준비 안 됨", "UpdateAvailable": "업데이트 가능", "Checking": "확인 중…", "ContinueInstallation": "설치 계속", "StartRuntime": "런타임 시작", "Uninstall": "플랫폼 구성 제거", "Installing": "설치 중…", "Uninstalling": "제거 중…",
+    "PhaseReady": "Codex Micro를 사용할 수 있습니다.", "PhaseNotInstalled": "필요한 플랫폼 구성을 설치하세요.", "PhaseNeedsRestart": "Windows를 다시 시작한 후 이 페이지에서 설치를 계속하세요.",
+    "PhaseSecureBootBlocked": "보안 부팅을 수동으로 끈 다음 설치 / 복구를 다시 실행하세요.", "PhaseUpdateAvailable": "포함된 구성 업데이트가 있습니다.", "PhaseRuntimeOffline": "로컬 런타임이 실행 중이 아닙니다.", "PhaseCodexOffline": "구성이 준비되었습니다. Codex Desktop을 열어 연결하세요.",
+    "PhaseDriverError": "가상 HID 드라이버가 준비되지 않았습니다. 설치 / 복구를 실행하세요.", "PhasePayloadMissing": "포함된 Windows 설치 파일이 없거나 불완전합니다.", "PhaseUnsupported": "지원되지 않는 플랫폼입니다. Windows 10 22H2 또는 Windows 11 x64가 필요합니다.", "PhaseNewerInstalled": "더 높은 버전이 설치되어 있어 자동 다운그레이드를 차단했습니다.",
+    "PlatformInfoMacTitle": "Codex Bridge 정보", "PlatformInfoWindowsTitle": "Windows 설정 정보", "PlatformInfoMac": "Codex Bridge는 로컬 전용 CDP로 Codex Desktop을 시작하고 로컬 서비스를 실행합니다.", "PlatformInfoWindows": "로컬에서 신뢰한 가상 HID 드라이버와 현재 사용자 예약 작업이 Windows 연결을 제공합니다. 제거해도 테스트 서명 모드는 변경되지 않습니다.",
+    "ConfirmInstallMac": "이 사용자의 Codex Bridge를 설치하거나 복구할까요?", "ConfirmInstallWindows": "관리자 PowerShell을 열어 로컬 가상 HID 드라이버를 설치하거나 복구할까요?", "ConfirmUninstall": "런타임, 드라이버, 예약 작업 및 로컬 인증서를 제거할까요?", "Confirm": "확인", "Cancel": "취소", "Version": "설치됨 {installed} · 포함됨 {bundled}", "Failed": "작업 실패"
   }
 }

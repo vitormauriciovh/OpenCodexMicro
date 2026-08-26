@@ -43,6 +43,23 @@
     "UlanziNode": "Ulanzi Studio Node",
     "UnknownNode": "未インストールまたは記録なし",
     "CheckAgain": "再確認",
-    "InstallationGuide": "インストールガイド"
+    "InstallationGuide": "インストールガイド",
+    "PlatformSetupTitleMac": "Codex Bridge 設定", "PlatformSetupTitleWindows": "Codex Micro Windows 設定",
+    "PlatformSetupIntroMac": "ローカル Codex 接続をインストール、起動、確認します。", "PlatformSetupIntroWindows": "Codex Desktop が使用するローカル仮想 HID 接続をインストールして確認します。",
+    "ExperimentalActionTitle": "実験的な Windows アクション", "ExperimentalActionDescription": "このアクションは Windows UI Automation を使用するため、Codex Desktop の更新、フォーカス、アクセシビリティ制限の影響を受ける場合があります。",
+    "LocalTrustTitle": "Windows ローカル信頼モード", "LocalTrustDescription": "同梱の仮想 HID ドライバーは、この PC だけで信頼されるプロジェクト開発証明書を使用します。",
+    "LocalTrustAdmin": "インストール時に管理者 PowerShell ウィンドウが表示されます。", "LocalTrustTestSigning": "Windows のテスト署名を有効にする必要があります。",
+    "LocalTrustSecureBoot": "続行前にセキュアブートを手動で無効にする必要がある場合があります。", "LocalTrustRestart": "Windows の再起動が必要な場合にのみ、このページで通知します。",
+    "SecureBootGuideTitle": "セキュアブートを一時的に無効にする方法", "SecureBootWarning": "セキュリティ上の注意：UEFI 設定を変更する前に作業を保存し、BitLocker 回復キーを確認してください。",
+    "SecureBootStep1": "Windows 11：設定 > システム > 回復。Windows 10：設定 > 更新とセキュリティ > 回復を開きます。", "SecureBootStep2": "詳細設定のスタートアップで、今すぐ再起動を選択します。",
+    "SecureBootStep3": "トラブルシューティング > 詳細オプション > UEFI ファームウェアの設定 > 再起動を選択します。", "SecureBootStep4": "UEFI/BIOS の Security、Boot、Authentication から Secure Boot を探し、Disabled にして保存して終了します。名称はメーカーにより異なります。",
+    "SecureBootStep5": "Windows 起動後にこのページへ戻り、インストール / 修復を再実行します。このローカル信頼ドライバーの使用中はセキュアブートを無効のままにします。",
+    "SetupCheckPayload": "インストーラーペイロード", "SetupCheckDriver": "仮想 HID ドライバー", "SetupCheckRuntime": "仮想デバイスランタイム", "SetupCheckCodex": "Codex 接続",
+    "Ready": "準備完了", "NotReady": "未準備", "UpdateAvailable": "更新あり", "Checking": "確認中…", "ContinueInstallation": "インストールを続行", "StartRuntime": "ランタイムを起動", "Uninstall": "プラットフォーム設定を削除", "Installing": "インストール中…", "Uninstalling": "削除中…",
+    "PhaseReady": "Codex Micro を使用できます。", "PhaseNotInstalled": "必要なプラットフォーム設定をインストールしてください。", "PhaseNeedsRestart": "Windows を再起動し、このページに戻ってインストールを続行してください。",
+    "PhaseSecureBootBlocked": "セキュアブートを手動で無効にし、インストール / 修復を再実行してください。", "PhaseUpdateAvailable": "同梱設定の更新があります。", "PhaseRuntimeOffline": "ローカルランタイムが起動していません。", "PhaseCodexOffline": "設定は完了しています。Codex Desktop を開いて接続してください。",
+    "PhaseDriverError": "仮想 HID ドライバーの準備ができていません。インストール / 修復を実行してください。", "PhasePayloadMissing": "同梱 Windows インストーラーが不足または破損しています。", "PhaseUnsupported": "未対応のプラットフォームです。Windows 10 22H2 または Windows 11 x64 が必要です。", "PhaseNewerInstalled": "新しいバージョンがインストール済みのため、自動ダウングレードを停止しました。",
+    "PlatformInfoMacTitle": "Codex Bridge について", "PlatformInfoWindowsTitle": "Windows 設定について", "PlatformInfoMac": "Codex Bridge はループバック限定 CDP で Codex Desktop を起動し、ローカルサービスを実行します。", "PlatformInfoWindows": "ローカルで信頼する仮想 HID ドライバーと現在のユーザーのタスクが Windows 接続を提供します。削除してもテスト署名は無効になりません。",
+    "ConfirmInstallMac": "このユーザー用の Codex Bridge をインストールまたは修復しますか？", "ConfirmInstallWindows": "管理者 PowerShell を開き、ローカル仮想 HID ドライバーをインストールまたは修復しますか？", "ConfirmUninstall": "ランタイム、ドライバー、タスク、ローカル証明書を削除しますか？", "Confirm": "確認", "Cancel": "キャンセル", "Version": "インストール済み {installed} · 同梱 {bundled}", "Failed": "操作に失敗しました"
   }
 }

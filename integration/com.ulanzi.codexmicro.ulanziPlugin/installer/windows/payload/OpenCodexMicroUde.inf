@@ -1,0 +1,57 @@
+[Version]
+Signature="$WINDOWS NT$"
+Class=USB
+ClassGuid={36FC9E60-C465-11CF-8056-444553540000}
+Provider=%ProviderName%
+CatalogFile=OpenCodexMicroUde.cat
+DriverVer = 08/20/2026,18.55.16.569
+PnpLockdown=1
+
+[DestinationDirs]
+DefaultDestDir=12
+
+[SourceDisksNames]
+1=%DiskName%,,
+
+[SourceDisksFiles]
+OpenCodexMicroUde.sys=1
+
+[Manufacturer]
+%ProviderName%=Standard,NTamd64
+
+[Standard.NTamd64]
+%DeviceDescription%=OpenCodexMicroUde_Install,Root\OpenCodexMicroUde
+
+[OpenCodexMicroUde_Install.NT]
+CopyFiles=DriverCopyFiles
+
+[DriverCopyFiles]
+OpenCodexMicroUde.sys
+
+[OpenCodexMicroUde_Install.NT.HW]
+Include=machine.inf
+Needs=PciD3ColdSupported
+
+[OpenCodexMicroUde_Install.NT.Services]
+AddService=OpenCodexMicroUde,0x00000002,OpenCodexMicroUde_Service
+
+[OpenCodexMicroUde_Service]
+DisplayName=%ServiceDescription%
+ServiceType=1
+StartType=3
+ErrorControl=1
+ServiceBinary=%12%\OpenCodexMicroUde.sys
+Dependencies=ucx01000,udecx
+
+[OpenCodexMicroUde_Install.NT.Wdf]
+KmdfService=OpenCodexMicroUde,OpenCodexMicroUde_Wdf
+
+[OpenCodexMicroUde_Wdf]
+KmdfLibraryVersion=1.31
+
+[Strings]
+ProviderName="OpenCodexMicro"
+DeviceDescription="OpenCodexMicro Virtual USB Host"
+ServiceDescription="OpenCodexMicro UdeCx Virtual USB Driver"
+DiskName="OpenCodexMicro Virtual USB Driver Installation Media"
+

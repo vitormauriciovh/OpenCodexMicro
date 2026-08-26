@@ -43,6 +43,23 @@
     "UlanziNode": "Ulanzi Studio Node",
     "UnknownNode": "Nicht installiert oder nicht erfasst",
     "CheckAgain": "Erneut prüfen",
-    "InstallationGuide": "Installationsanleitung"
+    "InstallationGuide": "Installationsanleitung",
+    "PlatformSetupTitleMac": "Codex Bridge einrichten", "PlatformSetupTitleWindows": "Codex Micro unter Windows einrichten",
+    "PlatformSetupIntroMac": "Lokale Codex-Verbindung installieren, starten und prüfen.", "PlatformSetupIntroWindows": "Lokale virtuelle HID-Verbindung für Codex Desktop installieren und prüfen.",
+    "ExperimentalActionTitle": "Experimentelle Windows-Aktion", "ExperimentalActionDescription": "Diese Aktion verwendet Windows UI Automation und kann durch Codex-Updates, Fokus oder Barrierefreiheitsbeschränkungen beeinträchtigt werden.",
+    "LocalTrustTitle": "Lokaler Windows-Vertrauensmodus", "LocalTrustDescription": "Der enthaltene virtuelle HID-Treiber nutzt ein Entwicklungszertifikat, dem nur auf diesem PC vertraut wird.",
+    "LocalTrustAdmin": "Die Installation öffnet ein sichtbares Administrator-PowerShell-Fenster.", "LocalTrustTestSigning": "Der Windows-Testsignaturmodus muss aktiviert sein.",
+    "LocalTrustSecureBoot": "Secure Boot muss eventuell manuell deaktiviert werden.", "LocalTrustRestart": "Diese Seite weist nur bei Bedarf auf einen Windows-Neustart hin.",
+    "SecureBootGuideTitle": "Secure Boot vorübergehend deaktivieren", "SecureBootWarning": "Sicherheitshinweis: Speichern Sie Ihre Arbeit und halten Sie den BitLocker-Wiederherstellungsschlüssel bereit, bevor Sie UEFI-Einstellungen ändern.",
+    "SecureBootStep1": "Windows 11: Einstellungen > System > Wiederherstellung. Windows 10: Einstellungen > Update und Sicherheit > Wiederherstellung.", "SecureBootStep2": "Wählen Sie unter Erweiterter Start die Option Jetzt neu starten.",
+    "SecureBootStep3": "Wählen Sie Problembehandlung > Erweiterte Optionen > UEFI-Firmwareeinstellungen > Neu starten.", "SecureBootStep4": "Suchen Sie in UEFI/BIOS unter Security, Boot oder Authentication nach Secure Boot, wählen Sie Disabled und speichern Sie. Die Bezeichnung hängt vom Hersteller ab.",
+    "SecureBootStep5": "Kehren Sie nach dem Windows-Start hierher zurück und wählen Sie erneut Installieren / Reparieren. Secure Boot muss während der Nutzung dieses lokal vertrauenswürdigen Treibers deaktiviert bleiben.",
+    "SetupCheckPayload": "Installationspaket", "SetupCheckDriver": "Virtueller HID-Treiber", "SetupCheckRuntime": "Virtuelle Gerätelaufzeit", "SetupCheckCodex": "Codex-Verbindung",
+    "Ready": "Bereit", "NotReady": "Nicht bereit", "UpdateAvailable": "Update verfügbar", "Checking": "Wird geprüft…", "ContinueInstallation": "Installation fortsetzen", "StartRuntime": "Laufzeit starten", "Uninstall": "Plattformkomponenten deinstallieren", "Installing": "Wird installiert…", "Uninstalling": "Wird deinstalliert…",
+    "PhaseReady": "Codex Micro ist bereit.", "PhaseNotInstalled": "Installieren Sie zuerst die erforderlichen Plattformkomponenten.", "PhaseNeedsRestart": "Starten Sie Windows neu und setzen Sie die Installation danach hier fort.",
+    "PhaseSecureBootBlocked": "Deaktivieren Sie Secure Boot manuell und führen Sie Installieren / Reparieren erneut aus.", "PhaseUpdateAvailable": "Ein Update der enthaltenen Komponenten ist verfügbar.", "PhaseRuntimeOffline": "Die lokale Laufzeit ist nicht aktiv.", "PhaseCodexOffline": "Die Einrichtung ist bereit. Öffnen Sie Codex Desktop, um die Verbindung herzustellen.",
+    "PhaseDriverError": "Der virtuelle HID-Treiber ist nicht bereit. Führen Sie Installieren / Reparieren aus.", "PhasePayloadMissing": "Das enthaltene Windows-Installationspaket fehlt oder ist unvollständig.", "PhaseUnsupported": "Diese Plattform wird nicht unterstützt. Erforderlich ist Windows 10 22H2 oder Windows 11 x64.", "PhaseNewerInstalled": "Eine neuere Version ist bereits installiert. Das automatische Downgrade wurde blockiert.",
+    "PlatformInfoMacTitle": "Über Codex Bridge", "PlatformInfoWindowsTitle": "Über die Windows-Einrichtung", "PlatformInfoMac": "Codex Bridge startet Codex Desktop mit lokalem CDP und betreibt einen lokalen Hintergrunddienst.", "PlatformInfoWindows": "Ein lokal vertrauenswürdiger virtueller HID-Treiber und eine Aufgabe des aktuellen Benutzers stellen die Windows-Verbindung bereit. Die Deinstallation lässt den Testsignaturmodus unverändert.",
+    "ConfirmInstallMac": "Codex Bridge für diesen Benutzer installieren oder reparieren?", "ConfirmInstallWindows": "Administrator-PowerShell öffnen und den lokalen virtuellen HID-Treiber installieren oder reparieren?", "ConfirmUninstall": "Laufzeit, Treiber, Aufgabe und lokales Zertifikat entfernen?", "Confirm": "Bestätigen", "Cancel": "Abbrechen", "Version": "Installiert {installed} · Enthalten {bundled}", "Failed": "Vorgang fehlgeschlagen"
   }
 }

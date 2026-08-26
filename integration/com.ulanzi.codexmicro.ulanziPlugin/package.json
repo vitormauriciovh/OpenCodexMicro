@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
-    "check": "node --check plugin/app.js && node --check plugin/bridge-installer.js",
-    "smoke": "node test/smoke.mjs"
+    "check": "node --check plugin/app.js && node --check plugin/bridge-installer.js && node --check plugin/platform-profile.js && node --check plugin/windows-setup.js && node --check plugin/windows-codex-action.js && node --check plugin/windows-codex-focus.js && node --check plugin/windows-codex-usage.js && node --check plugin/windows-hid-state.js",
+    "smoke": "node test/windows-codex-usage.mjs && node test/windows-hid-state.mjs && node test/smoke.mjs"
   },
   "dependencies": {
     "ws": "^8.18.0"
