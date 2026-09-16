@@ -20,7 +20,13 @@
     { "Name": "Codex 任務監視器", "Tooltip": "顯示活動任務類型（WORK/CODEX）與模型。多個任務執行時自動輪播，閒置時顯示最近任務模型。" },
     { "Name": "Codex 批准", "Tooltip": "批准或執行待處理的 Codex 工具確認。" },
     { "Name": "Codex 拒絕", "Tooltip": "拒絕或取消待處理的 Codex 工具確認。" },
-    { "Name": "Codex 關注警報", "Tooltip": "顯示待關注/出錯任務數並跳轉至該任務。" }
+    { "Name": "Codex 關注警報", "Tooltip": "顯示待關注/出錯任務數並跳轉至該任務。" },
+    { "Name": "Codex 停止生成", "Tooltip": "立即中斷或停止 Codex Desktop 的目前生成。" },
+    { "Name": "Codex Token 監視器", "Tooltip": "顯示工作階段 Token 消耗量與上下文視窗百分比。" },
+    { "Name": "Codex 思考深度", "Tooltip": "顯示並循環切換模型思考深度（低/中/高）。" },
+    { "Name": "Codex 快捷指令: 測試與修復", "Tooltip": "指示 Codex 執行專案測試並修復遇到的錯誤。" },
+    { "Name": "Codex 快捷指令: 程式碼審查", "Tooltip": "指示 Codex 審查改動並發現潛在 Bug 與安全風險。" },
+    { "Name": "Codex 快捷指令: 提交訊息", "Tooltip": "指示 Codex 為未暫存或已改動內容產生語意化提交說明。" }
   ],
   "Localization": {
     "BridgeSetup": "Codex Bridge 設定",

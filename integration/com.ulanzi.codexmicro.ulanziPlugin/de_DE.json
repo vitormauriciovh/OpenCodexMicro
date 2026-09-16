@@ -20,7 +20,13 @@
     { "Name": "Codex-Aufgabenmonitor", "Tooltip": "Zeigt Aufgabentyp (WORK/CODEX) und Modell an. Wechselt bei mehreren Aufgaben oder zeigt das Modell der letzten Aufgabe." },
     { "Name": "Codex Genehmigen", "Tooltip": "Ausstehende Bestätigungen für Codex-Tools genehmigen oder ausführen." },
     { "Name": "Codex Ablehnen", "Tooltip": "Ausstehende Bestätigungen für Codex-Tools ablehnen oder abbrechen." },
-    { "Name": "Codex Aufmerksamkeitsalarm", "Tooltip": "Anzahl der Aufgaben anzeigen, die Aufmerksamkeit/Fehler erfordern, und dorthin springen." }
+    { "Name": "Codex Aufmerksamkeitsalarm", "Tooltip": "Anzahl der Aufgaben anzeigen, die Aufmerksamkeit/Fehler erfordern, und dorthin springen." },
+    { "Name": "Codex Generierung Stoppen", "Tooltip": "Die aktive Generierung in Codex Desktop sofort abbrechen oder anhalten." },
+    { "Name": "Codex Token-Monitor", "Tooltip": "Token-Nutzung der Sitzung und Prozentsatz des Kontextfensters anzeigen." },
+    { "Name": "Codex Denkaufwand", "Tooltip": "Denkaufwand des Modells anzeigen und umschalten (Niedrig/Mittel/Hoch)." },
+    { "Name": "Codex Prompt: Testen und Beheben", "Tooltip": "Codex auffordern, Tests auszuführen und Fehler zu beheben." },
+    { "Name": "Codex Prompt: Code-Überprüfung", "Tooltip": "Codex auffordern, Änderungen und Sicherheitsrisiken zu überprüfen." },
+    { "Name": "Codex Prompt: Commit-Nachricht", "Tooltip": "Codex auffordern, eine semantische Commit-Nachricht zu generieren." }
   ],
   "Localization": {
     "BridgeSetup": "Codex Bridge einrichten",

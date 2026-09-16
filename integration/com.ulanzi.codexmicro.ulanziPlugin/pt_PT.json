@@ -20,7 +20,13 @@
     { "Name": "Monitor de Tarefas Codex", "Tooltip": "Mostra o tipo de tarefa ativa (WORK/CODEX) e o modelo. Alterna entre tarefas se várias estiverem em execução, ou mostra o modelo da última tarefa." },
     { "Name": "Aprovar Codex", "Tooltip": "Aprova ou executa confirmações de ferramentas pendentes do Codex." },
     { "Name": "Recusar Codex", "Tooltip": "Recusa ou cancela confirmações de ferramentas pendentes do Codex." },
-    { "Name": "Alerta de Atenção Codex", "Tooltip": "Mostra contagem de tarefas com atenção/erro pendente e salta para a tarefa." }
+    { "Name": "Alerta de Atenção Codex", "Tooltip": "Mostra contagem de tarefas com atenção/erro pendente e salta para a tarefa." },
+    { "Name": "Parar Geração Codex", "Tooltip": "Cancela ou interrompe instantaneamente a resposta ativa no Codex Desktop." },
+    { "Name": "Monitor de Tokens Codex", "Tooltip": "Exibe o consumo de tokens da sessão e a percentagem da janela de contexto." },
+    { "Name": "Esforço de Raciocínio Codex", "Tooltip": "Exibe e alterna o nível de esforço de raciocínio do modelo (Baixo/Médio/Alto)." },
+    { "Name": "Prompt Codex: Testar e Corrigir", "Tooltip": "Pede ao Codex para executar os testes e corrigir erros." },
+    { "Name": "Prompt Codex: Rever Código", "Tooltip": "Pede ao Codex para rever as alterações e riscos de segurança." },
+    { "Name": "Prompt Codex: Mensagem de Commit", "Tooltip": "Pede ao Codex para gerar uma mensagem de commit semântica." }
   ],
   "Localization": {
     "BridgeSetup": "Configuração do Codex Bridge",

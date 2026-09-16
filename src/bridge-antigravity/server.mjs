@@ -45,6 +45,30 @@ async function openFileInEditor(filePath) {
   }
 }
 
+async function sendSlashCommand(cmdName) {
+  await focusVSCode();
+  const textMap = {
+    boost: "/boost",
+    grillme: "/grill-me",
+    goal: "/goal"
+  };
+  const commandText = textMap[cmdName] || `/${cmdName}`;
+  const script = `
+tell application "Visual Studio Code" to activate
+delay 0.15
+tell application "System Events"
+  keystroke "${commandText}"
+  delay 0.1
+  key code 36
+end tell
+`;
+  try {
+    await execFileAsync("/usr/bin/osascript", ["-e", script], { timeout: 3000 });
+  } catch (err) {
+    console.error("Failed to execute osascript keystroke:", err);
+  }
+}
+
 async function refresh() {
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
@@ -148,6 +172,17 @@ export const server = createServer(async (request, response) => {
     try {
       await focusVSCode();
       return json(response, 200, { ok: true, action: "attention" });
+    } catch (error) {
+      return json(response, 500, { ok: false, error: error.message });
+    }
+  }
+
+  const slashMatch = request.method === "POST" && url.pathname.match(/^\/action\/(boost|grillme|goal)$/);
+  if (slashMatch) {
+    try {
+      const slash = slashMatch[1];
+      await sendSlashCommand(slash);
+      return json(response, 200, { ok: true, slash });
     } catch (error) {
       return json(response, 500, { ok: false, error: error.message });
     }

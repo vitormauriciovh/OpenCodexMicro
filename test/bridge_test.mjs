@@ -9,6 +9,7 @@ import {
 } from "../src/bridge/thread-key.mjs";
 import {
   CodexCdpClient,
+  composerPromptExpression,
   composerSteerExpression,
   rendererActionExpression
 } from "../src/bridge/codex-cdp.mjs";
@@ -58,11 +59,11 @@ test("renderer actions execute once on key down", async () => {
   const calls = [];
   client.dispatchRendererAction = async (action) => calls.push(action);
 
-  for (const action of ["pin", "new"]) {
+  for (const action of ["pin", "new", "stop", "reasoning"]) {
     await client.dispatchNamedAction(action, true);
     await client.dispatchNamedAction(action, false);
   }
-  assert.deepEqual(calls, ["pin", "new"]);
+  assert.deepEqual(calls, ["pin", "new", "stop", "reasoning"]);
 });
 
 test("new renderer action accepts the current localized New conversation control", () => {
@@ -270,6 +271,76 @@ test("reject renderer action accepts localized and testid controls", () => {
     true
   );
   assert.equal(clicks, 1);
+});
+
+test("stop renderer action accepts localized Stop buttons", () => {
+  let clicks = 0;
+  const button = {
+    offsetParent: {},
+    innerText: "Stop generating",
+    getAttribute(name) { return name === "aria-label" ? "Stop generating" : null; },
+    matches() { return false; },
+    click() { clicks += 1; }
+  };
+  const document = {
+    querySelector() { return null; },
+    querySelectorAll() { return [button]; }
+  };
+  assert.equal(
+    vm.runInNewContext(rendererActionExpression("stop"), { document }),
+    true
+  );
+  assert.equal(clicks, 1);
+});
+
+test("reasoning renderer action clicks the reasoning effort trigger", () => {
+  let clicks = 0;
+  const triggerButton = {
+    offsetParent: {},
+    click() { clicks += 1; }
+  };
+  const effortSpan = {
+    closest(sel) { return sel === "button" ? triggerButton : null; }
+  };
+  const document = {
+    querySelector(sel) {
+      return sel.includes("ModelPickerTriggerEffortText") ? effortSpan : null;
+    },
+    querySelectorAll() { return []; }
+  };
+  assert.equal(
+    vm.runInNewContext(rendererActionExpression("reasoning"), { document }),
+    true
+  );
+  assert.equal(clicks, 1);
+});
+
+test("composerPromptExpression focuses editor and inserts prompt text", () => {
+  let focused = 0;
+  const commands = [];
+  const editor = {
+    offsetParent: {},
+    focus() { focused += 1; }
+  };
+  const document = {
+    querySelectorAll(sel) {
+      return sel.includes("contenteditable") ? [editor] : [];
+    },
+    execCommand(cmd, showUi, val) {
+      commands.push({ cmd, val });
+      return true;
+    }
+  };
+
+  assert.equal(
+    vm.runInNewContext(composerPromptExpression("Execute os testes"), { document }),
+    true
+  );
+  assert.equal(focused, 1);
+  assert.deepEqual(commands, [
+    { cmd: "selectAll", val: null },
+    { cmd: "insertText", val: "Execute os testes" }
+  ]);
 });
 
 test("unknown bridge actions are rejected", async () => {

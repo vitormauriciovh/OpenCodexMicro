@@ -56,6 +56,22 @@
   "com.ulanzi.ulanzistudio.antigravity.navigate": {
     "Name": "Antigravity 最新セッションとスクロール",
     "Tooltip": "押して最新セッションを表示、回して VS Code をスクロールします。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.hud": {
+    "Name": "Antigravity エージェント HUD",
+    "Tooltip": "エージェントのリアルタイム状態（PLANNING, EXECUTING, WAITING, IDLE）とタイマーを表示します。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.boost": {
+    "Name": "Antigravity /boost",
+    "Tooltip": "深い思考と厳格な検証を行う /boost コマンドを挿入します。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.grillme": {
+    "Name": "Antigravity /grill-me",
+    "Tooltip": "設計整合のための対話型インタビュー /grill-me を挿入します。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.goal": {
+    "Name": "Antigravity /goal",
+    "Tooltip": "自律的な長時間タスク実行 /goal コマンドを挿入します。"
   }
 }
 

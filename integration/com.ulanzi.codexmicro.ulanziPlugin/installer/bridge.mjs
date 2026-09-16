@@ -3765,7 +3765,7 @@ var MICRO_ACTION_KEYS = Object.freeze({
   mic: "ACT10",
   submit: "ACT12"
 });
-var RENDERER_ACTIONS = /* @__PURE__ */ new Set(["pin", "new", "approve", "reject"]);
+var RENDERER_ACTIONS = /* @__PURE__ */ new Set(["pin", "new", "approve", "reject", "stop", "reasoning"]);
 var PIN_ACTION_LABELS = Object.freeze([
   "Pin chat",
   "Unpin chat",
@@ -3912,6 +3912,19 @@ function rendererActionExpression(action) {
       ].some((label) => labels.has(label))) ?? buttons.find((button) =>
         button.matches?.('[data-testid*="reject"],[data-testid*="deny"],[data-testid*="cancel"]')
       );
+    } else if (action === "stop") {
+      const labels = ["Stop", "Stop generating", "Cancel", "Parar", "Cancelar", "Interromper", "\u505C\u6B62", "\u505C\u6B62\u751F\u6210", "\u53D6\u6D88", "\u4E2D\u6B62", "Abbrechen", "Stoppen"];
+      const buttons = [...document.querySelectorAll("button, [role=button]")].filter(visible);
+      target = buttons.find((button) => {
+        const aria = button.getAttribute("aria-label") || "";
+        const title = button.getAttribute("title") || "";
+        const text = (button.innerText || "").trim();
+        return labels.some((l) => aria.includes(l) || title.includes(l) || text.includes(l));
+      }) ?? buttons.find((button) => button.matches?.('[data-testid*="stop"],[data-testid*="cancel"]'));
+    } else if (action === "reasoning") {
+      const trigger = document.querySelector('[class*="ModelPickerTriggerEffortText"]')?.closest("button")
+        ?? [...document.querySelectorAll("button")].find((b) => visible(b) && (b.getAttribute("aria-label")?.includes("reasoning") || b.getAttribute("title")?.includes("reasoning")));
+      if (trigger) target = trigger;
     }
     if (!target) return false;
     target.click();
@@ -3935,6 +3948,17 @@ function composerSteerExpression() {
       );
     if (!steer) return false;
     steer.click();
+    return true;
+  })()`;
+}
+function composerPromptExpression(text) {
+  return `(() => {
+    const editor = [...document.querySelectorAll('[contenteditable="true"][role="textbox"]')]
+      .find((element) => element.offsetParent !== null);
+    if (!editor) throw new Error("Codex composer is not available");
+    editor.focus();
+    document.execCommand("selectAll", false, null);
+    document.execCommand("insertText", false, ${JSON.stringify(text)});
     return true;
   })()`;
 }
@@ -4268,11 +4292,19 @@ var SNAPSHOT_EXPRESSION = `(async () => {
     lastTask = enrichedSlots[0];
   }
 
+  const activeMeta = (activeThreadKey && conversationsMeta.get(normalizeThreadKey(activeThreadKey)))
+    || (enrichedSlots[0]?.threadId && conversationsMeta.get(enrichedSlots[0].threadId))
+    || null;
+  const tokenUsage = activeMeta?.latestTokenUsageInfo || null;
+  const reasoningEffort = activeMeta?.latestReasoningEffort || "medium";
+
   return {
     activeThreadKey,
     slots: enrichedSlots,
     activeTasks,
     lastTask,
+    tokenUsage,
+    reasoningEffort,
     usage,
     bridgeSnapshot: {
       source: cacheHit ? "cache" : "discovery",
@@ -4408,6 +4440,15 @@ var CodexCdpClient = class {
     await this.connect();
     const clicked = await this.evaluate(composerSteerExpression());
     if (!clicked) throw new Error("Codex Steer action is not available");
+  }
+  async submitPrompt(text) {
+    await this.connect();
+    await this.evaluate(composerPromptExpression(text));
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    await this.dispatchAction(MICRO_ACTION_KEYS.submit, 1);
+    await new Promise((resolve) => setTimeout(resolve, 35));
+    await this.dispatchAction(MICRO_ACTION_KEYS.submit, 0);
+    return true;
   }
   async dispatchJoystick(direction, distance) {
     const angle = { up: 0.75, right: 0, down: 0.25, left: 0.5 }[direction];
@@ -4662,7 +4703,7 @@ var server = createServer(async (request, response) => {
     }
   }
   const action = request.method === "POST" && url.pathname.match(
-    /^\/action\/(fast|approve|reject|pin|new|fork|mic|steer|submit)\/(down|up)$/
+    /^\/action\/(fast|approve|reject|pin|new|fork|mic|steer|submit|stop|reasoning)\/(down|up)$/
   );
   if (action) {
     try {
@@ -4677,6 +4718,19 @@ var server = createServer(async (request, response) => {
       return json(response, 200, { ok: true, bridge: true });
     } catch (error) {
       return json(response, 503, { ok: false, error: error.message });
+    }
+  }
+  if (request.method === "POST" && url.pathname === "/prompt") {
+    try {
+      let body = "";
+      for await (const chunk of request) body += chunk;
+      const { text } = JSON.parse(body || "{}");
+      if (!text) throw new Error("Prompt text is required");
+      await focusCodex();
+      await client.submitPrompt(text);
+      return json(response, 200, { ok: true });
+    } catch (error) {
+      return json(response, 500, { ok: false, error: error.message });
     }
   }
   const joystick = request.method === "POST" && url.pathname.match(

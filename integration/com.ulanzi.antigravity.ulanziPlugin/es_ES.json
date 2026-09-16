@@ -54,8 +54,23 @@
     "Tooltip": "Enfoca VS Code para iniciar una nueva conversación de Antigravity."
   },
   "com.ulanzi.ulanzistudio.antigravity.navigate": {
-    "Name": "Antigravity Última Sesión y Scroll",
+    "Name": "Antigravity Última Sesión & Scroll",
     "Tooltip": "Pulsa para enfocar la última sesión; gira para desplazarte en VS Code."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.hud": {
+    "Name": "Antigravity Estado HUD",
+    "Tooltip": "Muestra el estado del agente en tiempo real (PLANNING, EXECUTING, WAITING, IDLE) con título y cronómetro."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.boost": {
+    "Name": "Antigravity /boost",
+    "Tooltip": "Inyecta el comando /boost para razonamiento profundo y verificación rigurosa."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.grillme": {
+    "Name": "Antigravity /grill-me",
+    "Tooltip": "Inyecta el comando /grill-me para entrevista arquitectónica interactiva."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.goal": {
+    "Name": "Antigravity /goal",
+    "Tooltip": "Inyecta el comando /goal para ejecución autónoma de tareas de larga duración."
   }
 }
-

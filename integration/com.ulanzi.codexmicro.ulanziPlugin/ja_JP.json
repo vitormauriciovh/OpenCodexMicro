@@ -20,7 +20,13 @@
     { "Name": "Codex タスクモニター", "Tooltip": "アクティブなタスク種別（WORK/CODEX）とモデルを表示します。複数実行時は順に切り替え、待機時は最後のモデルを表示します。" },
     { "Name": "Codex 承認", "Tooltip": "保留中の Codex ツール確認を承認または実行します。" },
     { "Name": "Codex 拒否", "Tooltip": "保留中の Codex ツール確認を拒否またはキャンセルします。" },
-    { "Name": "Codex 注意アラート", "Tooltip": "注意/エラーが必要なタスク数を表示し、そのタスクにジャンプします。" }
+    { "Name": "Codex 注意アラート", "Tooltip": "注意/エラーが必要なタスク数を表示し、そのタスクにジャンプします。" },
+    { "Name": "Codex 生成停止", "Tooltip": "Codex Desktop のアクティブな生成を即座に中止または停止します。" },
+    { "Name": "Codex トークンモニター", "Tooltip": "セッショントークン使用量とコンテキストウィンドウの割合を表示します。" },
+    { "Name": "Codex 推論エフォート", "Tooltip": "推論エフォート（低/中/高）を表示し、切り替えます。" },
+    { "Name": "Codex プロンプト: テスト＆修正", "Tooltip": "テストを実行してエラーを修正するよう Codex に指示します。" },
+    { "Name": "Codex プロンプト: コードレビュー", "Tooltip": "変更点とセキュリティリスクをレビューするよう Codex に指示します。" },
+    { "Name": "Codex プロンプト: コミット作成", "Tooltip": "Conventional Commits 形式のコミットメッセージを生成するよう Codex に指示します。" }
   ],
   "Localization": {
     "BridgeSetup": "Codex Bridge 設定",

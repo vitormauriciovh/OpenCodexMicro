@@ -125,7 +125,7 @@ const server = createServer(async (request, response) => {
     }
   }
   const action = request.method === "POST" && url.pathname.match(
-    /^\/action\/(fast|approve|reject|pin|new|fork|mic|steer|submit)\/(down|up)$/
+    /^\/action\/(fast|approve|reject|pin|new|fork|mic|steer|submit|stop|reasoning)\/(down|up)$/
   );
   if (action) {
     try {
@@ -140,6 +140,19 @@ const server = createServer(async (request, response) => {
       return json(response, 200, { ok: true, bridge: true });
     } catch (error) {
       return json(response, 503, { ok: false, error: error.message });
+    }
+  }
+  if (request.method === "POST" && url.pathname === "/prompt") {
+    try {
+      let body = "";
+      for await (const chunk of request) body += chunk;
+      const { text } = JSON.parse(body || "{}");
+      if (!text) throw new Error("Prompt text is required");
+      await focusCodex();
+      await client.submitPrompt(text);
+      return json(response, 200, { ok: true });
+    } catch (error) {
+      return json(response, 500, { ok: false, error: error.message });
     }
   }
   const joystick = request.method === "POST" && url.pathname.match(

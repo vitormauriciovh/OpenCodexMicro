@@ -56,6 +56,22 @@
   "com.ulanzi.ulanzistudio.antigravity.navigate": {
     "Name": "Antigravity 最新会话与滚动",
     "Tooltip": "按下打开最新会话；旋转可在 VS Code 中滚动。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.hud": {
+    "Name": "Antigravity Agent 状态 HUD",
+    "Tooltip": "显示 Agent 实时状态（PLANNING, EXECUTING, WAITING, IDLE）与计时器。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.boost": {
+    "Name": "Antigravity /boost",
+    "Tooltip": "快捷输入 /boost 指令以启用深度思考与严谨验证。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.grillme": {
+    "Name": "Antigravity /grill-me",
+    "Tooltip": "快捷输入 /grill-me 指令以开展架构设计访谈。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.goal": {
+    "Name": "Antigravity /goal",
+    "Tooltip": "快捷输入 /goal 指令以开展长时间自主任务。"
   }
 }
 

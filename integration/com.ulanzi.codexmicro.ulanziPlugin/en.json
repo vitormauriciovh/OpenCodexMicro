@@ -20,7 +20,13 @@
     { "Name": "Codex Task Monitor", "Tooltip": "Show active task type (WORK/CODEX) and model. Cycles when multiple tasks run, or shows the latest task model." },
     { "Name": "Codex Approve", "Tooltip": "Approve or execute pending Codex tool confirmations." },
     { "Name": "Codex Deny", "Tooltip": "Deny or cancel pending Codex tool confirmations." },
-    { "Name": "Codex Attention Alert", "Tooltip": "Show pending attention/error task count and jump to the task." }
+    { "Name": "Codex Attention Alert", "Tooltip": "Show pending attention/error task count and jump to the task." },
+    { "Name": "Codex Stop Generation", "Tooltip": "Instantly cancel or stop the active turn in Codex Desktop." },
+    { "Name": "Codex Token Monitor", "Tooltip": "Display session token usage and context window percentage." },
+    { "Name": "Codex Reasoning Effort", "Tooltip": "Display and cycle model reasoning effort (Low/Med/High)." },
+    { "Name": "Codex Prompt: Test & Fix", "Tooltip": "Prompt Codex to run tests and fix errors." },
+    { "Name": "Codex Prompt: Code Review", "Tooltip": "Prompt Codex to review changes and security risks." },
+    { "Name": "Codex Prompt: Commit Msg", "Tooltip": "Prompt Codex to generate conventional commit messages." }
   ],
   "Localization": {
     "BridgeSetup": "Codex Bridge Setup",

@@ -56,6 +56,22 @@
   "com.ulanzi.ulanzistudio.antigravity.navigate": {
     "Name": "Antigravity Letzte Sitzung & Scrollen",
     "Tooltip": "Drücken für die letzte Sitzung; drehen zum Scrollen in VS Code."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.hud": {
+    "Name": "Antigravity Agent HUD",
+    "Tooltip": "Echtzeit-Agentenstatus (PLANNING, EXECUTING, WAITING, IDLE) mit Titel und Timer."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.boost": {
+    "Name": "Antigravity /boost",
+    "Tooltip": "Fügt den Befehl /boost für tiefes Nachdenken und Verifikation ein."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.grillme": {
+    "Name": "Antigravity /grill-me",
+    "Tooltip": "Fügt den Befehl /grill-me für interaktive Architektur-Interviews ein."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.goal": {
+    "Name": "Antigravity /goal",
+    "Tooltip": "Fügt den Befehl /goal für autonome Langzeitaufgaben ein."
   }
 }
 

@@ -170,6 +170,46 @@
       },
       "DisableAutomaticStates": true,
       "States": [{ "Name": "Latest & Scroll", "Image": "assets/icons/task-idle.png" }]
+    },
+    {
+      "Name": "Antigravity Agent HUD",
+      "Icon": "assets/icons/task-working.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.hud",
+      "Tooltip": "Real-time Agent Status HUD (PLANNING, EXECUTING, WAITING, IDLE) with session title and elapsed timer.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "HUD", "Image": "assets/icons/task-working.png" }]
+    },
+    {
+      "Name": "Antigravity /boost",
+      "Icon": "assets/icons/fast.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.boost",
+      "Tooltip": "Inject /boost slash command for deep thinking and rigorous verification.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Boost", "Image": "assets/icons/fast.png" }]
+    },
+    {
+      "Name": "Antigravity /grill-me",
+      "Icon": "assets/icons/steer.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.grillme",
+      "Tooltip": "Inject /grill-me slash command for interactive architectural interview.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Grill-Me", "Image": "assets/icons/steer.png" }]
+    },
+    {
+      "Name": "Antigravity /goal",
+      "Icon": "assets/icons/plugin.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.goal",
+      "Tooltip": "Inject /goal slash command for autonomous long-running task execution.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Goal", "Image": "assets/icons/plugin.png" }]
     }
   ]
 }

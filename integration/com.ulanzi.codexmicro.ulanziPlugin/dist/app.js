@@ -4075,7 +4075,13 @@ var ACTION_LABELS = Object.freeze({
   taskmonitor: "MONITOR",
   approve: "APPROVE",
   reject: "DENY",
-  attention: "ATTENTION"
+  attention: "ATTENTION",
+  stop: "STOP",
+  tokens: "TOKENS",
+  reasoning: "THINK",
+  prompt_test: "TEST",
+  prompt_review: "REVIEW",
+  prompt_commit: "COMMIT"
 });
 var TASK_ICON_PATHS = Object.freeze({
   idle: "assets/icons/task-idle.png",
@@ -4817,6 +4823,365 @@ function setRejectDisplay(instance) {
     }
   });
 }
+function formatTokenCount(num) {
+  if (num === null || num === void 0 || !Number.isFinite(num)) return "0";
+  if (num >= 1e6) {
+    return `${(num / 1e6).toFixed(2)}M`;
+  }
+  if (num >= 1e4) {
+    return `${Math.round(num / 1e3)}k`;
+  }
+  if (num >= 1e3) {
+    return `${(num / 1e3).toFixed(1)}k`;
+  }
+  return String(num);
+}
+function tokensIconData(tokenUsage, connected = true) {
+  if (!connected) {
+    const svg2 = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <defs>
+        <linearGradient id="bgOff" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#181c20"/>
+          <stop offset="100%" stop-color="#0c0e10"/>
+        </linearGradient>
+      </defs>
+      <rect width="196" height="196" rx="22" fill="url(#bgOff)"/>
+      <rect x="2" y="2" width="192" height="192" rx="20" fill="none" stroke="#2c333a" stroke-width="2"/>
+      <text x="98" y="90" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="800" fill="#8a96a3" letter-spacing="1">TOKENS</text>
+      <text x="98" y="118" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#ef4444" letter-spacing="0.8">OFFLINE</text>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg2).toString("base64")}`;
+  }
+  const total = tokenUsage?.total?.totalTokens ?? 0;
+  const last = tokenUsage?.last?.totalTokens ?? 0;
+  const contextWindow = tokenUsage?.modelContextWindow || 2e5;
+  const pct = Math.min(100, Math.round(total / contextWindow * 100));
+  const totalStr = formatTokenCount(total);
+  const lastStr = last > 0 ? `+${formatTokenCount(last)}` : "\u2014";
+  const pctColor = pct > 80 ? "#ef4444" : pct > 50 ? "#f59e0b" : "#3b82f6";
+  const barWidth = Math.max(4, Math.round(pct / 100 * 128));
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+    <defs>
+      <linearGradient id="bgTokens" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#161b22"/>
+        <stop offset="100%" stop-color="#0a0d10"/>
+      </linearGradient>
+    </defs>
+    <rect width="196" height="196" rx="22" fill="url(#bgTokens)"/>
+    <rect x="2" y="2" width="192" height="192" rx="20" fill="none" stroke="#21262d" stroke-width="2"/>
+
+    <g transform="translate(98, 36)">
+      <rect x="-38" y="-13" width="76" height="26" rx="13" fill="#1e293b" stroke="#334155" stroke-width="1.2"/>
+      <text x="0" y="5" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="11" font-weight="800" fill="#94a3b8" letter-spacing="1">TOKENS</text>
+    </g>
+
+    <text x="98" y="96" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="30" font-weight="900" fill="#f8fafc" letter-spacing="0.5">${totalStr}</text>
+    <text x="98" y="122" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#64748b" letter-spacing="0.8">LAST: <tspan fill="#38bdf8" font-weight="800">${lastStr}</tspan></text>
+
+    <!-- Context Window Bar -->
+    <g transform="translate(34, 142)">
+      <rect x="0" y="0" width="128" height="8" rx="4" fill="#21262d"/>
+      <rect x="0" y="0" width="${barWidth}" height="8" rx="4" fill="${pctColor}"/>
+    </g>
+    <text x="98" y="168" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="11" font-weight="800" fill="${pctColor}" letter-spacing="0.6">${pct}% CONTEXT</text>
+  </svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+function reasoningIconData(effort, connected = true) {
+  if (!connected) {
+    const svg2 = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <defs>
+        <linearGradient id="bgOff" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#181c20"/>
+          <stop offset="100%" stop-color="#0c0e10"/>
+        </linearGradient>
+      </defs>
+      <rect width="196" height="196" rx="22" fill="url(#bgOff)"/>
+      <rect x="2" y="2" width="192" height="192" rx="20" fill="none" stroke="#2c333a" stroke-width="2"/>
+      <text x="98" y="90" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="800" fill="#8a96a3" letter-spacing="1">THINK</text>
+      <text x="98" y="118" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#ef4444" letter-spacing="0.8">OFFLINE</text>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg2).toString("base64")}`;
+  }
+  const effortStr = String(effort || "medium").toLowerCase();
+  const isHigh = effortStr === "high";
+  const isMed = effortStr === "medium" || effortStr === "med";
+  const isLow = effortStr === "low";
+  const levelText = isHigh ? "HIGH" : isLow ? "LOW" : "MEDIUM";
+  const activeCol = isHigh ? "#ec4899" : isLow ? "#06b6d4" : "#8b5cf6";
+  const activeLevel = isHigh ? 3 : isLow ? 1 : 2;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+    <defs>
+      <linearGradient id="bgThink" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#161b22"/>
+        <stop offset="100%" stop-color="#0a0d10"/>
+      </linearGradient>
+      <filter id="glowEffort" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="3" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <rect width="196" height="196" rx="22" fill="url(#bgThink)"/>
+    <rect x="2" y="2" width="192" height="192" rx="20" fill="none" stroke="#21262d" stroke-width="2"/>
+
+    <g transform="translate(98, 36)">
+      <rect x="-42" y="-13" width="84" height="26" rx="13" fill="#1e1b4b" stroke="#3730a3" stroke-width="1.2"/>
+      <text x="0" y="5" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="11" font-weight="800" fill="#a5b4fc" letter-spacing="1.2">THINKING</text>
+    </g>
+
+    <!-- 3 Level Indicator Bars -->
+    <g transform="translate(68, 62)">
+      <rect x="0" y="${28 - 10}" width="16" height="10" rx="3" fill="${activeLevel >= 1 ? "#06b6d4" : "#1e293b"}" ${activeLevel >= 1 ? 'filter="url(#glowEffort)"' : ""}/>
+      <rect x="22" y="${28 - 18}" width="16" height="18" rx="3" fill="${activeLevel >= 2 ? "#8b5cf6" : "#1e293b"}" ${activeLevel >= 2 ? 'filter="url(#glowEffort)"' : ""}/>
+      <rect x="44" y="${28 - 28}" width="16" height="28" rx="3" fill="${activeLevel >= 3 ? "#ec4899" : "#1e293b"}" ${activeLevel >= 3 ? 'filter="url(#glowEffort)"' : ""}/>
+    </g>
+
+    <text x="98" y="126" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="22" font-weight="900" fill="${activeCol}" letter-spacing="1">${levelText}</text>
+    <text x="98" y="156" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="700" fill="#64748b" letter-spacing="0.8">PRESS TO CYCLE</text>
+  </svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+function stopIconData({ connected = true, isRunning = false }) {
+  if (!connected) {
+    const svg2 = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <defs>
+        <linearGradient id="bgOff" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#181c20"/>
+          <stop offset="100%" stop-color="#0c0e10"/>
+        </linearGradient>
+      </defs>
+      <rect width="196" height="196" rx="22" fill="url(#bgOff)"/>
+      <rect x="2" y="2" width="192" height="192" rx="20" fill="none" stroke="#2c333a" stroke-width="2"/>
+      <text x="98" y="90" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="800" fill="#8a96a3" letter-spacing="1">STOP</text>
+      <text x="98" y="118" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#ef4444" letter-spacing="0.8">OFFLINE</text>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg2).toString("base64")}`;
+  }
+  const borderCol = isRunning ? "#ef4444" : "#450a0a";
+  const btnCol = isRunning ? "#dc2626" : "#7f1d1d";
+  const subText = isRunning ? "CANCEL TURN" : "READY";
+  const subCol = isRunning ? "#fca5a5" : "#78716c";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+    <defs>
+      <linearGradient id="bgStop" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="${isRunning ? "#450a0a" : "#1c1917"}"/>
+        <stop offset="100%" stop-color="#0c0a09"/>
+      </linearGradient>
+      <filter id="glowStop" x="-40%" y="-40%" width="180%" height="180%">
+        <feGaussianBlur stdDeviation="${isRunning ? 4 : 2}" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <rect width="196" height="196" rx="22" fill="url(#bgStop)"/>
+    <rect x="2" y="2" width="192" height="192" rx="20" fill="none" stroke="${borderCol}" stroke-width="${isRunning ? 3 : 2}" ${isRunning ? 'filter="url(#glowStop)"' : ""}/>
+
+    <!-- Stop Button Circle with Center Square -->
+    <circle cx="98" cy="74" r="32" fill="${btnCol}" stroke="#f87171" stroke-width="3" filter="url(#glowStop)"/>
+    <rect x="84" y="60" width="28" height="28" rx="5" fill="#ffffff"/>
+
+    <text x="98" y="136" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="18" font-weight="900" fill="#ffffff" letter-spacing="2">STOP</text>
+    <text x="98" y="158" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="800" fill="${subCol}" letter-spacing="0.8">${subText}</text>
+  </svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+function promptIconData(type, connected = true) {
+  if (!connected) {
+    const svg2 = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <defs>
+        <linearGradient id="bgOff" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#181c20"/>
+          <stop offset="100%" stop-color="#0c0e10"/>
+        </linearGradient>
+      </defs>
+      <rect width="196" height="196" rx="22" fill="url(#bgOff)"/>
+      <rect x="2" y="2" width="192" height="192" rx="20" fill="none" stroke="#2c333a" stroke-width="2"/>
+      <text x="98" y="90" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="800" fill="#8a96a3" letter-spacing="1">PROMPT</text>
+      <text x="98" y="118" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#ef4444" letter-spacing="0.8">OFFLINE</text>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg2).toString("base64")}`;
+  }
+  let title = "PROMPT";
+  let sub = "1-TOUCH";
+  let col = "#10b981";
+  let iconPath = "";
+  if (type === "prompt_test") {
+    title = "TEST & FIX";
+    sub = "AUTO TEST";
+    col = "#10b981";
+    iconPath = `<path d="M90 60h16M98 60v12l-14 20h28l-14-20" fill="none" stroke="${col}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M88 84l6 6 14-14" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  } else if (type === "prompt_review") {
+    title = "REVIEW";
+    sub = "CODE & BUGS";
+    col = "#a855f7";
+    iconPath = `<circle cx="94" cy="74" r="14" fill="none" stroke="${col}" stroke-width="3.5"/>
+                <path d="M104 84l12 12" stroke="${col}" stroke-width="3.5" stroke-linecap="round"/>
+                <path d="M90 74h8M94 70v8" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>`;
+  } else if (type === "prompt_commit") {
+    title = "COMMIT";
+    sub = "SEMANTIC MSG";
+    col = "#0ea5e9";
+    iconPath = `<circle cx="98" cy="74" r="10" fill="${col}" stroke="#ffffff" stroke-width="3"/>
+                <line x1="72" y1="74" x2="88" y2="74" stroke="${col}" stroke-width="3.5" stroke-linecap="round"/>
+                <line x1="108" y1="74" x2="124" y2="74" stroke="${col}" stroke-width="3.5" stroke-linecap="round"/>`;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+    <defs>
+      <linearGradient id="bgPrompt" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#161b22"/>
+        <stop offset="100%" stop-color="#0a0d10"/>
+      </linearGradient>
+      <filter id="glowCol" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="3" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <rect width="196" height="196" rx="22" fill="url(#bgPrompt)"/>
+    <rect x="2" y="2" width="192" height="192" rx="20" fill="none" stroke="#21262d" stroke-width="2"/>
+
+    <g transform="translate(98, 36)">
+      <rect x="-42" y="-13" width="84" height="26" rx="13" fill="#1e293b" stroke="${col}" stroke-width="1.2"/>
+      <text x="0" y="5" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="11" font-weight="900" fill="${col}" letter-spacing="1.2">QUICK</text>
+    </g>
+
+    <g filter="url(#glowCol)">
+      ${iconPath}
+    </g>
+
+    <text x="98" y="136" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="16" font-weight="900" fill="#ffffff" letter-spacing="1">${title}</text>
+    <text x="98" y="158" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="800" fill="#94a3b8" letter-spacing="0.8">${sub}</text>
+  </svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+function setTokensDisplay(instance) {
+  const connected = Boolean(latestState?.connected);
+  const tokenUsage = latestState?.tokenUsage || null;
+  const total = tokenUsage?.total?.totalTokens ?? 0;
+  const last = tokenUsage?.last?.totalTokens ?? 0;
+  const digest = `tokens:${connected}:${total}:${last}`;
+  if (!instance.active || instance.lastDisplay === digest) return;
+  instance.lastDisplay = digest;
+  send({
+    cmd: "state",
+    param: {
+      statelist: [
+        {
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 1,
+          data: tokensIconData(tokenUsage, connected),
+          showtext: false,
+          textdata: ""
+        },
+        {
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 0,
+          state: 0,
+          showtext: false,
+          textdata: ""
+        }
+      ]
+    }
+  });
+}
+function setReasoningDisplay(instance) {
+  const connected = Boolean(latestState?.connected);
+  const effort = latestState?.reasoningEffort || null;
+  const digest = `reasoning:${connected}:${effort}`;
+  if (!instance.active || instance.lastDisplay === digest) return;
+  instance.lastDisplay = digest;
+  send({
+    cmd: "state",
+    param: {
+      statelist: [
+        {
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 1,
+          data: reasoningIconData(effort, connected),
+          showtext: false,
+          textdata: ""
+        },
+        {
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 0,
+          state: 0,
+          showtext: false,
+          textdata: ""
+        }
+      ]
+    }
+  });
+}
+function setStopDisplay(instance) {
+  const connected = Boolean(latestState?.connected);
+  const isRunning = (latestState?.activeTasks || []).length > 0;
+  const digest = `stop:${connected}:${isRunning}`;
+  if (!instance.active || instance.lastDisplay === digest) return;
+  instance.lastDisplay = digest;
+  send({
+    cmd: "state",
+    param: {
+      statelist: [
+        {
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 1,
+          data: stopIconData({ connected, isRunning }),
+          showtext: false,
+          textdata: ""
+        },
+        {
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 0,
+          state: 0,
+          showtext: false,
+          textdata: ""
+        }
+      ]
+    }
+  });
+}
+function setPromptDisplay(instance, type) {
+  const connected = Boolean(latestState?.connected);
+  const digest = `prompt:${type}:${connected}`;
+  if (!instance.active || instance.lastDisplay === digest) return;
+  instance.lastDisplay = digest;
+  send({
+    cmd: "state",
+    param: {
+      statelist: [
+        {
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 1,
+          data: promptIconData(type, connected),
+          showtext: false,
+          textdata: ""
+        },
+        {
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 0,
+          state: 0,
+          showtext: false,
+          textdata: ""
+        }
+      ]
+    }
+  });
+}
 function renderInstance(instance) {
   const slot = taskSlot(instance.uuid);
   if (slot === null) {
@@ -4839,6 +5204,22 @@ function renderInstance(instance) {
     }
     if (action === "reject") {
       setRejectDisplay(instance);
+      return;
+    }
+    if (action === "tokens") {
+      setTokensDisplay(instance);
+      return;
+    }
+    if (action === "reasoning") {
+      setReasoningDisplay(instance);
+      return;
+    }
+    if (action === "stop") {
+      setStopDisplay(instance);
+      return;
+    }
+    if (action === "prompt_test" || action === "prompt_review" || action === "prompt_commit") {
+      setPromptDisplay(instance, action);
       return;
     }
     if (!latestState?.connected) {
@@ -4875,11 +5256,16 @@ function renderInstance(instance) {
 function renderAll() {
   for (const instance of instances.values()) renderInstance(instance);
 }
-async function bridgeRequest(path, method = "GET") {
-  const response = await fetch(`${BRIDGE_URL}${path}`, {
+async function bridgeRequest(path, method = "GET", body = null) {
+  const options = {
     method,
     signal: AbortSignal.timeout(1200)
-  });
+  };
+  if (body) {
+    options.headers = { "Content-Type": "application/json" };
+    options.body = JSON.stringify(body);
+  }
+  const response = await fetch(`${BRIDGE_URL}${path}`, options);
   const payload = await response.json();
   if (!response.ok || payload.ok === false) {
     throw new Error(payload.error || `Bridge HTTP ${response.status}`);
@@ -4916,6 +5302,50 @@ async function invoke(instance, pressed) {
     if (!action) throw new Error(`Unknown Codex action: ${instance.uuid}`);
     if (action === "usage") {
       if (pressed) await bridgeRequest("/focus", "POST");
+      return;
+    }
+    if (action === "tokens") {
+      if (pressed) await bridgeRequest("/focus", "POST");
+      return;
+    }
+    if (action === "reasoning") {
+      if (pressed) {
+        await bridgeRequest("/action/reasoning/down", "POST");
+        await bridgeRequest("/focus", "POST").catch(() => {
+        });
+      }
+      return;
+    }
+    if (action === "stop") {
+      if (pressed) {
+        await bridgeRequest("/action/stop/down", "POST");
+        await bridgeRequest("/focus", "POST").catch(() => {
+        });
+      }
+      return;
+    }
+    if (action === "prompt_test") {
+      if (pressed) {
+        await bridgeRequest("/prompt", "POST", {
+          text: "Execute os testes do projeto e corrija qualquer erro ou falha encontrada."
+        });
+      }
+      return;
+    }
+    if (action === "prompt_review") {
+      if (pressed) {
+        await bridgeRequest("/prompt", "POST", {
+          text: "Analise as altera\xE7\xF5es recentes (git diff), aponte poss\xEDveis bugs, vulnerabilidades de seguran\xE7a e melhorias de performance."
+        });
+      }
+      return;
+    }
+    if (action === "prompt_commit") {
+      if (pressed) {
+        await bridgeRequest("/prompt", "POST", {
+          text: "Gere uma mensagem de commit sem\xE2ntica e profissional (Conventional Commits) para as altera\xE7\xF5es pendentes."
+        });
+      }
       return;
     }
     if (action === "taskmonitor") {

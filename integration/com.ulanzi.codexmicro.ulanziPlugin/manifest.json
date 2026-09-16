@@ -205,6 +205,66 @@
       "Controllers": ["Keypad"],
       "DisableAutomaticStates": true,
       "States": [{ "Name": "Attention", "Image": "assets/icons/attention.png" }]
+    },
+    {
+      "Name": "Codex Stop Generation",
+      "Icon": "assets/icons/reject.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.stop",
+      "Tooltip": "Instantly cancel or stop the active turn in Codex Desktop.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Stop", "Image": "assets/icons/reject.png" }]
+    },
+    {
+      "Name": "Codex Token Monitor",
+      "Icon": "assets/icons/usage.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.tokens",
+      "Tooltip": "Display session token usage and context window percentage.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Tokens", "Image": "assets/icons/usage.png" }]
+    },
+    {
+      "Name": "Codex Reasoning Effort",
+      "Icon": "assets/icons/fast.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.reasoning",
+      "Tooltip": "Display and cycle model reasoning effort (Low/Med/High).",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Reasoning", "Image": "assets/icons/fast.png" }]
+    },
+    {
+      "Name": "Codex Prompt: Test & Fix",
+      "Icon": "assets/icons/plugin.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.prompt_test",
+      "Tooltip": "Prompt Codex to run tests and fix errors.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Test & Fix", "Image": "assets/icons/plugin.png" }]
+    },
+    {
+      "Name": "Codex Prompt: Code Review",
+      "Icon": "assets/icons/plugin.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.prompt_review",
+      "Tooltip": "Prompt Codex to review changes and security risks.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Review", "Image": "assets/icons/plugin.png" }]
+    },
+    {
+      "Name": "Codex Prompt: Commit Msg",
+      "Icon": "assets/icons/plugin.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.prompt_commit",
+      "Tooltip": "Prompt Codex to generate conventional commit messages.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Commit", "Image": "assets/icons/plugin.png" }]
     }
   ]
 }

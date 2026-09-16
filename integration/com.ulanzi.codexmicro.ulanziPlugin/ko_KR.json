@@ -20,7 +20,13 @@
     { "Name": "Codex 작업 모니터", "Tooltip": "활성 작업 유형(WORK/CODEX)과 모델을 표시합니다. 여러 작업 실행 시 순환하거나 최근 작업 모델을 표시합니다." },
     { "Name": "Codex 승인", "Tooltip": "대기 중인 Codex 도구 확인을 승인하거나 실행합니다." },
     { "Name": "Codex 거부", "Tooltip": "대기 중인 Codex 도구 확인을 거부하거나 취소합니다." },
-    { "Name": "Codex 주의 알림", "Tooltip": "주의/오류가 필요한 작업 수를 표시하고 해당 작업으로 이동합니다." }
+    { "Name": "Codex 주의 알림", "Tooltip": "주의/오류가 필요한 작업 수를 표시하고 해당 작업으로 이동합니다." },
+    { "Name": "Codex 생성 중지", "Tooltip": "Codex Desktop에서 활성 생성을 즉시 취소하거나 중지합니다." },
+    { "Name": "Codex 토큰 모니터", "Tooltip": "세션 토큰 사용량과 컨텍스트 창 백분율을 표시합니다." },
+    { "Name": "Codex 추론 노력", "Tooltip": "모델 추론 노력 수준을 표시하고 전환합니다(낮음/중간/높음)." },
+    { "Name": "Codex 프롬프트: 테스트 및 수정", "Tooltip": "Codex에 테스트를 실행하고 오류를 수정하도록 요청합니다." },
+    { "Name": "Codex 프롬프트: 코드 검토", "Tooltip": "Codex에 변경 사항 및 보안 위험을 검토하도록 요청합니다." },
+    { "Name": "Codex 프롬프트: 커밋 메시지", "Tooltip": "Codex에 시맨틱 커밋 메시지를 생성하도록 요청합니다." }
   ],
   "Localization": {
     "BridgeSetup": "Codex Bridge 설정",
