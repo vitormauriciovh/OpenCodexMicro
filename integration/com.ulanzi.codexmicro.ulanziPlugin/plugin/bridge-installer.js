@@ -150,23 +150,35 @@ export function createBridgeInstaller({
     }
   }
 
+  async function readAppPlistVersion() {
+    try {
+      const plistContent = await readFile(join(bridgeContents, "Info.plist"), "utf8");
+      const match = plistContent.match(/<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/);
+      return match?.[1] || null;
+    } catch {
+      return null;
+    }
+  }
+
   async function status() {
-    const [appInstalled, runtimeInstalled, agentInstalled, metadata, probe] = await Promise.all([
+    const [appInstalled, runtimeInstalled, agentInstalled, metadata, probe, plistVersion] = await Promise.all([
       exists(bridgeExecutable, fsConstants.X_OK),
       exists(bridgeRuntime),
       exists(bridgeAgent),
       readJson(installMetadata),
-      probeBridge()
+      probeBridge(),
+      readAppPlistVersion()
     ]);
+    const installedVersion = metadata?.version || plistVersion || null;
     const installed = appInstalled && runtimeInstalled && agentInstalled;
     return {
       supported: platform === "darwin" && Number.isInteger(uid),
       installed,
       appInstalled,
       serviceInstalled: runtimeInstalled && agentInstalled,
-      installedVersion: metadata?.version || null,
+      installedVersion,
       bundledVersion: version,
-      needsUpdate: !installed || metadata?.version !== version,
+      needsUpdate: !installed || installedVersion !== version,
       appPath: bridgeApp,
       nodeExecutable: metadata?.nodeExecutable || null,
       nodeVersion: metadata?.nodeVersion || null,

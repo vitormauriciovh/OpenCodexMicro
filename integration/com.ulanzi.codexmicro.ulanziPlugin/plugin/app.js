@@ -58,44 +58,82 @@ function actionName(uuid) {
   return Object.hasOwn(ACTION_LABELS, name) ? name : null;
 }
 
-function usageRemaining(usage) {
+function extractWindowUsage(usage, kind) {
   const windows = Array.isArray(usage?.windows) ? usage.windows : [];
-  const window = windows.find((item) => item?.kind === "weekly") ?? windows[0];
-  const remaining = Number(window?.remainingPercent);
+  const window = windows.find((item) => item?.kind === kind);
+  if (!window) return null;
+  const remaining = Number(window.remainingPercent);
   return Number.isFinite(remaining)
     ? Math.max(0, Math.min(100, Math.round(remaining)))
     : null;
 }
 
+function usageRemaining(usage) {
+  return {
+    fiveHour: extractWindowUsage(usage, "five-hour"),
+    weekly: extractWindowUsage(usage, "weekly")
+  };
+}
+
+function getUsageProgressColor(remaining) {
+  if (remaining === null) return "#858c8f";
+  if (remaining >= 50) return "#2fbd7f";
+  if (remaining >= 20) return "#e89b2d";
+  return "#e45861";
+}
+
 function usageIconData(usage) {
-  const remaining = usageRemaining(usage);
-  const progress = remaining === null
-    ? "#858c8f"
-    : remaining >= 50
-      ? "#2fbd7f"
-      : remaining >= 20
-        ? "#e89b2d"
-        : "#e45861";
-  const circumference = 2 * Math.PI * 57;
-  const filled = circumference * (remaining ?? 0) / 100;
-  const value = remaining === null ? "—" : String(remaining);
-  const percent = remaining === null ? "" : "%";
+  const { fiveHour, weekly } = usageRemaining(usage);
+  const col1 = getUsageProgressColor(fiveHour);
+  const col2 = getUsageProgressColor(weekly);
+
+  const r1 = 60;
+  const r2 = 47;
+  const c1 = 2 * Math.PI * r1;
+  const c2 = 2 * Math.PI * r2;
+  const filled1 = c1 * (fiveHour ?? 0) / 100;
+  const filled2 = c2 * (weekly ?? 0) / 100;
+
+  const val1 = fiveHour === null ? "—" : String(fiveHour);
+  const pct1 = fiveHour === null ? "" : "%";
+  const val2 = weekly === null ? "—" : String(weekly);
+  const pct2 = weekly === null ? "" : "%";
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="196" height="196" viewBox="0 0 196 196">
     <defs>
       <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
-        <feGaussianBlur stdDeviation="4.5" result="blur"/>
+        <feGaussianBlur stdDeviation="3.5" result="blur"/>
         <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
       </filter>
     </defs>
     <image width="196" height="196" href="data:image/png;base64,${USAGE_BASE64}" xlink:href="data:image/png;base64,${USAGE_BASE64}"/>
     <g fill="none" transform="rotate(-90 98 94)">
-      <circle cx="98" cy="94" r="58.5" stroke="#ffffff" stroke-opacity=".57" stroke-width="2.4"/>
-      <circle cx="98" cy="94" r="57" stroke="#5e6c68" stroke-opacity=".57" stroke-width="16"/>
-      <circle cx="98" cy="94" r="57" stroke="#a0aca9" stroke-width="12"/>
-      <circle cx="98" cy="94" r="57" stroke="#cdd6d3" stroke-width="6"/>
-      ${remaining === null ? "" : `<circle cx="98" cy="94" r="57" stroke="${progress}" stroke-opacity=".5" stroke-width="18" stroke-linecap="butt" stroke-dasharray="${filled} ${circumference - filled}" filter="url(#glow)"/><circle cx="98" cy="94" r="57" stroke="${progress}" stroke-width="10" stroke-linecap="butt" stroke-dasharray="${filled} ${circumference - filled}"/>`}
+      <!-- Outer Track (5H) -->
+      <circle cx="98" cy="94" r="${r1}" stroke="#5e6c68" stroke-opacity=".25" stroke-width="7"/>
+      <circle cx="98" cy="94" r="${r1}" stroke="#a0aca9" stroke-opacity=".3" stroke-width="5"/>
+      <!-- Inner Track (Weekly) -->
+      <circle cx="98" cy="94" r="${r2}" stroke="#5e6c68" stroke-opacity=".25" stroke-width="7"/>
+      <circle cx="98" cy="94" r="${r2}" stroke="#a0aca9" stroke-opacity=".3" stroke-width="5"/>
+      <!-- Outer Progress (5H) -->
+      ${fiveHour !== null ? `
+        <circle cx="98" cy="94" r="${r1}" stroke="${col1}" stroke-opacity=".4" stroke-width="10" stroke-linecap="butt" stroke-dasharray="${filled1} ${c1 - filled1}" filter="url(#glow)"/>
+        <circle cx="98" cy="94" r="${r1}" stroke="${col1}" stroke-width="6" stroke-linecap="butt" stroke-dasharray="${filled1} ${c1 - filled1}"/>
+      ` : ""}
+      <!-- Inner Progress (Weekly) -->
+      ${weekly !== null ? `
+        <circle cx="98" cy="94" r="${r2}" stroke="${col2}" stroke-opacity=".4" stroke-width="10" stroke-linecap="butt" stroke-dasharray="${filled2} ${c2 - filled2}" filter="url(#glow)"/>
+        <circle cx="98" cy="94" r="${r2}" stroke="${col2}" stroke-width="6" stroke-linecap="butt" stroke-dasharray="${filled2} ${c2 - filled2}"/>
+      ` : ""}
     </g>
-    <text x="98" y="105" fill="#303638" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="36" font-weight="700" text-anchor="middle">${value}${percent ? `<tspan dx="2" dy="-2" font-size="18">${percent}</tspan>` : ""}</text>
+    <!-- Center text: 5H and WK -->
+    <text x="98" y="85" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif">
+      <tspan font-size="11" font-weight="700" fill="#6b787c" letter-spacing="0.5">5H </tspan>
+      <tspan font-size="17" font-weight="800" fill="#2d3335">${val1}${pct1 ? `<tspan dx="1" dy="-2" font-size="11" font-weight="700" fill="#6b787c">${pct1}</tspan>` : ""}</tspan>
+    </text>
+    <text x="98" y="108" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif">
+      <tspan font-size="11" font-weight="700" fill="#6b787c" letter-spacing="0.5">WK </tspan>
+      <tspan font-size="17" font-weight="800" fill="#2d3335">${val2}${pct2 ? `<tspan dx="1" dy="-2" font-size="11" font-weight="700" fill="#6b787c">${pct2}</tspan>` : ""}</tspan>
+    </text>
   </svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
@@ -243,22 +281,33 @@ function setTaskDisplay(instance, path, text) {
 }
 
 function setUsageDisplay(instance, usage) {
-  const remaining = usageRemaining(usage);
-  const digest = `usage:${remaining ?? "unknown"}`;
+  const { fiveHour, weekly } = usageRemaining(usage);
+  const digest = `usage:${fiveHour ?? "none"}:${weekly ?? "none"}`;
   if (!instance.active || instance.lastDisplay === digest) return;
   instance.lastDisplay = digest;
   send({
     cmd: "state",
     param: {
-      statelist: [{
-        uuid: instance.uuid,
-        actionid: instance.actionid,
-        key: instance.key,
-        type: 1,
-        data: usageIconData(usage),
-        showtext: true,
-        textdata: ACTION_LABELS.usage
-      }]
+      statelist: [
+        {
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 1,
+          data: usageIconData(usage),
+          showtext: false,
+          textdata: ""
+        },
+        {
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 0,
+          state: 0,
+          showtext: false,
+          textdata: ""
+        }
+      ]
     }
   });
 }
@@ -267,16 +316,16 @@ function renderInstance(instance) {
   const slot = taskSlot(instance.uuid);
   if (slot === null) {
     const action = actionName(instance.uuid);
+    if (action === "usage") {
+      setUsageDisplay(instance, latestState?.connected ? latestState.usage : null);
+      return;
+    }
     if (!latestState?.connected) {
       if (action === "navigate") {
         setTaskDisplay(instance, TASK_ICON_PATHS.idle, "Bridge Offline");
       } else {
         setDisplay(instance, 0, "Bridge Offline");
       }
-      return;
-    }
-    if (action === "usage") {
-      setUsageDisplay(instance, latestState.usage);
       return;
     }
     if (action === "navigate") {

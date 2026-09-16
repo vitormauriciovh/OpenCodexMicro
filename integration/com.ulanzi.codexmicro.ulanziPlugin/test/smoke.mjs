@@ -297,8 +297,8 @@ try {
   );
   const usageItem = usageState?.param?.statelist?.[0];
   assert.equal(usageItem?.type, 1);
-  assert.equal(usageItem?.showtext, true);
-  assert.equal(usageItem?.textdata, "USAGE");
+  assert.equal(usageItem?.showtext, false);
+  assert.equal(usageItem?.textdata, "");
   assert.match(usageItem?.data || "", /^data:image\/svg\+xml;base64,/);
   const usageSvg = Buffer.from(usageItem.data.split(",")[1], "base64").toString();
   assert.match(usageSvg, />23<tspan/);

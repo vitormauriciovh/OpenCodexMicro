@@ -180,6 +180,15 @@ const bridgePlist = `<?xml version="1.0" encoding="UTF-8"?>
 `;
 await writeFile(bridgeAgent, bridgePlist, { mode: 0o644 });
 
+const installMetadata = join(appRoot, "install.json");
+await writeFile(installMetadata, `${JSON.stringify({
+  version: releaseVersion,
+  nodeExecutable: process.execPath,
+  nodeVersion: process.version,
+  nodeSource: "system",
+  installedAt: new Date().toISOString()
+}, null, 2)}\n`, { mode: 0o600 });
+
 for (const agent of [bridgeAgent]) {
   try {
     execFileSync("/bin/launchctl", ["bootout", `gui/${uid}`, agent], {
