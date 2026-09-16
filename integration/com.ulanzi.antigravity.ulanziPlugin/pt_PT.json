@@ -45,6 +45,10 @@
     "Name": "Antigravity Ver Walkthrough",
     "Tooltip": "Abre o resumo de walkthrough gerado no VS Code."
   },
+  "com.ulanzi.ulanzistudio.antigravity.usage": {
+    "Name": "Antigravity Uso / Quota",
+    "Tooltip": "Exibe o uso da janela de contexto e limites de sessão com contagem regressiva de reset."
+  },
   "com.ulanzi.ulanzistudio.antigravity.new": {
     "Name": "Antigravity Nova Sessão",
     "Tooltip": "Foca o VS Code para iniciar uma nova conversa no Antigravity."

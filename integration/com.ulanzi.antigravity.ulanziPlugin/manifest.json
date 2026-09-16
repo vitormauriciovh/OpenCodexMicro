@@ -136,6 +136,16 @@
       "States": [{ "Name": "Walkthrough", "Image": "assets/icons/steer.png" }]
     },
     {
+      "Name": "Antigravity Usage",
+      "Icon": "assets/icons/usage.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.usage",
+      "Tooltip": "Display remaining Antigravity context window and session allowance with reset countdown.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Usage", "Image": "assets/icons/usage.png" }]
+    },
+    {
       "Name": "Antigravity New Session",
       "Icon": "assets/icons/new.png",
       "PropertyInspectorPath": "property-inspector/setup.html",

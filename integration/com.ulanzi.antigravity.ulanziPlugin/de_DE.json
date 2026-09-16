@@ -45,6 +45,10 @@
     "Name": "Antigravity Zusammenfassung anzeigen",
     "Tooltip": "Öffnet die Zusammenfassung in VS Code."
   },
+  "com.ulanzi.ulanzistudio.antigravity.usage": {
+    "Name": "Antigravity Nutzung / Quote",
+    "Tooltip": "Zeigt verbleibenden Kontext und Sitzungskontingent mit Reset-Countdown an."
+  },
   "com.ulanzi.ulanzistudio.antigravity.new": {
     "Name": "Antigravity Neue Sitzung",
     "Tooltip": "Fokussiert VS Code für ein neues Antigravity-Gespräch."

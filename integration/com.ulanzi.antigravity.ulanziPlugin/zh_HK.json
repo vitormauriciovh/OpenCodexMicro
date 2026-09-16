@@ -45,6 +45,10 @@
     "Name": "Antigravity 查看總結",
     "Tooltip": "在 VS Code 中開啟成果總結文檔。"
   },
+  "com.ulanzi.ulanzistudio.antigravity.usage": {
+    "Name": "Antigravity 用量與配額",
+    "Tooltip": "顯示 Antigravity 上下文視窗與會話配額剩餘量及重置倒計時。"
+  },
   "com.ulanzi.ulanzistudio.antigravity.new": {
     "Name": "Antigravity 新會話",
     "Tooltip": "聚焦 VS Code 並開始新 Antigravity 對話。"

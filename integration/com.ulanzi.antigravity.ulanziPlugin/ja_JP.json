@@ -45,6 +45,10 @@
     "Name": "Antigravity まとめを表示",
     "Tooltip": "VS Code で成果サマリーを開きます。"
   },
+  "com.ulanzi.ulanzistudio.antigravity.usage": {
+    "Name": "Antigravity 使用量 / クォータ",
+    "Tooltip": "コンテキストウィンドウとセッション残量、リセットまでのカウントダウンを表示します。"
+  },
   "com.ulanzi.ulanzistudio.antigravity.new": {
     "Name": "Antigravity 新規セッション",
     "Tooltip": "VS Code にフォーカスして新しいセッションを開始します。"

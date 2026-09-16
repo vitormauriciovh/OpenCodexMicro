@@ -45,6 +45,10 @@
     "Name": "Antigravity Ver Resumen",
     "Tooltip": "Abre el resumen de cambios generado en VS Code."
   },
+  "com.ulanzi.ulanzistudio.antigravity.usage": {
+    "Name": "Antigravity Uso / Cuota",
+    "Tooltip": "Muestra el uso de la ventana de contexto y cuota de sesión con cuenta regresiva."
+  },
   "com.ulanzi.ulanzistudio.antigravity.new": {
     "Name": "Antigravity Nueva Sesión",
     "Tooltip": "Enfoca VS Code para iniciar una nueva conversación de Antigravity."

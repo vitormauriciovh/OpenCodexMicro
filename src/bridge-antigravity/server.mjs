@@ -174,7 +174,7 @@ export const server = createServer(async (request, response) => {
   return json(response, 404, { ok: false, error: "Not found" });
 });
 
-if (process.argv[1] && process.argv[1].endsWith("server.mjs")) {
+if (process.argv[1] && (process.argv[1].endsWith("server.mjs") || process.argv[1].endsWith("bridge-antigravity.mjs"))) {
   server.listen(PORT, HOST, () => {
     console.log(`Antigravity Bridge listening on http://${HOST}:${PORT}`);
     refresh();

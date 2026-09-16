@@ -19,6 +19,8 @@
     "check:plugin": "npm --prefix integration/com.ulanzi.codexmicro.ulanziPlugin run check && npm --prefix integration/com.ulanzi.codexmicro.ulanziPlugin run smoke",
     "check": "npm run test && npm run check:node && npm run build:all && npm run check:plugin",
     "setup": "node scripts/install.mjs",
+    "setup:antigravity": "node scripts/install-antigravity.mjs",
+    "setup:all": "node scripts/install.mjs && node scripts/install-antigravity.mjs",
     "install:plugin": "node scripts/install-plugin.mjs",
     "install:plugin:antigravity": "node scripts/install-antigravity-plugin.mjs",
     "install:all": "npm run install:plugin && npm run install:plugin:antigravity",

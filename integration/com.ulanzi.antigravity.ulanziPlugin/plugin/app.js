@@ -21,6 +21,7 @@ const ACTION_LABELS = Object.freeze({
   subagents: "SUBAGENTS",
   plan: "PLAN",
   walkthrough: "WALKTHROUGH",
+  usage: "USAGE",
   new: "NEW",
   navigate: "LATEST"
 });
@@ -62,6 +63,111 @@ function formatElapsed(ms) {
   const hr = Math.floor(min / 60);
   const remMin = min % 60;
   return `${hr}h ${remMin}m`;
+}
+
+function extractWindowUsage(usage, kind) {
+  const windows = Array.isArray(usage?.windows) ? usage.windows : [];
+  const window = windows.find((item) => item?.kind === kind);
+  if (!window) return null;
+  const remaining = Number(window.remainingPercent);
+  return Number.isFinite(remaining)
+    ? Math.max(0, Math.min(100, Math.round(remaining)))
+    : null;
+}
+
+function usageRemaining(usage) {
+  return {
+    context: extractWindowUsage(usage, "context"),
+    session: extractWindowUsage(usage, "session")
+  };
+}
+
+function formatResetCountdown(resetsAt) {
+  if (!resetsAt || !Number.isFinite(resetsAt)) return null;
+  const targetMs = resetsAt > 1e11 ? resetsAt : resetsAt * 1000;
+  const diffMs = targetMs - Date.now();
+  if (diffMs <= 0) return null;
+  if (diffMs < 3600000) {
+    const mins = Math.max(1, Math.ceil(diffMs / 60000));
+    return `RESET ${mins}M`;
+  }
+  if (diffMs < 86400000) {
+    const hrs = Math.floor(diffMs / 3600000);
+    const mins = Math.floor((diffMs % 3600000) / 60000);
+    return mins > 0 ? `RESET ${hrs}H ${mins}M` : `RESET ${hrs}H`;
+  }
+  const days = Math.floor(diffMs / 86400000);
+  const hrs = Math.floor((diffMs % 86400000) / 3600000);
+  return hrs > 0 ? `RESET ${days}D ${hrs}H` : `RESET ${days}D`;
+}
+
+function getPrimaryResetText(usage) {
+  const windows = Array.isArray(usage?.windows) ? usage.windows : [];
+  const primary = windows.find((w) => w?.kind === "session" && w?.resetsAt) ||
+                  windows.find((w) => w?.resetsAt);
+  return primary?.resetsAt ? formatResetCountdown(primary.resetsAt) : null;
+}
+
+function getUsageProgressColor(remaining) {
+  if (remaining === null) return "#858c8f";
+  if (remaining >= 50) return "#10b981";
+  if (remaining >= 20) return "#f59e0b";
+  return "#ef4444";
+}
+
+function usageIconData(usage) {
+  const { context, session } = usageRemaining(usage);
+  const col1 = "#8b5cf6"; // Purple for context window
+  const col2 = getUsageProgressColor(session); // Session allowance
+  const resetLabel = getPrimaryResetText(usage) || "ANTIGRAVITY";
+
+  const r1 = 60;
+  const r2 = 46;
+  const c1 = 2 * Math.PI * r1;
+  const c2 = 2 * Math.PI * r2;
+  const filled1 = c1 * (context ?? 95) / 100;
+  const filled2 = c2 * (session ?? 90) / 100;
+
+  const val1 = context === null ? "—" : String(context);
+  const pct1 = context === null ? "" : "%";
+  const val2 = session === null ? "—" : String(session);
+  const pct2 = session === null ? "" : "%";
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+    <defs>
+      <linearGradient id="bgUsage" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#0f172a"/>
+        <stop offset="100%" stop-color="#020617"/>
+      </linearGradient>
+      <filter id="glowUsage" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="3.5" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <rect width="196" height="196" rx="24" fill="url(#bgUsage)"/>
+    <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="#1e293b" stroke-width="2"/>
+    <g fill="none" transform="rotate(-90 98 92)">
+      <!-- Outer Track (CTX) -->
+      <circle cx="98" cy="92" r="${r1}" stroke="#334155" stroke-opacity=".35" stroke-width="7"/>
+      <!-- Inner Track (SES) -->
+      <circle cx="98" cy="92" r="${r2}" stroke="#334155" stroke-opacity=".35" stroke-width="7"/>
+      <!-- Outer Progress (CTX) -->
+      <circle cx="98" cy="92" r="${r1}" stroke="${col1}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${filled1} ${c1 - filled1}" filter="url(#glowUsage)"/>
+      <!-- Inner Progress (SES) -->
+      <circle cx="98" cy="92" r="${r2}" stroke="${col2}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${filled2} ${c2 - filled2}"/>
+    </g>
+    <!-- Center text: CTX and SES -->
+    <text x="98" y="83" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif">
+      <tspan font-size="11" font-weight="700" fill="#a5b4fc" letter-spacing="0.5">CTX </tspan>
+      <tspan font-size="17" font-weight="900" fill="#ffffff">${val1}${pct1 ? `<tspan dx="1" dy="-2" font-size="11" font-weight="700" fill="#a5b4fc">${pct1}</tspan>` : ""}</tspan>
+    </text>
+    <text x="98" y="107" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif">
+      <tspan font-size="11" font-weight="700" fill="#6ee7b7" letter-spacing="0.5">SES </tspan>
+      <tspan font-size="17" font-weight="900" fill="#ffffff">${val2}${pct2 ? `<tspan dx="1" dy="-2" font-size="11" font-weight="700" fill="#6ee7b7">${pct2}</tspan>` : ""}</tspan>
+    </text>
+    <text x="98" y="165" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="9" font-weight="800" fill="#94a3b8" letter-spacing="0.8">${resetLabel}</text>
+  </svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
 
 function contextOf(message) {
@@ -392,6 +498,8 @@ function updateDisplays() {
       sendSvgState(instance, planIconData());
     } else if (name === "walkthrough") {
       sendSvgState(instance, walkthroughIconData());
+    } else if (name === "usage") {
+      sendSvgState(instance, usageIconData(latestState?.usage));
     } else if (name === "new") {
       sendSvgState(instance, newSessionIconData());
     } else if (name === "navigate") {
@@ -489,6 +597,8 @@ async function handleMessage(raw) {
       await invokeAction("plan");
     } else if (name === "walkthrough") {
       await invokeAction("walkthrough");
+    } else if (name === "usage") {
+      await fetch(`${BRIDGE_URL}/focus`, { method: "POST" }).catch(() => {});
     } else if (name === "new") {
       await fetch(`${BRIDGE_URL}/focus`, { method: "POST" }).catch(() => {});
     } else if (name === "navigate") {

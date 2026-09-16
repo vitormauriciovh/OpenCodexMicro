@@ -45,6 +45,10 @@
     "Name": "Antigravity Walkthrough",
     "Tooltip": "Open the walkthrough artifact in VS Code."
   },
+  "com.ulanzi.ulanzistudio.antigravity.usage": {
+    "Name": "Antigravity Usage",
+    "Tooltip": "Display remaining Antigravity context window and session allowance with reset countdown."
+  },
   "com.ulanzi.ulanzistudio.antigravity.new": {
     "Name": "Antigravity New Session",
     "Tooltip": "Focus VS Code to start a new Antigravity session."

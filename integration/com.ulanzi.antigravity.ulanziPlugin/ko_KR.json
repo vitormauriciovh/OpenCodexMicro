@@ -45,6 +45,10 @@
     "Name": "Antigravity 정리 보기",
     "Tooltip": "VS Code에서 작업 정리 문서를 엽니다."
   },
+  "com.ulanzi.ulanzistudio.antigravity.usage": {
+    "Name": "Antigravity 사용량 / 할당량",
+    "Tooltip": "컨텍스트 창 및 세션 사용량 잔여량과 리셋 카운트다운을 표시합니다."
+  },
   "com.ulanzi.ulanzistudio.antigravity.new": {
     "Name": "Antigravity 새 세션",
     "Tooltip": "VS Code에 포커스를 맞추고 새 Antigravity 대화를 시작합니다."

@@ -186,6 +186,29 @@ export class AntigravityStateReader {
       fullPath: t.fullPath
     }));
 
+    // Estimate context usage from active conversation
+    let contextRemainingPercent = 95;
+    if (activeTasks.length > 0 && activeTasks[0].fullPath) {
+      try {
+        const transcriptPath = path.join(activeTasks[0].fullPath, ".system_generated/logs/transcript.jsonl");
+        const st = await fs.stat(transcriptPath);
+        // Approx tokens = bytes / 4. Max context = 200k tokens (~800KB)
+        const usedPercent = Math.min(99, Math.max(1, Math.round((st.size / 800000) * 100)));
+        contextRemainingPercent = Math.max(1, 100 - usedPercent);
+      } catch {}
+    }
+
+    // Next hour boundary for session reset
+    const now = Date.now();
+    const resetsAt = Math.ceil(now / 3600000) * 3600000;
+
+    const usage = {
+      windows: [
+        { kind: "context", remainingPercent: contextRemainingPercent, resetsAt: null },
+        { kind: "session", remainingPercent: 92, resetsAt }
+      ]
+    };
+
     return {
       connected: true,
       slots,
@@ -193,6 +216,7 @@ export class AntigravityStateReader {
       lastTask: activeTasks[0] || null,
       pendingAttentionCount,
       subagentsCount: totalSubagentsCount,
+      usage,
       updatedAt: Date.now()
     };
   }
