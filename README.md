@@ -15,11 +15,12 @@ Steer, Mic, Submit, and Latest Task & Scroll Encoder actions.
 
 | Feature | Behavior |
 | --- | --- |
-| Five live task actions | Show Codex's Most Recent tasks with idle, working, complete, attention, or error state |
+| Five live task actions | Show Codex's Most Recent tasks with idle, working (with elapsed timer), complete, attention, or error state |
 | Exact task switching | Route the selected thread through Codex's own Micro event bus |
-| Codex controls | Fast, Usage, Pin, New, Fork, Steer, Mic, and Submit |
+| Codex controls | Fast, Usage (with reset countdown), Approve, Deny, Attention Alert, Pin, New, Fork, Steer, Mic, and Submit |
 | Encoder navigation | Press to open task 1; turn left/right to scroll up/down through Ulanzi Studio's hotkey protocol |
-| Live usage | Draw the remaining Codex allowance directly on the key; press to return to Codex |
+| Live usage | Draw the remaining Codex allowance and reset countdown directly on the key; press to return to Codex |
+| Attention Alert | Display count of threads needing approval or intervention and jump directly to them |
 | Ulanzi Studio integration | Let Ulanzi Studio own the device and manage the key layout |
 | Local-only transport | Bind CDP and the Bridge API to loopback addresses only |
 
@@ -114,8 +115,8 @@ diagnostics, updates, and uninstall instructions.
 ## Configure
 
 The physical layout is managed in Ulanzi Studio. The plugin ships these
-actions: Codex Task 1–5, Fast, Usage, Pin, New, Fork, Steer, Mic, Submit, and
-Latest Task & Scroll for Encoder controls.
+actions: Codex Task 1–5, Fast, Usage, Approve, Deny, Attention Alert, Pin, New,
+Fork, Steer, Mic, Submit, and Latest Task & Scroll for Encoder controls.
 No separate device daemon or shortcut mapping is required.
 
 Select any configured action to open the shared **Codex Bridge Setup** page.

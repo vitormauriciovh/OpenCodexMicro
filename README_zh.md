@@ -14,11 +14,12 @@ Fork、Steer、Mic、Submit 和 Latest Task & Scroll 旋钮操作。
 
 | 功能 | 行为 |
 | --- | --- |
-| 五个实时任务 Action | 展示 Codex Most Recent 任务及空闲、运行、完成、等待处理或错误状态 |
+| 五个实时任务 Action | 展示 Codex Most Recent 任务及空闲、运行（带运行耗时）、完成、等待处理或错误状态 |
 | 精确任务切换 | 通过 Codex 自己的 Micro event bus 打开按键显示的任务 |
-| Codex 常用控制 | Fast、Usage、Pin、New、Fork、Steer、Mic 和 Submit |
+| Codex 常用控制 | Fast、Usage（带重置倒计时）、Approve、Deny、Attention Alert、Pin、New、Fork、Steer、Mic 和 Submit |
 | 旋钮导航 | 按下打开 task1；左/右旋转通过 Ulanzi Studio hotkey 协议向上/向下滚动 |
-| Usage 显示 | 在按键上动态绘制剩余额度，点击后回到 Codex 应用 |
+| Usage 显示 | 在按键上动态绘制剩余额度及重置倒计时，点击后回到 Codex 应用 |
+| Attention Alert | 动态显示待审批/待处理的任务数量，一键直达需要注意的任务 |
 | Ulanzi Studio 集成 | 由 Ulanzi Studio 独占设备并管理实体键位 |
 | 仅本机通信 | CDP 与 Bridge API 都只绑定回环地址 |
 

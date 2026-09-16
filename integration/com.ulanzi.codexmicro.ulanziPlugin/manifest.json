@@ -175,6 +175,36 @@
       "Controllers": ["Keypad"],
       "DisableAutomaticStates": true,
       "States": [{ "Name": "Task Monitor", "Image": "assets/icons/task-idle.png" }]
+    },
+    {
+      "Name": "Codex Approve",
+      "Icon": "assets/icons/approve.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.approve",
+      "Tooltip": "Approve or execute pending Codex tool confirmations.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Approve", "Image": "assets/icons/approve.png" }]
+    },
+    {
+      "Name": "Codex Deny",
+      "Icon": "assets/icons/reject.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.reject",
+      "Tooltip": "Deny or cancel pending Codex tool confirmations.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Deny", "Image": "assets/icons/reject.png" }]
+    },
+    {
+      "Name": "Codex Attention Alert",
+      "Icon": "assets/icons/attention.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.attention",
+      "Tooltip": "Show pending attention/error task count and jump to the task.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Attention", "Image": "assets/icons/attention.png" }]
     }
   ]
 }

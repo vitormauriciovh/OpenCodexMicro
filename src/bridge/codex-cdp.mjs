@@ -20,7 +20,7 @@ const MICRO_ACTION_KEYS = Object.freeze({
   mic: "ACT10",
   submit: "ACT12"
 });
-const RENDERER_ACTIONS = new Set(["pin", "new"]);
+const RENDERER_ACTIONS = new Set(["pin", "new", "approve", "reject"]);
 const PIN_ACTION_LABELS = Object.freeze([
   "Pin chat",
   "Unpin chat",
@@ -45,6 +45,71 @@ const STEER_ACTION_LABELS = Object.freeze([
   "调整方向",
   "調整方向",
   "引導"
+]);
+const APPROVE_ACTION_LABELS = Object.freeze([
+  "Approve",
+  "Allow",
+  "Run",
+  "Accept",
+  "Confirm",
+  "Yes",
+  "Proceed",
+  "Aprovar",
+  "Permitir",
+  "Executar",
+  "Aceitar",
+  "Confirmar",
+  "Sim",
+  "Prosseguir",
+  "批准",
+  "允许",
+  "运行",
+  "接受",
+  "确认",
+  "是",
+  "继续",
+  "承認",
+  "許可",
+  "実行",
+  "同意",
+  "確認",
+  "はい",
+  "続行",
+  "Genehmigen",
+  "Zulassen",
+  "Ausführen",
+  "Bestätigen"
+]);
+const REJECT_ACTION_LABELS = Object.freeze([
+  "Reject",
+  "Deny",
+  "Cancel",
+  "Decline",
+  "No",
+  "Dismiss",
+  "Stop",
+  "Rejeitar",
+  "Negar",
+  "Cancelar",
+  "Recusar",
+  "Não",
+  "Dispensar",
+  "Parar",
+  "拒绝",
+  "否认",
+  "取消",
+  "否",
+  "关闭",
+  "停止",
+  "拒否",
+  "却下",
+  "キャンセル",
+  "辞退",
+  "いいえ",
+  "閉じる",
+  "Ablehnen",
+  "Verweigern",
+  "Abbrechen"
 ]);
 
 export function rendererActionExpression(action) {
@@ -83,6 +148,26 @@ export function rendererActionExpression(action) {
           (button.innerText || "").trim()
         ].some((label) => labels.has(label)));
       }
+    } else if (action === "approve") {
+      const labels = new Set(${JSON.stringify(APPROVE_ACTION_LABELS)});
+      const buttons = [...document.querySelectorAll("button, [role=button]")].filter(visible);
+      target = buttons.find((button) => [
+        button.getAttribute("aria-label"),
+        button.getAttribute("title"),
+        (button.innerText || "").trim()
+      ].some((label) => labels.has(label))) ?? buttons.find((button) =>
+        button.matches?.('[data-testid*="approve"],[data-testid*="allow"],[data-testid*="run"]')
+      );
+    } else if (action === "reject") {
+      const labels = new Set(${JSON.stringify(REJECT_ACTION_LABELS)});
+      const buttons = [...document.querySelectorAll("button, [role=button]")].filter(visible);
+      target = buttons.find((button) => [
+        button.getAttribute("aria-label"),
+        button.getAttribute("title"),
+        (button.innerText || "").trim()
+      ].some((label) => labels.has(label))) ?? buttons.find((button) =>
+        button.matches?.('[data-testid*="reject"],[data-testid*="deny"],[data-testid*="cancel"]')
+      );
     }
     if (!target) return false;
     target.click();
@@ -564,7 +649,13 @@ export class CodexCdpClient {
 
   async dispatchNamedAction(action, pressed) {
     const key = MICRO_ACTION_KEYS[action];
-    if (key) return this.dispatchAction(key, pressed ? 1 : 0);
+    if (key) {
+      const result = await this.dispatchAction(key, pressed ? 1 : 0);
+      if (pressed && (action === "approve" || action === "reject")) {
+        void this.dispatchRendererAction(action).catch(() => {});
+      }
+      return result;
+    }
     if (!RENDERER_ACTIONS.has(action)) {
       throw new Error(`Unsupported Codex bridge action: ${action}`);
     }

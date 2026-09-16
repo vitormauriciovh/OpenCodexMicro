@@ -3765,7 +3765,7 @@ var MICRO_ACTION_KEYS = Object.freeze({
   mic: "ACT10",
   submit: "ACT12"
 });
-var RENDERER_ACTIONS = /* @__PURE__ */ new Set(["pin", "new"]);
+var RENDERER_ACTIONS = /* @__PURE__ */ new Set(["pin", "new", "approve", "reject"]);
 var PIN_ACTION_LABELS = Object.freeze([
   "Pin chat",
   "Unpin chat",
@@ -3790,6 +3790,71 @@ var STEER_ACTION_LABELS = Object.freeze([
   "\u8C03\u6574\u65B9\u5411",
   "\u8ABF\u6574\u65B9\u5411",
   "\u5F15\u5C0E"
+]);
+var APPROVE_ACTION_LABELS = Object.freeze([
+  "Approve",
+  "Allow",
+  "Run",
+  "Accept",
+  "Confirm",
+  "Yes",
+  "Proceed",
+  "Aprovar",
+  "Permitir",
+  "Executar",
+  "Aceitar",
+  "Confirmar",
+  "Sim",
+  "Prosseguir",
+  "\u6279\u51C6",
+  "\u5141\u8BB8",
+  "\u8FD0\u884C",
+  "\u63A5\u53D7",
+  "\u786E\u8BA4",
+  "\u662F",
+  "\u7EE7\u7EED",
+  "\u627F\u8A8D",
+  "\u8A31\u53EF",
+  "\u5B9F\u884C",
+  "\u540C\u610F",
+  "\u78BA\u8A8D",
+  "\u306F\u3044",
+  "\u7D9A\u884C",
+  "Genehmigen",
+  "Zulassen",
+  "Ausf\xFChren",
+  "Best\xE4tigen"
+]);
+var REJECT_ACTION_LABELS = Object.freeze([
+  "Reject",
+  "Deny",
+  "Cancel",
+  "Decline",
+  "No",
+  "Dismiss",
+  "Stop",
+  "Rejeitar",
+  "Negar",
+  "Cancelar",
+  "Recusar",
+  "N\xE3o",
+  "Dispensar",
+  "Parar",
+  "\u62D2\u7EDD",
+  "\u5426\u8BA4",
+  "\u53D6\u6D88",
+  "\u5426",
+  "\u5173\u95ED",
+  "\u505C\u6B62",
+  "\u62D2\u5426",
+  "\u5374\u4E0B",
+  "\u30AD\u30E3\u30F3\u30BB\u30EB",
+  "\u8F9E\u9000",
+  "\u3044\u3044\u3048",
+  "\u9589\u3058\u308B",
+  "Ablehnen",
+  "Verweigern",
+  "Abbrechen"
 ]);
 function rendererActionExpression(action) {
   return `(() => {
@@ -3827,6 +3892,26 @@ function rendererActionExpression(action) {
           (button.innerText || "").trim()
         ].some((label) => labels.has(label)));
       }
+    } else if (action === "approve") {
+      const labels = new Set(${JSON.stringify(APPROVE_ACTION_LABELS)});
+      const buttons = [...document.querySelectorAll("button, [role=button]")].filter(visible);
+      target = buttons.find((button) => [
+        button.getAttribute("aria-label"),
+        button.getAttribute("title"),
+        (button.innerText || "").trim()
+      ].some((label) => labels.has(label))) ?? buttons.find((button) =>
+        button.matches?.('[data-testid*="approve"],[data-testid*="allow"],[data-testid*="run"]')
+      );
+    } else if (action === "reject") {
+      const labels = new Set(${JSON.stringify(REJECT_ACTION_LABELS)});
+      const buttons = [...document.querySelectorAll("button, [role=button]")].filter(visible);
+      target = buttons.find((button) => [
+        button.getAttribute("aria-label"),
+        button.getAttribute("title"),
+        (button.innerText || "").trim()
+      ].some((label) => labels.has(label))) ?? buttons.find((button) =>
+        button.matches?.('[data-testid*="reject"],[data-testid*="deny"],[data-testid*="cancel"]')
+      );
     }
     if (!target) return false;
     target.click();
@@ -4299,7 +4384,14 @@ var CodexCdpClient = class {
   }
   async dispatchNamedAction(action, pressed) {
     const key = MICRO_ACTION_KEYS[action];
-    if (key) return this.dispatchAction(key, pressed ? 1 : 0);
+    if (key) {
+      const result = await this.dispatchAction(key, pressed ? 1 : 0);
+      if (pressed && (action === "approve" || action === "reject")) {
+        void this.dispatchRendererAction(action).catch(() => {
+        });
+      }
+      return result;
+    }
     if (!RENDERER_ACTIONS.has(action)) {
       throw new Error(`Unsupported Codex bridge action: ${action}`);
     }

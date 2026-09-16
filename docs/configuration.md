@@ -13,9 +13,12 @@ No repository or npm working directory is required for this flow.
 
 | Action | Behavior |
 | --- | --- |
-| Codex Task 1–5 | Show the matching Most Recent task title and state; press to open it |
+| Codex Task 1–5 | Show the matching Most Recent task title and state (including live elapsed time when running); press to open it |
 | Fast | Toggle Fast mode for the active task |
-| Usage | Show remaining usage; press to focus Codex |
+| Usage | Show remaining usage allowance and reset countdown; press to focus Codex |
+| Approve | One-touch approve pending command or tool action in the active thread |
+| Deny | One-touch reject / cancel pending tool call in the active thread |
+| Attention Alert | Display count of threads needing approval or intervention; press to switch directly to the pending thread |
 | Pin | Pin or unpin the active task |
 | New | Create a new Codex task |
 | Latest Task & Scroll (Encoder) | Press to open task 1; turn left/right to send mouse-wheel up/down through the Ulanzi hotkey protocol |

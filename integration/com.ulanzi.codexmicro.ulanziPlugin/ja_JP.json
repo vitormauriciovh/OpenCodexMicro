@@ -17,7 +17,10 @@
     { "Name": "Codex を誘導", "Tooltip": "現在の入力欄のテキストを実行中タスクへの誘導入力として送信します。" },
     { "Name": "Codex マイク", "Tooltip": "Codex のマイク操作を切り替えます。" },
     { "Name": "Codex に送信", "Tooltip": "現在の Codex 入力欄のテキストを送信またはキューに追加します。" },
-    { "Name": "Codex タスクモニター", "Tooltip": "アクティブなタスク種別（WORK/CODEX）とモデルを表示します。複数実行時は順に切り替え、待機時は最後のモデルを表示します。" }
+    { "Name": "Codex タスクモニター", "Tooltip": "アクティブなタスク種別（WORK/CODEX）とモデルを表示します。複数実行時は順に切り替え、待機時は最後のモデルを表示します。" },
+    { "Name": "Codex 承認", "Tooltip": "保留中の Codex ツール確認を承認または実行します。" },
+    { "Name": "Codex 拒否", "Tooltip": "保留中の Codex ツール確認を拒否またはキャンセルします。" },
+    { "Name": "Codex 注意アラート", "Tooltip": "注意/エラーが必要なタスク数を表示し、そのタスクにジャンプします。" }
   ],
   "Localization": {
     "BridgeSetup": "Codex Bridge 設定",

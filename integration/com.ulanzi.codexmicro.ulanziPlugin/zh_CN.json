@@ -17,7 +17,10 @@
     { "Name": "引导 Codex", "Tooltip": "将当前编辑器文本作为引导输入发送给正在运行的任务。" },
     { "Name": "Codex 麦克风", "Tooltip": "切换 Codex 麦克风操作。" },
     { "Name": "提交到 Codex", "Tooltip": "提交或排队发送当前 Codex 编辑器文本。" },
-    { "Name": "Codex 任务监视器", "Tooltip": "显示活动任务类型（WORK/CODEX）与模型。多个任务运行时自动轮播，空闲时显示最近任务模型。" }
+    { "Name": "Codex 任务监视器", "Tooltip": "显示活动任务类型（WORK/CODEX）与模型。多个任务运行时自动轮播，空闲时显示最近任务模型。" },
+    { "Name": "Codex 批准", "Tooltip": "批准或执行待处理的 Codex 工具确认。" },
+    { "Name": "Codex 拒绝", "Tooltip": "拒绝或取消待处理的 Codex 工具确认。" },
+    { "Name": "Codex 关注警报", "Tooltip": "显示待关注/出错任务数并跳转至该任务。" }
   ],
   "Localization": {
     "BridgeSetup": "Codex Bridge 设置",

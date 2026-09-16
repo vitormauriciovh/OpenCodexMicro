@@ -232,6 +232,46 @@ test("steer renderer action accepts the current localized control", () => {
   assert.equal(clicks, 1);
 });
 
+test("approve renderer action accepts localized and testid controls", () => {
+  let clicks = 0;
+  const button = {
+    offsetParent: {},
+    innerText: "Aprovar",
+    getAttribute(name) { return name === "aria-label" ? "Aprovar" : null; },
+    matches() { return false; },
+    click() { clicks += 1; }
+  };
+  const document = {
+    querySelector() { return null; },
+    querySelectorAll() { return [button]; }
+  };
+  assert.equal(
+    vm.runInNewContext(rendererActionExpression("approve"), { document }),
+    true
+  );
+  assert.equal(clicks, 1);
+});
+
+test("reject renderer action accepts localized and testid controls", () => {
+  let clicks = 0;
+  const button = {
+    offsetParent: {},
+    innerText: "Cancel",
+    getAttribute(name) { return name === "title" ? "Cancel" : null; },
+    matches() { return false; },
+    click() { clicks += 1; }
+  };
+  const document = {
+    querySelector() { return null; },
+    querySelectorAll() { return [button]; }
+  };
+  assert.equal(
+    vm.runInNewContext(rendererActionExpression("reject"), { document }),
+    true
+  );
+  assert.equal(clicks, 1);
+});
+
 test("unknown bridge actions are rejected", async () => {
   const client = new CodexCdpClient();
   await assert.rejects(

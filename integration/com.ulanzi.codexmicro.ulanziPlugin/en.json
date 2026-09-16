@@ -17,7 +17,10 @@
     { "Name": "Steer Codex", "Tooltip": "Send the current composer text as steering input to the running task." },
     { "Name": "Codex Microphone", "Tooltip": "Toggle the Codex microphone action." },
     { "Name": "Submit to Codex", "Tooltip": "Submit or queue the current Codex composer text." },
-    { "Name": "Codex Task Monitor", "Tooltip": "Show active task type (WORK/CODEX) and model. Cycles when multiple tasks run, or shows the latest task model." }
+    { "Name": "Codex Task Monitor", "Tooltip": "Show active task type (WORK/CODEX) and model. Cycles when multiple tasks run, or shows the latest task model." },
+    { "Name": "Codex Approve", "Tooltip": "Approve or execute pending Codex tool confirmations." },
+    { "Name": "Codex Deny", "Tooltip": "Deny or cancel pending Codex tool confirmations." },
+    { "Name": "Codex Attention Alert", "Tooltip": "Show pending attention/error task count and jump to the task." }
   ],
   "Localization": {
     "BridgeSetup": "Codex Bridge Setup",

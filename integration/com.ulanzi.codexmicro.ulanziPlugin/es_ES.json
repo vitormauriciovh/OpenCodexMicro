@@ -17,7 +17,10 @@
     { "Name": "Orientar Codex", "Tooltip": "Envía el texto actual del editor como orientación a la tarea en ejecución." },
     { "Name": "Micrófono de Codex", "Tooltip": "Activa o desactiva la acción de micrófono de Codex." },
     { "Name": "Enviar a Codex", "Tooltip": "Envía o pone en cola el texto actual del editor de Codex." },
-    { "Name": "Monitor de tareas de Codex", "Tooltip": "Muestra el tipo de tarea activa (WORK/CODEX) y el modelo. Alterna entre tareas si hay varias en ejecución, o muestra el modelo de la última tarea." }
+    { "Name": "Monitor de tareas de Codex", "Tooltip": "Muestra el tipo de tarea activa (WORK/CODEX) y el modelo. Alterna entre tareas si hay varias en ejecución, o muestra el modelo de la última tarea." },
+    { "Name": "Aprobar Codex", "Tooltip": "Aprueba o ejecuta confirmaciones de herramientas pendientes de Codex." },
+    { "Name": "Denegar Codex", "Tooltip": "Deniega o cancela confirmaciones de herramientas pendientes de Codex." },
+    { "Name": "Alerta de Atención Codex", "Tooltip": "Muestra recuento de tareas que requieren atención/error y salta a ella." }
   ],
   "Localization": {
     "BridgeSetup": "Configuración de Codex Bridge",

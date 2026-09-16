@@ -17,7 +17,10 @@
     { "Name": "Codex 조정", "Tooltip": "현재 입력창 텍스트를 실행 중인 작업에 조정 입력으로 보냅니다." },
     { "Name": "Codex 마이크", "Tooltip": "Codex 마이크 동작을 전환합니다." },
     { "Name": "Codex에 제출", "Tooltip": "현재 Codex 입력창 텍스트를 제출하거나 대기열에 추가합니다." },
-    { "Name": "Codex 작업 모니터", "Tooltip": "활성 작업 유형(WORK/CODEX)과 모델을 표시합니다. 여러 작업 실행 시 순환하거나 최근 작업 모델을 표시합니다." }
+    { "Name": "Codex 작업 모니터", "Tooltip": "활성 작업 유형(WORK/CODEX)과 모델을 표시합니다. 여러 작업 실행 시 순환하거나 최근 작업 모델을 표시합니다." },
+    { "Name": "Codex 승인", "Tooltip": "대기 중인 Codex 도구 확인을 승인하거나 실행합니다." },
+    { "Name": "Codex 거부", "Tooltip": "대기 중인 Codex 도구 확인을 거부하거나 취소합니다." },
+    { "Name": "Codex 주의 알림", "Tooltip": "주의/오류가 필요한 작업 수를 표시하고 해당 작업으로 이동합니다." }
   ],
   "Localization": {
     "BridgeSetup": "Codex Bridge 설정",

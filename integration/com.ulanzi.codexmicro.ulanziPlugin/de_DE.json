@@ -17,7 +17,10 @@
     { "Name": "Codex steuern", "Tooltip": "Sendet den aktuellen Eingabetext als Steueranweisung an die laufende Aufgabe." },
     { "Name": "Codex-Mikrofon", "Tooltip": "Schaltet die Codex-Mikrofonaktion um." },
     { "Name": "An Codex senden", "Tooltip": "Sendet den aktuellen Codex-Eingabetext oder stellt ihn in die Warteschlange." },
-    { "Name": "Codex-Aufgabenmonitor", "Tooltip": "Zeigt Aufgabentyp (WORK/CODEX) und Modell an. Wechselt bei mehreren Aufgaben oder zeigt das Modell der letzten Aufgabe." }
+    { "Name": "Codex-Aufgabenmonitor", "Tooltip": "Zeigt Aufgabentyp (WORK/CODEX) und Modell an. Wechselt bei mehreren Aufgaben oder zeigt das Modell der letzten Aufgabe." },
+    { "Name": "Codex Genehmigen", "Tooltip": "Ausstehende Bestätigungen für Codex-Tools genehmigen oder ausführen." },
+    { "Name": "Codex Ablehnen", "Tooltip": "Ausstehende Bestätigungen für Codex-Tools ablehnen oder abbrechen." },
+    { "Name": "Codex Aufmerksamkeitsalarm", "Tooltip": "Anzahl der Aufgaben anzeigen, die Aufmerksamkeit/Fehler erfordern, und dorthin springen." }
   ],
   "Localization": {
     "BridgeSetup": "Codex Bridge einrichten",

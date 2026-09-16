@@ -4072,7 +4072,10 @@ var ACTION_LABELS = Object.freeze({
   steer: "STEER",
   mic: "MIC",
   submit: "SUBMIT",
-  taskmonitor: "MONITOR"
+  taskmonitor: "MONITOR",
+  approve: "APPROVE",
+  reject: "DENY",
+  attention: "ATTENTION"
 });
 var TASK_ICON_PATHS = Object.freeze({
   idle: "assets/icons/task-idle.png",
@@ -4091,6 +4094,37 @@ var taskMonitorIndex = 0;
 var lastTaskMonitorRotation = Date.now();
 var lastKnownTask = null;
 var currentDisplayedTask = null;
+var taskStartTimes = /* @__PURE__ */ new Map();
+function updateTaskRunningTimes(slots, activeTasks) {
+  const currentRunningKeys = /* @__PURE__ */ new Set();
+  const allItems = [...slots || [], ...activeTasks || []];
+  for (const item of allItems) {
+    if (!item?.threadKey) continue;
+    const isRunning = ["working", "thinking", "running", "in_progress"].includes(String(item.status || "").toLowerCase());
+    if (isRunning) {
+      currentRunningKeys.add(item.threadKey);
+      if (!taskStartTimes.has(item.threadKey)) {
+        taskStartTimes.set(item.threadKey, Date.now());
+      }
+    }
+  }
+  for (const key of taskStartTimes.keys()) {
+    if (!currentRunningKeys.has(key)) {
+      taskStartTimes.delete(key);
+    }
+  }
+}
+function formatElapsed(ms) {
+  if (!ms || ms < 0) return "";
+  const sec = Math.floor(ms / 1e3);
+  if (sec < 60) return `${sec}s`;
+  const min = Math.floor(sec / 60);
+  const remSec = sec % 60;
+  if (min < 60) return `${min}m ${remSec}s`;
+  const hr = Math.floor(min / 60);
+  const remMin = min % 60;
+  return `${hr}h ${remMin}m`;
+}
 function contextOf(message) {
   return String(message.actionid || `${message.uuid}___${message.key}`);
 }
@@ -4115,6 +4149,29 @@ function usageRemaining(usage) {
     weekly: extractWindowUsage(usage, "weekly")
   };
 }
+function formatResetCountdown(resetsAt) {
+  if (!resetsAt || !Number.isFinite(resetsAt)) return null;
+  const targetMs = resetsAt > 1e11 ? resetsAt : resetsAt * 1e3;
+  const diffMs = targetMs - Date.now();
+  if (diffMs <= 0) return null;
+  if (diffMs < 36e5) {
+    const mins = Math.max(1, Math.ceil(diffMs / 6e4));
+    return `RESET ${mins}M`;
+  }
+  if (diffMs < 864e5) {
+    const hrs2 = Math.floor(diffMs / 36e5);
+    const mins = Math.floor(diffMs % 36e5 / 6e4);
+    return mins > 0 ? `RESET ${hrs2}H ${mins}M` : `RESET ${hrs2}H`;
+  }
+  const days = Math.floor(diffMs / 864e5);
+  const hrs = Math.floor(diffMs % 864e5 / 36e5);
+  return hrs > 0 ? `RESET ${days}D ${hrs}H` : `RESET ${days}D`;
+}
+function getPrimaryResetText(usage) {
+  const windows = Array.isArray(usage?.windows) ? usage.windows : [];
+  const primary = windows.find((w) => w?.kind === "five-hour" && w?.resetsAt) || windows.find((w) => w?.resetsAt);
+  return primary?.resetsAt ? formatResetCountdown(primary.resetsAt) : null;
+}
 function getUsageProgressColor(remaining) {
   if (remaining === null) return "#858c8f";
   if (remaining >= 50) return "#2fbd7f";
@@ -4125,6 +4182,7 @@ function usageIconData(usage) {
   const { fiveHour, weekly } = usageRemaining(usage);
   const col1 = getUsageProgressColor(fiveHour);
   const col2 = getUsageProgressColor(weekly);
+  const resetLabel = getPrimaryResetText(usage);
   const r1 = 60;
   const r2 = 47;
   const c1 = 2 * Math.PI * r1;
@@ -4170,6 +4228,9 @@ function usageIconData(usage) {
       <tspan font-size="11" font-weight="700" fill="#6b787c" letter-spacing="0.5">WK </tspan>
       <tspan font-size="17" font-weight="800" fill="#2d3335">${val2}${pct2 ? `<tspan dx="1" dy="-2" font-size="11" font-weight="700" fill="#6b787c">${pct2}</tspan>` : ""}</tspan>
     </text>
+    ${resetLabel ? `
+      <text x="98" y="166" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="9" font-weight="800" fill="#6b787c" letter-spacing="0.8">${resetLabel}</text>
+    ` : ""}
   </svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
@@ -4342,7 +4403,8 @@ function taskMonitorIconData({
   model = "DEFAULT",
   status = "idle",
   currentIndex = 0,
-  totalRunning = 0
+  totalRunning = 0,
+  elapsed = ""
 }) {
   if (!connected) {
     const svg2 = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
@@ -4373,6 +4435,7 @@ function taskMonitorIconData({
   const hasMultiple = totalRunning > 1;
   const modelStr = String(model || "DEFAULT");
   const modelFontSize = modelStr.length > 10 ? "17" : modelStr.length > 8 ? "19" : "22";
+  const runningText = elapsed && elapsed !== "0s" ? `RUNNING ${elapsed}` : "RUNNING";
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
     <defs>
       <linearGradient id="cardBg" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -4407,7 +4470,7 @@ function taskMonitorIconData({
       <g transform="translate(98, 156)">
         <circle cx="-38" cy="-4" r="5" fill="#22c55e" filter="url(#glowGreen)"/>
         <circle cx="-38" cy="-4" r="3.5" fill="#ffffff"/>
-        <text x="-24" y="1" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="900" fill="#22c55e" letter-spacing="1.2">RUNNING</text>
+        <text x="-24" y="1" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="900" fill="#22c55e" letter-spacing="0.8">${runningText}</text>
       </g>
     ` : `
       <g transform="translate(98, 156)">
@@ -4485,7 +4548,8 @@ function setTaskMonitorDisplay(instance) {
   currentDisplayedTask = targetTask;
   taskType = targetTask?.taskType || "CODEX";
   model = targetTask?.model || "DEFAULT";
-  const digest = `monitor:true:${taskType}:${model}:${status}:${currentIndex}:${totalRunning}`;
+  const elapsed = targetTask?.threadKey ? formatElapsed(Date.now() - (taskStartTimes.get(targetTask.threadKey) || Date.now())) : "";
+  const digest = `monitor:true:${taskType}:${model}:${status}:${currentIndex}:${totalRunning}:${elapsed}`;
   if (!instance.active || instance.lastDisplay === digest) return;
   instance.lastDisplay = digest;
   send({
@@ -4503,7 +4567,8 @@ function setTaskMonitorDisplay(instance) {
             model,
             status,
             currentIndex,
-            totalRunning
+            totalRunning,
+            elapsed
           }),
           showtext: false,
           textdata: ""
@@ -4521,6 +4586,237 @@ function setTaskMonitorDisplay(instance) {
     }
   });
 }
+function getPendingAttentionTasks(slots, activeTasks) {
+  const pending = [];
+  const seenKeys = /* @__PURE__ */ new Set();
+  const checkItem = (item, slotIndex) => {
+    if (!item?.threadKey || seenKeys.has(item.threadKey)) return;
+    const st = String(item.status || "").toLowerCase();
+    const isAttention = ["attention", "notification", "input", "approval", "waiting_input", "needs_input"].includes(st);
+    const isError = ["error", "failed", "failure"].includes(st);
+    if (isAttention || isError) {
+      seenKeys.add(item.threadKey);
+      pending.push({ ...item, slot: slotIndex, isError, isAttention });
+    }
+  };
+  if (Array.isArray(slots)) {
+    slots.forEach((s, idx) => checkItem(s, idx));
+  }
+  if (Array.isArray(activeTasks)) {
+    activeTasks.forEach((t) => checkItem(t, t.slot ?? null));
+  }
+  return pending;
+}
+function attentionBadgeIconData({ count = 0, hasError = false, connected = true }) {
+  if (!connected) {
+    const svg2 = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <defs>
+        <linearGradient id="bgOff" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#181c20"/>
+          <stop offset="100%" stop-color="#0c0e10"/>
+        </linearGradient>
+      </defs>
+      <rect width="196" height="196" rx="22" fill="url(#bgOff)"/>
+      <rect x="2" y="2" width="192" height="192" rx="20" fill="none" stroke="#2c333a" stroke-width="2"/>
+      <text x="98" y="90" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="800" fill="#8a96a3" letter-spacing="1">ATTENTION</text>
+      <text x="98" y="118" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#ef4444" letter-spacing="0.8">OFFLINE</text>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg2).toString("base64")}`;
+  }
+  if (count === 0) {
+    const svg2 = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <defs>
+        <linearGradient id="bgClear" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#161b22"/>
+          <stop offset="100%" stop-color="#0a0d10"/>
+        </linearGradient>
+      </defs>
+      <rect width="196" height="196" rx="22" fill="url(#bgClear)"/>
+      <rect x="2" y="2" width="192" height="192" rx="20" fill="none" stroke="#21262d" stroke-width="2"/>
+      <circle cx="98" cy="80" r="32" fill="#0d1117" stroke="#238636" stroke-width="3"/>
+      <path d="M86 80l8 8 16-16" fill="none" stroke="#2ea043" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="98" y="136" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="800" fill="#3fb950" letter-spacing="1.2">ALL CLEAR</text>
+      <text x="98" y="156" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="700" fill="#8b949e" letter-spacing="0.8">0 PENDING</text>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg2).toString("base64")}`;
+  }
+  const primaryColor = hasError ? "#ef4444" : "#f59e0b";
+  const labelText = hasError ? "NEEDS ERROR FIX" : "NEEDS INPUT";
+  const badgeText = String(count);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+    <defs>
+      <linearGradient id="bgAlert" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#1c1917"/>
+        <stop offset="100%" stop-color="#0c0a09"/>
+      </linearGradient>
+      <filter id="glowAlert" x="-40%" y="-40%" width="180%" height="180%">
+        <feGaussianBlur stdDeviation="4" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <rect width="196" height="196" rx="22" fill="url(#bgAlert)"/>
+    <rect x="2" y="2" width="192" height="192" rx="20" fill="none" stroke="${primaryColor}" stroke-width="2.5" filter="url(#glowAlert)"/>
+    <circle cx="98" cy="74" r="34" fill="#292524" stroke="${primaryColor}" stroke-width="3.5" filter="url(#glowAlert)"/>
+    <text x="98" y="85" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="30" font-weight="900" fill="${primaryColor}">${badgeText}</text>
+    <text x="98" y="134" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="900" fill="${primaryColor}" letter-spacing="1">${labelText}</text>
+    <text x="98" y="156" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="700" fill="#a8a29e" letter-spacing="0.6">PRESS TO JUMP</text>
+  </svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+function setAttentionDisplay(instance) {
+  if (!latestState?.connected) {
+    const digest2 = "attention:offline";
+    if (!instance.active || instance.lastDisplay === digest2) return;
+    instance.lastDisplay = digest2;
+    send({
+      cmd: "state",
+      param: {
+        statelist: [{
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 1,
+          data: attentionBadgeIconData({ connected: false }),
+          showtext: false,
+          textdata: ""
+        }, {
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 0,
+          state: 0,
+          showtext: false,
+          textdata: ""
+        }]
+      }
+    });
+    return;
+  }
+  const pending = getPendingAttentionTasks(latestState.slots, latestState.activeTasks);
+  const count = pending.length;
+  const hasError = pending.some((p) => p.isError);
+  const digest = `attention:${count}:${hasError}`;
+  if (!instance.active || instance.lastDisplay === digest) return;
+  instance.lastDisplay = digest;
+  send({
+    cmd: "state",
+    param: {
+      statelist: [{
+        uuid: instance.uuid,
+        actionid: instance.actionid,
+        key: instance.key,
+        type: 1,
+        data: attentionBadgeIconData({ count, hasError, connected: true }),
+        showtext: false,
+        textdata: ""
+      }, {
+        uuid: instance.uuid,
+        actionid: instance.actionid,
+        key: instance.key,
+        type: 0,
+        state: 0,
+        showtext: false,
+        textdata: ""
+      }]
+    }
+  });
+}
+function approveIconData({ connected = true }) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+    <defs>
+      <linearGradient id="bgApprove" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#14532d"/>
+        <stop offset="100%" stop-color="#052e16"/>
+      </linearGradient>
+      <filter id="glowGreen" x="-40%" y="-40%" width="180%" height="180%">
+        <feGaussianBlur stdDeviation="3.5" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <rect width="196" height="196" rx="22" fill="url(#bgApprove)"/>
+    <rect x="2" y="2" width="192" height="192" rx="20" fill="none" stroke="#22c55e" stroke-width="2"/>
+    <circle cx="98" cy="74" r="32" fill="#166534" stroke="#4ade80" stroke-width="3" filter="url(#glowGreen)"/>
+    <path d="M84 74l10 10 20-20" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="98" y="136" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="15" font-weight="900" fill="#4ade80" letter-spacing="1.5">APPROVE</text>
+    <text x="98" y="156" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="700" fill="#86efac" letter-spacing="0.8">EXECUTE / RUN</text>
+  </svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+function rejectIconData({ connected = true }) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+    <defs>
+      <linearGradient id="bgReject" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#7f1d1d"/>
+        <stop offset="100%" stop-color="#450a0a"/>
+      </linearGradient>
+      <filter id="glowRed" x="-40%" y="-40%" width="180%" height="180%">
+        <feGaussianBlur stdDeviation="3.5" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <rect width="196" height="196" rx="22" fill="url(#bgReject)"/>
+    <rect x="2" y="2" width="192" height="192" rx="20" fill="none" stroke="#ef4444" stroke-width="2"/>
+    <circle cx="98" cy="74" r="32" fill="#991b1b" stroke="#f87171" stroke-width="3" filter="url(#glowRed)"/>
+    <path d="M86 62l24 24M110 62l-24 24" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="98" y="136" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="15" font-weight="900" fill="#f87171" letter-spacing="1.5">DENY</text>
+    <text x="98" y="156" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="700" fill="#fca5a5" letter-spacing="0.8">CANCEL / REJECT</text>
+  </svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+function setApproveDisplay(instance) {
+  const digest = `approve:${latestState?.connected}`;
+  if (!instance.active || instance.lastDisplay === digest) return;
+  instance.lastDisplay = digest;
+  send({
+    cmd: "state",
+    param: {
+      statelist: [{
+        uuid: instance.uuid,
+        actionid: instance.actionid,
+        key: instance.key,
+        type: 1,
+        data: approveIconData({ connected: Boolean(latestState?.connected) }),
+        showtext: false,
+        textdata: ""
+      }, {
+        uuid: instance.uuid,
+        actionid: instance.actionid,
+        key: instance.key,
+        type: 0,
+        state: 0,
+        showtext: false,
+        textdata: ""
+      }]
+    }
+  });
+}
+function setRejectDisplay(instance) {
+  const digest = `reject:${latestState?.connected}`;
+  if (!instance.active || instance.lastDisplay === digest) return;
+  instance.lastDisplay = digest;
+  send({
+    cmd: "state",
+    param: {
+      statelist: [{
+        uuid: instance.uuid,
+        actionid: instance.actionid,
+        key: instance.key,
+        type: 1,
+        data: rejectIconData({ connected: Boolean(latestState?.connected) }),
+        showtext: false,
+        textdata: ""
+      }, {
+        uuid: instance.uuid,
+        actionid: instance.actionid,
+        key: instance.key,
+        type: 0,
+        state: 0,
+        showtext: false,
+        textdata: ""
+      }]
+    }
+  });
+}
 function renderInstance(instance) {
   const slot = taskSlot(instance.uuid);
   if (slot === null) {
@@ -4531,6 +4827,18 @@ function renderInstance(instance) {
     }
     if (action === "taskmonitor") {
       setTaskMonitorDisplay(instance);
+      return;
+    }
+    if (action === "attention") {
+      setAttentionDisplay(instance);
+      return;
+    }
+    if (action === "approve") {
+      setApproveDisplay(instance);
+      return;
+    }
+    if (action === "reject") {
+      setRejectDisplay(instance);
       return;
     }
     if (!latestState?.connected) {
@@ -4588,6 +4896,7 @@ async function pollBridge() {
   pollInFlight = true;
   try {
     latestState = await bridgeRequest("/state");
+    updateTaskRunningTimes(latestState?.slots, latestState?.activeTasks);
   } catch (error) {
     latestState = { connected: false, error: error.message, slots: [] };
   } finally {
@@ -4619,6 +4928,26 @@ async function invoke(instance, pressed) {
         ]);
       } else {
         await bridgeRequest("/focus", "POST");
+      }
+      return;
+    }
+    if (action === "attention") {
+      if (!pressed) return;
+      const pending = getPendingAttentionTasks(latestState?.slots, latestState?.activeTasks);
+      if (pending.length > 0) {
+        const target = pending[0];
+        if (target.threadKey) {
+          await bridgeRequest(`/thread/${encodeURIComponent(target.threadKey)}/click?slot=${target.slot ?? 0}`, "POST");
+        }
+      }
+      await bridgeRequest("/focus", "POST");
+      return;
+    }
+    if (action === "approve" || action === "reject") {
+      await bridgeRequest(`/action/${action}/${pressed ? "down" : "up"}`, "POST");
+      if (pressed) {
+        await bridgeRequest("/focus", "POST").catch(() => {
+        });
       }
       return;
     }
@@ -4728,7 +5057,10 @@ function connect() {
     reconnectTimer = setTimeout(connect, 1e3);
     reconnectTimer.unref();
   });
-  socket.on("error", () => socket.close());
+  socket.on("error", (err) => {
+    console.error("WS error:", err);
+    socket.close();
+  });
 }
 connect();
 for (const signal of ["SIGINT", "SIGTERM"]) {

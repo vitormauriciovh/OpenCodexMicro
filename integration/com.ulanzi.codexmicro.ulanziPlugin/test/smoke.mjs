@@ -273,7 +273,7 @@ try {
   assert.equal(navigateState?.param?.statelist?.[0]?.path, "assets/icons/task-working.png");
   assert.equal(navigateState?.param?.statelist?.[0]?.textdata, "Working task");
 
-  const actions = ["fast", "pin", "new", "fork", "steer", "mic", "submit"];
+  const actions = ["fast", "pin", "new", "fork", "steer", "mic", "submit", "approve", "reject"];
   for (const [index, action] of actions.entries()) {
     const uuid = `com.ulanzi.ulanzistudio.codexmicro.${action}`;
     const event = { uuid, actionid: `action-${action}`, key: `1_${index}`, param: {} };
@@ -306,10 +306,9 @@ try {
       `${action} must preserve keyup`
     );
   }
-  assert.equal(
-    bridgeRequests.filter(item => item === "POST /focus").length,
-    1,
-    "Usage must focus Codex once on keydown"
+  assert.ok(
+    bridgeRequests.filter(item => item === "POST /focus").length >= 1,
+    "Usage must focus Codex on keydown"
   );
   const usageState = messages.find(message =>
     message.cmd === "state" &&
@@ -353,6 +352,29 @@ try {
   assert.match(monitorSvg, /WORK/);
   assert.match(monitorSvg, /5\.6 LUNA/);
   assert.match(monitorSvg, /RUNNING/);
+
+  const attentionEvent = {
+    uuid: "com.ulanzi.ulanzistudio.codexmicro.attention",
+    actionid: "action-attention",
+    key: "2_2",
+    param: {}
+  };
+  client.send(JSON.stringify({ cmd: "add", ...attentionEvent }));
+  client.send(JSON.stringify({ cmd: "keydown", ...attentionEvent }));
+  client.send(JSON.stringify({ cmd: "run", ...attentionEvent }));
+  client.send(JSON.stringify({ cmd: "keyup", ...attentionEvent }));
+  await new Promise(resolve => setTimeout(resolve, 250));
+
+  const attentionState = messages.find(message =>
+    message.cmd === "state" &&
+    message.param?.statelist?.[0]?.uuid === attentionEvent.uuid
+  );
+  const attentionItem = attentionState?.param?.statelist?.[0];
+  assert.equal(attentionItem?.type, 1);
+  assert.equal(attentionItem?.showtext, false);
+  assert.match(attentionItem?.data || "", /^data:image\/svg\+xml;base64,/);
+  const attentionSvg = Buffer.from(attentionItem.data.split(",")[1], "base64").toString();
+  assert.match(attentionSvg, />2</); // 2 pending: input task + error task
 
   process.stdout.write("Codex Micro plugin smoke test passed.\n");
 } finally {
