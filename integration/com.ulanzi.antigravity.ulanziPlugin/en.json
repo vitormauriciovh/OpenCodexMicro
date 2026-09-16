@@ -1,0 +1,57 @@
+{
+  "Description": "Turn Ulanzi D200 Series into a dedicated Antigravity AI Agent control surface through Ulanzi Studio.",
+  "Name": "Antigravity",
+  "com.ulanzi.ulanzistudio.antigravity.task1": {
+    "Name": "Antigravity Session 1",
+    "Tooltip": "Open recent Antigravity session slot 1 and show its live status."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task2": {
+    "Name": "Antigravity Session 2",
+    "Tooltip": "Open recent Antigravity session slot 2 and show its live status."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task3": {
+    "Name": "Antigravity Session 3",
+    "Tooltip": "Open recent Antigravity session slot 3 and show its live status."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task4": {
+    "Name": "Antigravity Session 4",
+    "Tooltip": "Open recent Antigravity session slot 4 and show its live status."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task5": {
+    "Name": "Antigravity Session 5",
+    "Tooltip": "Open recent Antigravity session slot 5 and show its live status."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.proceed": {
+    "Name": "Antigravity Proceed",
+    "Tooltip": "Approve the pending implementation plan or tool call in Antigravity."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.cancel": {
+    "Name": "Antigravity Cancel",
+    "Tooltip": "Stop execution or cancel the pending action in Antigravity."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.attention": {
+    "Name": "Antigravity Attention",
+    "Tooltip": "Show pending attention count and switch directly to the active session."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.subagents": {
+    "Name": "Antigravity Subagents",
+    "Tooltip": "Display count of active subagents in Antigravity."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.plan": {
+    "Name": "Antigravity View Plan",
+    "Tooltip": "Open the active implementation plan in VS Code."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.walkthrough": {
+    "Name": "Antigravity Walkthrough",
+    "Tooltip": "Open the walkthrough artifact in VS Code."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.new": {
+    "Name": "Antigravity New Session",
+    "Tooltip": "Focus VS Code to start a new Antigravity session."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.navigate": {
+    "Name": "Antigravity Latest & Scroll",
+    "Tooltip": "Press to focus latest session; turn left or right to scroll VS Code."
+  }
+}
+

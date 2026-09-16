@@ -1,0 +1,57 @@
+{
+  "Description": "Ulanzi Studio を通じて Ulanzi D200 Series で Antigravity AI Agent を操作します。",
+  "Name": "Antigravity",
+  "com.ulanzi.ulanzistudio.antigravity.task1": {
+    "Name": "Antigravity セッション 1",
+    "Tooltip": "最新の Antigravity セッション 1 を開き、リアルタイム状態を表示します。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task2": {
+    "Name": "Antigravity セッション 2",
+    "Tooltip": "最新の Antigravity セッション 2 を開き、リアルタイム状態を表示します。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task3": {
+    "Name": "Antigravity セッション 3",
+    "Tooltip": "最新の Antigravity セッション 3 を開き、リアルタイム状態を表示します。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task4": {
+    "Name": "Antigravity セッション 4",
+    "Tooltip": "最新の Antigravity セッション 4 を開き、リアルタイム状態を表示します。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task5": {
+    "Name": "Antigravity セッション 5",
+    "Tooltip": "最新の Antigravity セッション 5 を開き、リアルタイム状態を表示します。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.proceed": {
+    "Name": "Antigravity 承認 / Proceed",
+    "Tooltip": "保留中の計画やツール実行をワンタッチで承認します。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.cancel": {
+    "Name": "Antigravity キャンセル / 停止",
+    "Tooltip": "実行を停止または保留中のアクションをキャンセルします。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.attention": {
+    "Name": "Antigravity アテンション通知",
+    "Tooltip": "対応が必要なセッション数を表示し、直接開きます。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.subagents": {
+    "Name": "Antigravity サブエージェント",
+    "Tooltip": "稼働中のサブエージェント数を表示します。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.plan": {
+    "Name": "Antigravity 計画を表示",
+    "Tooltip": "VS Code で現在の実装計画を開きます。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.walkthrough": {
+    "Name": "Antigravity まとめを表示",
+    "Tooltip": "VS Code で成果サマリーを開きます。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.new": {
+    "Name": "Antigravity 新規セッション",
+    "Tooltip": "VS Code にフォーカスして新しいセッションを開始します。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.navigate": {
+    "Name": "Antigravity 最新セッションとスクロール",
+    "Tooltip": "押して最新セッションを表示、回して VS Code をスクロールします。"
+  }
+}
+

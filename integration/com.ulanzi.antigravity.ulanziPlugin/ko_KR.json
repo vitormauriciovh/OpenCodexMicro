@@ -1,0 +1,57 @@
+{
+  "Description": "Ulanzi Studio를 통해 Ulanzi D200 Series에서 Antigravity AI Agent를 제어합니다.",
+  "Name": "Antigravity",
+  "com.ulanzi.ulanzistudio.antigravity.task1": {
+    "Name": "Antigravity 세션 1",
+    "Tooltip": "최근 Antigravity 세션 1을 열고 실시간 상태를 표시합니다."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task2": {
+    "Name": "Antigravity 세션 2",
+    "Tooltip": "최근 Antigravity 세션 2를 열고 실시간 상태를 표시합니다."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task3": {
+    "Name": "Antigravity 세션 3",
+    "Tooltip": "최근 Antigravity 세션 3을 열고 실시간 상태를 표시합니다."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task4": {
+    "Name": "Antigravity 세션 4",
+    "Tooltip": "최근 Antigravity 세션 4를 열고 실시간 상태를 표시합니다."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task5": {
+    "Name": "Antigravity 세션 5",
+    "Tooltip": "최근 Antigravity 세션 5를 열고 실시간 상태를 표시합니다."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.proceed": {
+    "Name": "Antigravity 승인 / Proceed",
+    "Tooltip": "보류 중인 실행 계획 또는 도구 실행을 승인합니다."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.cancel": {
+    "Name": "Antigravity 취소 / 정지",
+    "Tooltip": "실행을 중지하거나 보류 중인 작업을 취소합니다."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.attention": {
+    "Name": "Antigravity 확인 알림",
+    "Tooltip": "확인이 필요한 세션 수를 표시하고 해당 세션으로 바로 이동합니다."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.subagents": {
+    "Name": "Antigravity 서브 에이전트",
+    "Tooltip": "실행 중인 서브 에이전트 수를 표시합니다."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.plan": {
+    "Name": "Antigravity 계획 보기",
+    "Tooltip": "VS Code에서 현재 실행 계획을 엽니다."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.walkthrough": {
+    "Name": "Antigravity 정리 보기",
+    "Tooltip": "VS Code에서 작업 정리 문서를 엽니다."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.new": {
+    "Name": "Antigravity 새 세션",
+    "Tooltip": "VS Code에 포커스를 맞추고 새 Antigravity 대화를 시작합니다."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.navigate": {
+    "Name": "Antigravity 최신 세션 및 스크롤",
+    "Tooltip": "눌러서 최신 세션을 열고, 돌려서 VS Code를 스크롤합니다."
+  }
+}
+

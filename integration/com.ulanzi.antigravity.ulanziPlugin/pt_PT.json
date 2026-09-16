@@ -1,0 +1,57 @@
+{
+  "Description": "Transforme o Ulanzi D200 Series numa superfície dedicada de controlo do Antigravity AI Agent.",
+  "Name": "Antigravity",
+  "com.ulanzi.ulanzistudio.antigravity.task1": {
+    "Name": "Antigravity Sessão 1",
+    "Tooltip": "Abre a sessão 1 recente do Antigravity e mostra o seu estado em tempo real."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task2": {
+    "Name": "Antigravity Sessão 2",
+    "Tooltip": "Abre a sessão 2 recente do Antigravity e mostra o seu estado em tempo real."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task3": {
+    "Name": "Antigravity Sessão 3",
+    "Tooltip": "Abre a sessão 3 recente do Antigravity e mostra o seu estado em tempo real."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task4": {
+    "Name": "Antigravity Sessão 4",
+    "Tooltip": "Abre a sessão 4 recente do Antigravity e mostra o seu estado em tempo real."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task5": {
+    "Name": "Antigravity Sessão 5",
+    "Tooltip": "Abre a sessão 5 recente do Antigravity e mostra o seu estado em tempo real."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.proceed": {
+    "Name": "Antigravity Aprovar / Proceed",
+    "Tooltip": "Aprova o plano de implementação pendente ou ação no Antigravity."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.cancel": {
+    "Name": "Antigravity Cancelar / Stop",
+    "Tooltip": "Interrompe a execução ou cancela a ação pendente no Antigravity."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.attention": {
+    "Name": "Antigravity Alerta de Atenção",
+    "Tooltip": "Exibe contagem de sessões pendentes e abre diretamente a sessão ativa."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.subagents": {
+    "Name": "Antigravity Subagentes",
+    "Tooltip": "Exibe a contagem de subagentes ativos no Antigravity."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.plan": {
+    "Name": "Antigravity Ver Plano",
+    "Tooltip": "Abre o plano de implementação ativo no VS Code."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.walkthrough": {
+    "Name": "Antigravity Ver Walkthrough",
+    "Tooltip": "Abre o resumo de walkthrough gerado no VS Code."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.new": {
+    "Name": "Antigravity Nova Sessão",
+    "Tooltip": "Foca o VS Code para iniciar uma nova conversa no Antigravity."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.navigate": {
+    "Name": "Antigravity Última Sessão & Scroll",
+    "Tooltip": "Pressione para focar a última sessão; gire para rolar o VS Code."
+  }
+}
+

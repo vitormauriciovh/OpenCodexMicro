@@ -1,0 +1,57 @@
+{
+  "Description": "通过 Ulanzi Studio，用 Ulanzi D200 Series 操控 Antigravity AI Agent。",
+  "Name": "Antigravity",
+  "com.ulanzi.ulanzistudio.antigravity.task1": {
+    "Name": "Antigravity 任务 1",
+    "Tooltip": "打开 Antigravity 最近任务槽位 1 并显示其实时状态。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task2": {
+    "Name": "Antigravity 任务 2",
+    "Tooltip": "打开 Antigravity 最近任务槽位 2 并显示其实时状态。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task3": {
+    "Name": "Antigravity 任务 3",
+    "Tooltip": "打开 Antigravity 最近任务槽位 3 并显示其实时状态。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task4": {
+    "Name": "Antigravity 任务 4",
+    "Tooltip": "打开 Antigravity 最近任务槽位 4 并显示其实时状态。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task5": {
+    "Name": "Antigravity 任务 5",
+    "Tooltip": "打开 Antigravity 最近任务槽位 5 并显示其实时状态。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.proceed": {
+    "Name": "Antigravity 批准执行 / Proceed",
+    "Tooltip": "一键批准 Antigravity 待处理的实施计划或工具调用。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.cancel": {
+    "Name": "Antigravity 取消 / 停止",
+    "Tooltip": "停止执行或取消 Antigravity 待处理操作。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.attention": {
+    "Name": "Antigravity 关注提醒",
+    "Tooltip": "显示需要处理的任务数量并直接切换到对应会话。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.subagents": {
+    "Name": "Antigravity 子代理监控",
+    "Tooltip": "显示 Antigravity 中运行中的子代理数量。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.plan": {
+    "Name": "Antigravity 查看计划",
+    "Tooltip": "在 VS Code 中打开当前实施计划。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.walkthrough": {
+    "Name": "Antigravity 查看总结",
+    "Tooltip": "在 VS Code 中打开成果总结文档。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.new": {
+    "Name": "Antigravity 新会话",
+    "Tooltip": "聚焦 VS Code 并开始新 Antigravity 对话。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.navigate": {
+    "Name": "Antigravity 最新会话与滚动",
+    "Tooltip": "按下打开最新会话；旋转可在 VS Code 中滚动。"
+  }
+}
+

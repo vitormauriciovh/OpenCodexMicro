@@ -1,0 +1,166 @@
+{
+  "Author": "OpenCodexMicro",
+  "Name": "Antigravity",
+  "Overview": "Control Antigravity VS Code agent tasks, plans, and actions from Ulanzi D200 Series in Ulanzi Studio.",
+  "Description": "Turn Ulanzi D200 Series into a dedicated Antigravity AI Agent control surface through Ulanzi Studio.\n\nFEATURES\n- View recent Antigravity sessions with live status and elapsed execution timer.\n- One-touch Proceed / Approve Plan and Cancel / Stop actions.\n- Attention alert badge jumping directly to threads needing feedback.\n- Active Subagents monitor and direct Plan / Walkthrough inspectors.\n- Use the Latest Session & Scroll Encoder action to switch session and scroll VS Code.\n- Keep communication local through loopback-only endpoints.",
+  "Icon": "assets/icons/plugin.png",
+  "Category": "AI",
+  "CategoryIcon": "assets/icons/plugin.png",
+  "Banner": [
+    "assets/banners/codex-micro-banner-1.png",
+    "assets/banners/codex-micro-banner-2.png",
+    "assets/banners/codex-micro-banner-3.png"
+  ],
+  "Version": "0.4.1",
+  "UUID": "com.ulanzi.ulanzistudio.antigravity",
+  "Type": "JavaScript",
+  "CodePath": "dist/app.js",
+  "Software": {
+    "MinVersion": "3.0.1"
+  },
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "13.0"
+    }
+  ],
+  "Actions": [
+    {
+      "Name": "Antigravity Session 1",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.task1",
+      "Tooltip": "Open recent Antigravity session slot 1 and show its live status.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Session", "Image": "assets/icons/task-idle.png" }]
+    },
+    {
+      "Name": "Antigravity Session 2",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.task2",
+      "Tooltip": "Open recent Antigravity session slot 2 and show its live status.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Session", "Image": "assets/icons/task-idle.png" }]
+    },
+    {
+      "Name": "Antigravity Session 3",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.task3",
+      "Tooltip": "Open recent Antigravity session slot 3 and show its live status.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Session", "Image": "assets/icons/task-idle.png" }]
+    },
+    {
+      "Name": "Antigravity Session 4",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.task4",
+      "Tooltip": "Open recent Antigravity session slot 4 and show its live status.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Session", "Image": "assets/icons/task-idle.png" }]
+    },
+    {
+      "Name": "Antigravity Session 5",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.task5",
+      "Tooltip": "Open recent Antigravity session slot 5 and show its live status.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Session", "Image": "assets/icons/task-idle.png" }]
+    },
+    {
+      "Name": "Antigravity Proceed",
+      "Icon": "assets/icons/approve.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.proceed",
+      "Tooltip": "Approve the pending implementation plan or tool call in Antigravity.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Proceed", "Image": "assets/icons/approve.png" }]
+    },
+    {
+      "Name": "Antigravity Cancel",
+      "Icon": "assets/icons/reject.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.cancel",
+      "Tooltip": "Stop execution or cancel the pending action in Antigravity.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Cancel", "Image": "assets/icons/reject.png" }]
+    },
+    {
+      "Name": "Antigravity Attention",
+      "Icon": "assets/icons/attention.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.attention",
+      "Tooltip": "Show pending attention count and switch directly to the active session.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Attention", "Image": "assets/icons/attention.png" }]
+    },
+    {
+      "Name": "Antigravity Subagents",
+      "Icon": "assets/icons/fast.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.subagents",
+      "Tooltip": "Display count of active subagents in Antigravity.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Subagents", "Image": "assets/icons/fast.png" }]
+    },
+    {
+      "Name": "Antigravity View Plan",
+      "Icon": "assets/icons/pin.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.plan",
+      "Tooltip": "Open the active implementation plan in VS Code.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Plan", "Image": "assets/icons/pin.png" }]
+    },
+    {
+      "Name": "Antigravity Walkthrough",
+      "Icon": "assets/icons/steer.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.walkthrough",
+      "Tooltip": "Open the walkthrough artifact in VS Code.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Walkthrough", "Image": "assets/icons/steer.png" }]
+    },
+    {
+      "Name": "Antigravity New Session",
+      "Icon": "assets/icons/new.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.new",
+      "Tooltip": "Focus VS Code to start a new Antigravity session.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "New Session", "Image": "assets/icons/new.png" }]
+    },
+    {
+      "Name": "Antigravity Latest & Scroll",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.navigate",
+      "Tooltip": "Press to focus latest session; turn left or right to scroll VS Code.",
+      "Controllers": ["Encoder"],
+      "Encoder": {
+        "TriggerDescription": {
+          "Rotate": "Rotate to scroll VS Code",
+          "Push": "Press to focus latest Antigravity session"
+        }
+      },
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Latest & Scroll", "Image": "assets/icons/task-idle.png" }]
+    }
+  ]
+}
+
