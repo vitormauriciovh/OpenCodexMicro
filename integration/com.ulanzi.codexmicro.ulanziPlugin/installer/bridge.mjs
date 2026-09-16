@@ -4052,6 +4052,46 @@ var SNAPSHOT_EXPRESSION = `(async () => {
       break;
     } catch {}
   }
+  const conversationsMeta = new Map();
+  for (const queryClient of queryClients) {
+    try {
+      const queries = queryClient.getQueryCache().getAll();
+      for (const query of queries) {
+        if (JSON.stringify(query.queryKey).includes("recent-conversations-meta")) {
+          const items = query.state?.data?.items || query.state?.data || [];
+          const list = Array.isArray(items) ? items : (items.conversations || []);
+          for (const item of list) {
+            if (item && item.id && !conversationsMeta.has(item.id)) {
+              conversationsMeta.set(item.id, item);
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  const isWorkTask = (item) => {
+    if (!item) return false;
+    const originator = String(item.originator || "").toLowerCase();
+    const serviceName = String(item.serviceName || "").toLowerCase();
+    return originator.includes("work") || serviceName.includes("work");
+  };
+
+  const formatModel = (raw) => {
+    if (!raw) return "DEFAULT";
+    const str = String(raw).trim();
+    if (/luna/i.test(str)) return /5.6/i.test(str) ? "5.6 LUNA" : "LUNA";
+    if (/terra/i.test(str)) return /5.6/i.test(str) ? "5.6 TERRA" : "TERRA";
+    if (/daybreak/i.test(str)) return "DAYBREAK";
+    if (/gpt-5.5/i.test(str)) return "GPT-5.5";
+    if (/gpt-5/i.test(str)) return "GPT-5";
+    if (/gpt-4o/i.test(str)) return "GPT-4o";
+    if (/o1/i.test(str)) return "o1";
+    if (/o3/i.test(str)) return "o3";
+    if (/claude/i.test(str)) return "CLAUDE";
+    return str.replace(/^gpt-/i, "").replace(/-latest$/i, "").toUpperCase();
+  };
+
   const active = document.querySelector("[data-app-action-sidebar-thread-id][data-app-action-sidebar-thread-active=true]")
     ?? document.querySelector("[data-app-action-sidebar-thread-id][aria-current=page]");
   const activeThreadKey = document.querySelector("[data-above-composer-conversation-id]")
@@ -4059,17 +4099,95 @@ var SNAPSHOT_EXPRESSION = `(async () => {
     ?? active?.getAttribute("data-app-action-sidebar-thread-id")
     ?? null;
   const normalizeThreadKey = (value) => String(value ?? "").replace(/^local:/, "");
-  return {
-    activeThreadKey,
-    slots: found.map((slot) => ({
+
+  const enrichedSlots = found.map((slot) => {
+    const threadId = normalizeThreadKey(slot.threadKey);
+    const meta = threadId ? conversationsMeta.get(threadId) : null;
+    const rawModel = meta?.latestModel || meta?.latestThreadSettings?.model || meta?.previousTurnModel || null;
+    const isSlotRunning = ["working", "thinking", "running", "in_progress"].includes(String(slot.status || "").toLowerCase());
+    const isMetaRunning = ["working", "thinking", "running", "in_progress"].includes(String(meta?.threadRuntimeStatus?.type || "").toLowerCase());
+    const running = isSlotRunning || isMetaRunning;
+    const taskType = isWorkTask(meta) ? "WORK" : "CODEX";
+    const model = formatModel(rawModel);
+    return {
       id: slot.id,
       threadKey: slot.threadKey ?? null,
-      title: slot.title ?? slot.thread?.title ?? slot.task?.title ?? null,
-      status: slot.status ?? "idle",
+      threadId: threadId || null,
+      title: slot.title ?? slot.thread?.title ?? slot.task?.title ?? meta?.title ?? null,
+      status: slot.status ?? meta?.threadRuntimeStatus?.type ?? "idle",
+      running,
+      taskType,
+      model,
+      rawModel,
       selected: Boolean(slot.selected) || Boolean(
-        activeThreadKey && normalizeThreadKey(slot.threadKey) === normalizeThreadKey(activeThreadKey)
+        activeThreadKey && threadId === normalizeThreadKey(activeThreadKey)
       )
-    })),
+    };
+  });
+
+  const activeTasks = [];
+  const seenRunningKeys = new Set();
+  for (const slot of enrichedSlots) {
+    if (slot.running && slot.threadKey) {
+      activeTasks.push({
+        threadKey: slot.threadKey,
+        threadId: slot.threadId,
+        slot: slot.id,
+        title: slot.title,
+        status: slot.status,
+        taskType: slot.taskType,
+        model: slot.model,
+        rawModel: slot.rawModel
+      });
+      seenRunningKeys.add(slot.threadId);
+    }
+  }
+
+  for (const [id, meta] of conversationsMeta.entries()) {
+    if (!seenRunningKeys.has(id)) {
+      const isMetaRunning = ["working", "thinking", "running", "in_progress"].includes(String(meta?.threadRuntimeStatus?.type || "").toLowerCase());
+      if (isMetaRunning) {
+        const rawModel = meta?.latestModel || meta?.latestThreadSettings?.model || meta?.previousTurnModel || null;
+        activeTasks.push({
+          threadKey: "local:" + id,
+          threadId: id,
+          slot: null,
+          title: meta.title || "Untitled",
+          status: meta.threadRuntimeStatus?.type || "working",
+          taskType: isWorkTask(meta) ? "WORK" : "CODEX",
+          model: formatModel(rawModel),
+          rawModel
+        });
+        seenRunningKeys.add(id);
+      }
+    }
+  }
+
+  let lastTask = null;
+  if (activeTasks.length > 0) {
+    lastTask = activeTasks[0];
+  } else if (activeThreadKey && conversationsMeta.has(normalizeThreadKey(activeThreadKey))) {
+    const meta = conversationsMeta.get(normalizeThreadKey(activeThreadKey));
+    const rawModel = meta?.latestModel || meta?.latestThreadSettings?.model || meta?.previousTurnModel || null;
+    lastTask = {
+      threadKey: "local:" + meta.id,
+      threadId: meta.id,
+      slot: null,
+      title: meta.title,
+      status: meta.threadRuntimeStatus?.type || "idle",
+      taskType: isWorkTask(meta) ? "WORK" : "CODEX",
+      model: formatModel(rawModel),
+      rawModel
+    };
+  } else if (enrichedSlots[0]?.threadKey) {
+    lastTask = enrichedSlots[0];
+  }
+
+  return {
+    activeThreadKey,
+    slots: enrichedSlots,
+    activeTasks,
+    lastTask,
     usage,
     bridgeSnapshot: {
       source: cacheHit ? "cache" : "discovery",
@@ -4347,9 +4465,12 @@ var cached = {
     status: "off",
     selected: false
   })),
+  activeTasks: [],
+  lastTask: null,
   error: "Waiting for Codex",
   updatedAt: Date.now()
 };
+var rememberedLastTask = null;
 var refreshPromise = null;
 var nextReconnectAt = 0;
 async function focusCodex() {
@@ -4363,7 +4484,18 @@ async function refresh(force = false) {
   refreshPromise = (async () => {
     try {
       const snapshot = await client.snapshot();
-      cached = { connected: true, ...snapshot, error: null, updatedAt: Date.now() };
+      if (Array.isArray(snapshot.activeTasks) && snapshot.activeTasks.length > 0) {
+        rememberedLastTask = snapshot.activeTasks[0];
+      } else if (snapshot.lastTask) {
+        rememberedLastTask = snapshot.lastTask;
+      }
+      cached = {
+        connected: true,
+        ...snapshot,
+        lastTask: rememberedLastTask || snapshot.lastTask || null,
+        error: null,
+        updatedAt: Date.now()
+      };
       nextReconnectAt = 0;
     } catch (error) {
       cached = { ...cached, connected: false, error: error.message, updatedAt: Date.now() };

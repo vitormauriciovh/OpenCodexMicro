@@ -16,7 +16,8 @@
     { "Name": "Codex-Aufgabe abzweigen", "Tooltip": "Zweigt die aktive Codex-Aufgabe in eine neue Aufgabe ab." },
     { "Name": "Codex steuern", "Tooltip": "Sendet den aktuellen Eingabetext als Steueranweisung an die laufende Aufgabe." },
     { "Name": "Codex-Mikrofon", "Tooltip": "Schaltet die Codex-Mikrofonaktion um." },
-    { "Name": "An Codex senden", "Tooltip": "Sendet den aktuellen Codex-Eingabetext oder stellt ihn in die Warteschlange." }
+    { "Name": "An Codex senden", "Tooltip": "Sendet den aktuellen Codex-Eingabetext oder stellt ihn in die Warteschlange." },
+    { "Name": "Codex-Aufgabenmonitor", "Tooltip": "Zeigt Aufgabentyp (WORK/CODEX) und Modell an. Wechselt bei mehreren Aufgaben oder zeigt das Modell der letzten Aufgabe." }
   ],
   "Localization": {
     "BridgeSetup": "Codex Bridge einrichten",

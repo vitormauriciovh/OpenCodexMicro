@@ -16,7 +16,8 @@
     { "Name": "Bifurcar tarefa Codex", "Tooltip": "Bifurca a tarefa ativa do Codex numa nova tarefa." },
     { "Name": "Orientar Codex", "Tooltip": "Envia o texto atual do editor como orientação para a tarefa em execução." },
     { "Name": "Microfone Codex", "Tooltip": "Alterna a ação de microfone do Codex." },
-    { "Name": "Enviar para o Codex", "Tooltip": "Envia ou coloca em fila o texto atual do editor do Codex." }
+    { "Name": "Enviar para o Codex", "Tooltip": "Envia ou coloca em fila o texto atual do editor do Codex." },
+    { "Name": "Monitor de Tarefas Codex", "Tooltip": "Mostra o tipo de tarefa ativa (WORK/CODEX) e o modelo. Alterna entre tarefas se várias estiverem em execução, ou mostra o modelo da última tarefa." }
   ],
   "Localization": {
     "BridgeSetup": "Configuração do Codex Bridge",

@@ -136,6 +136,26 @@ const bridge = createServer((request, response) => {
         { id: 3, threadKey: "44444444-4444-4444-4444-444444444444", title: "Failed task", status: "error" },
         { id: 4, threadKey: "55555555-5555-5555-5555-555555555555", title: "Idle task", status: "idle" }
       ],
+      activeTasks: [
+        {
+          threadKey: "11111111-1111-1111-1111-111111111111",
+          threadId: "11111111-1111-1111-1111-111111111111",
+          slot: 0,
+          title: "Working task",
+          status: "thinking",
+          taskType: "WORK",
+          model: "5.6 LUNA"
+        }
+      ],
+      lastTask: {
+        threadKey: "11111111-1111-1111-1111-111111111111",
+        threadId: "11111111-1111-1111-1111-111111111111",
+        slot: 0,
+        title: "Working task",
+        status: "thinking",
+        taskType: "WORK",
+        model: "5.6 LUNA"
+      },
       usage: { windows: [{ kind: "weekly", remainingPercent: 23 }] }
     }));
     return;
@@ -303,6 +323,37 @@ try {
   const usageSvg = Buffer.from(usageItem.data.split(",")[1], "base64").toString();
   assert.match(usageSvg, />23<tspan/);
   assert.match(usageSvg, /#e89b2d/);
+
+  const monitorEvent = {
+    uuid: "com.ulanzi.ulanzistudio.codexmicro.taskmonitor",
+    actionid: "action-monitor",
+    key: "2_1",
+    param: {}
+  };
+  client.send(JSON.stringify({ cmd: "add", ...monitorEvent }));
+  client.send(JSON.stringify({ cmd: "keydown", ...monitorEvent }));
+  client.send(JSON.stringify({ cmd: "run", ...monitorEvent }));
+  client.send(JSON.stringify({ cmd: "keyup", ...monitorEvent }));
+  await new Promise(resolve => setTimeout(resolve, 250));
+
+  assert.equal(
+    bridgeRequests.filter(item => item.includes("/thread/11111111-1111-1111-1111-111111111111/click?slot=0")).length,
+    3,
+    "Task Monitor press must open active thread"
+  );
+  const monitorState = messages.find(message =>
+    message.cmd === "state" &&
+    message.param?.statelist?.[0]?.uuid === monitorEvent.uuid
+  );
+  const monitorItem = monitorState?.param?.statelist?.[0];
+  assert.equal(monitorItem?.type, 1);
+  assert.equal(monitorItem?.showtext, false);
+  assert.match(monitorItem?.data || "", /^data:image\/svg\+xml;base64,/);
+  const monitorSvg = Buffer.from(monitorItem.data.split(",")[1], "base64").toString();
+  assert.match(monitorSvg, /WORK/);
+  assert.match(monitorSvg, /5\.6 LUNA/);
+  assert.match(monitorSvg, /RUNNING/);
+
   process.stdout.write("Codex Micro plugin smoke test passed.\n");
 } finally {
   child.kill("SIGTERM");

@@ -16,7 +16,8 @@
     { "Name": "Codex タスクをフォーク", "Tooltip": "アクティブな Codex タスクを新しいタスクとしてフォークします。" },
     { "Name": "Codex を誘導", "Tooltip": "現在の入力欄のテキストを実行中タスクへの誘導入力として送信します。" },
     { "Name": "Codex マイク", "Tooltip": "Codex のマイク操作を切り替えます。" },
-    { "Name": "Codex に送信", "Tooltip": "現在の Codex 入力欄のテキストを送信またはキューに追加します。" }
+    { "Name": "Codex に送信", "Tooltip": "現在の Codex 入力欄のテキストを送信またはキューに追加します。" },
+    { "Name": "Codex タスクモニター", "Tooltip": "アクティブなタスク種別（WORK/CODEX）とモデルを表示します。複数実行時は順に切り替え、待機時は最後のモデルを表示します。" }
   ],
   "Localization": {
     "BridgeSetup": "Codex Bridge 設定",

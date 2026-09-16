@@ -165,6 +165,16 @@
       "Controllers": ["Keypad"],
       "DisableAutomaticStates": true,
       "States": [{ "Name": "Submit", "Image": "assets/icons/submit.png" }]
+    },
+    {
+      "Name": "Codex Task Monitor",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.taskmonitor",
+      "Tooltip": "Show active task type (WORK/CODEX) and model. Cycles when multiple tasks run, or shows the latest task model.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Task Monitor", "Image": "assets/icons/task-idle.png" }]
     }
   ]
 }

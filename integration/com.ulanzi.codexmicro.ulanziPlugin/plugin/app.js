@@ -27,7 +27,8 @@ const ACTION_LABELS = Object.freeze({
   fork: "FORK",
   steer: "STEER",
   mic: "MIC",
-  submit: "SUBMIT"
+  submit: "SUBMIT",
+  taskmonitor: "MONITOR"
 });
 const TASK_ICON_PATHS = Object.freeze({
   idle: "assets/icons/task-idle.png",
@@ -43,6 +44,10 @@ let pollTimer;
 let pollInFlight = false;
 let latestState = null;
 let setupOperation = null;
+let taskMonitorIndex = 0;
+let lastTaskMonitorRotation = Date.now();
+let lastKnownTask = null;
+let currentDisplayedTask = null;
 
 function contextOf(message) {
   return String(message.actionid || `${message.uuid}___${message.key}`);
@@ -312,12 +317,211 @@ function setUsageDisplay(instance, usage) {
   });
 }
 
+function taskMonitorIconData({
+  connected = true,
+  taskType = "WORK",
+  model = "DEFAULT",
+  status = "idle",
+  currentIndex = 0,
+  totalRunning = 0
+}) {
+  if (!connected) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <defs>
+        <linearGradient id="bgOff" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#181c20"/>
+          <stop offset="100%" stop-color="#0c0e10"/>
+        </linearGradient>
+      </defs>
+      <rect width="196" height="196" rx="22" fill="url(#bgOff)"/>
+      <rect x="2" y="2" width="192" height="192" rx="20" fill="none" stroke="#2c333a" stroke-width="2"/>
+      <g transform="translate(98, 40)">
+        <rect x="-40" y="-13" width="80" height="26" rx="13" fill="#262c33" stroke="#3b444f" stroke-width="1.5"/>
+        <text x="0" y="5" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="11" font-weight="800" fill="#8a96a3" letter-spacing="1.2">BRIDGE</text>
+      </g>
+      <text x="98" y="104" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="20" font-weight="800" fill="#606d7b" letter-spacing="0.8">OFFLINE</text>
+      <g transform="translate(98, 154)">
+        <circle cx="-38" cy="-4" r="4" fill="#ef4444"/>
+        <text x="-26" y="0" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#ef4444" letter-spacing="0.8">DISCONNECTED</text>
+      </g>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+  }
+
+  const isWork = taskType === "WORK";
+  const typeBg = isWork ? "#0284c7" : "#6366f1";
+  const typeBorder = isWork ? "#38bdf8" : "#818cf8";
+  const isRunning = status === "running" || status === "working" || status === "thinking";
+  const hasMultiple = totalRunning > 1;
+
+  const modelStr = String(model || "DEFAULT");
+  const modelFontSize = modelStr.length > 10 ? "17" : modelStr.length > 8 ? "19" : "22";
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+    <defs>
+      <linearGradient id="cardBg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#161b22"/>
+        <stop offset="100%" stop-color="#0a0d10"/>
+      </linearGradient>
+      <filter id="glowGreen" x="-40%" y="-40%" width="180%" height="180%">
+        <feGaussianBlur stdDeviation="3" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <rect width="196" height="196" rx="22" fill="url(#cardBg)"/>
+    <rect x="2" y="2" width="192" height="192" rx="20" fill="none" stroke="${isRunning ? (isWork ? '#0369a1' : '#4f46e5') : '#21262d'}" stroke-width="2"/>
+
+    <g transform="translate(${hasMultiple ? '66' : '98'}, 38)">
+      <rect x="-42" y="-14" width="84" height="28" rx="14" fill="${typeBg}" stroke="${typeBorder}" stroke-width="1.5"/>
+      <text x="0" y="5" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="900" fill="#ffffff" letter-spacing="1.2">${taskType}</text>
+    </g>
+    ${hasMultiple ? `
+      <g transform="translate(148, 38)">
+        <rect x="-24" y="-12" width="48" height="24" rx="12" fill="#1e293b" stroke="#334155" stroke-width="1.2"/>
+        <text x="0" y="4" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="11" font-weight="800" fill="#94a3b8" letter-spacing="0.5">${currentIndex + 1}/${totalRunning}</text>
+      </g>
+    ` : ""}
+
+    <text x="98" y="80" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="9" font-weight="800" fill="#64748b" letter-spacing="1.8">AI MODEL</text>
+    <text x="98" y="108" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="${modelFontSize}" font-weight="900" fill="#f8fafc" letter-spacing="0.5">${modelStr}</text>
+
+    <line x1="38" y1="126" x2="158" y2="126" stroke="#21262d" stroke-width="1.2" stroke-dasharray="3 3"/>
+
+    ${isRunning ? `
+      <g transform="translate(98, 156)">
+        <circle cx="-38" cy="-4" r="5" fill="#22c55e" filter="url(#glowGreen)"/>
+        <circle cx="-38" cy="-4" r="3.5" fill="#ffffff"/>
+        <text x="-24" y="1" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="900" fill="#22c55e" letter-spacing="1.2">RUNNING</text>
+      </g>
+    ` : `
+      <g transform="translate(98, 156)">
+        <circle cx="-28" cy="-4" r="3.5" fill="#64748b"/>
+        <text x="-16" y="0" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="11" font-weight="700" fill="#94a3b8" letter-spacing="1">LAST TASK</text>
+      </g>
+    `}
+  </svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+
+function setTaskMonitorDisplay(instance) {
+  if (!latestState?.connected) {
+    const digest = "monitor:offline";
+    if (!instance.active || instance.lastDisplay === digest) return;
+    instance.lastDisplay = digest;
+    currentDisplayedTask = null;
+    send({
+      cmd: "state",
+      param: {
+        statelist: [
+          {
+            uuid: instance.uuid,
+            actionid: instance.actionid,
+            key: instance.key,
+            type: 1,
+            data: taskMonitorIconData({ connected: false }),
+            showtext: false,
+            textdata: ""
+          },
+          {
+            uuid: instance.uuid,
+            actionid: instance.actionid,
+            key: instance.key,
+            type: 0,
+            state: 0,
+            showtext: false,
+            textdata: ""
+          }
+        ]
+      }
+    });
+    return;
+  }
+
+  const activeTasks = Array.isArray(latestState.activeTasks) ? latestState.activeTasks : [];
+  let taskType = "CODEX";
+  let model = "DEFAULT";
+  let status = "idle";
+  let currentIndex = 0;
+  let totalRunning = activeTasks.length;
+  let targetTask = null;
+
+  if (totalRunning > 0) {
+    status = "running";
+    if (totalRunning > 1) {
+      const now = Date.now();
+      if (now - lastTaskMonitorRotation >= 2500) {
+        taskMonitorIndex = (taskMonitorIndex + 1) % totalRunning;
+        lastTaskMonitorRotation = now;
+      }
+      currentIndex = taskMonitorIndex % totalRunning;
+    } else {
+      taskMonitorIndex = 0;
+      currentIndex = 0;
+    }
+    targetTask = activeTasks[currentIndex] || activeTasks[0];
+    lastKnownTask = targetTask;
+  } else {
+    status = "idle";
+    taskMonitorIndex = 0;
+    currentIndex = 0;
+    if (!lastKnownTask) {
+      lastKnownTask = latestState.lastTask || latestState.slots?.[0] || null;
+    }
+    targetTask = lastKnownTask;
+  }
+
+  currentDisplayedTask = targetTask;
+  taskType = targetTask?.taskType || "CODEX";
+  model = targetTask?.model || "DEFAULT";
+
+  const digest = `monitor:true:${taskType}:${model}:${status}:${currentIndex}:${totalRunning}`;
+  if (!instance.active || instance.lastDisplay === digest) return;
+  instance.lastDisplay = digest;
+
+  send({
+    cmd: "state",
+    param: {
+      statelist: [
+        {
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 1,
+          data: taskMonitorIconData({
+            connected: true,
+            taskType,
+            model,
+            status,
+            currentIndex,
+            totalRunning
+          }),
+          showtext: false,
+          textdata: ""
+        },
+        {
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 0,
+          state: 0,
+          showtext: false,
+          textdata: ""
+        }
+      ]
+    }
+  });
+}
+
 function renderInstance(instance) {
   const slot = taskSlot(instance.uuid);
   if (slot === null) {
     const action = actionName(instance.uuid);
     if (action === "usage") {
       setUsageDisplay(instance, latestState?.connected ? latestState.usage : null);
+      return;
+    }
+    if (action === "taskmonitor") {
+      setTaskMonitorDisplay(instance);
       return;
     }
     if (!latestState?.connected) {
@@ -399,6 +603,19 @@ async function invoke(instance, pressed) {
     if (!action) throw new Error(`Unknown Codex action: ${instance.uuid}`);
     if (action === "usage") {
       if (pressed) await bridgeRequest("/focus", "POST");
+      return;
+    }
+    if (action === "taskmonitor") {
+      if (!pressed) return;
+      const targetThreadKey = currentDisplayedTask?.threadKey || latestState?.activeThreadKey;
+      if (targetThreadKey) {
+        await Promise.all([
+          bridgeRequest(`/thread/${encodeURIComponent(targetThreadKey)}/click?slot=0`, "POST"),
+          bridgeRequest("/focus", "POST")
+        ]);
+      } else {
+        await bridgeRequest("/focus", "POST");
+      }
       return;
     }
     await bridgeRequest(`/action/${action}/${pressed ? "down" : "up"}`, "POST");

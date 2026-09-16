@@ -16,7 +16,8 @@
     { "Name": "Fork Codex Task", "Tooltip": "Fork the active Codex task into a new task." },
     { "Name": "Steer Codex", "Tooltip": "Send the current composer text as steering input to the running task." },
     { "Name": "Codex Microphone", "Tooltip": "Toggle the Codex microphone action." },
-    { "Name": "Submit to Codex", "Tooltip": "Submit or queue the current Codex composer text." }
+    { "Name": "Submit to Codex", "Tooltip": "Submit or queue the current Codex composer text." },
+    { "Name": "Codex Task Monitor", "Tooltip": "Show active task type (WORK/CODEX) and model. Cycles when multiple tasks run, or shows the latest task model." }
   ],
   "Localization": {
     "BridgeSetup": "Codex Bridge Setup",

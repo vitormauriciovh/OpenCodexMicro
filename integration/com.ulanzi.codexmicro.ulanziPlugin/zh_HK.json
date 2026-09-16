@@ -16,7 +16,8 @@
     { "Name": "分支 Codex 任務", "Tooltip": "從目前 Codex 任務建立新的分支任務。" },
     { "Name": "引導 Codex", "Tooltip": "將目前編輯器文字作為引導輸入傳送給執行中的任務。" },
     { "Name": "Codex 麥克風", "Tooltip": "切換 Codex 麥克風操作。" },
-    { "Name": "提交至 Codex", "Tooltip": "提交或排隊傳送目前的 Codex 編輯器文字。" }
+    { "Name": "提交至 Codex", "Tooltip": "提交或排隊傳送目前的 Codex 編輯器文字。" },
+    { "Name": "Codex 任務監視器", "Tooltip": "顯示活動任務類型（WORK/CODEX）與模型。多個任務執行時自動輪播，閒置時顯示最近任務模型。" }
   ],
   "Localization": {
     "BridgeSetup": "Codex Bridge 設定",

@@ -17,9 +17,12 @@ let cached = {
   slots: Array.from({ length: 6 }, (_, id) => ({
     id, threadKey: null, title: null, status: "off", selected: false
   })),
+  activeTasks: [],
+  lastTask: null,
   error: "Waiting for Codex",
   updatedAt: Date.now()
 };
+let rememberedLastTask = null;
 let refreshPromise = null;
 let nextReconnectAt = 0;
 
@@ -35,7 +38,18 @@ async function refresh(force = false) {
   refreshPromise = (async () => {
     try {
       const snapshot = await client.snapshot();
-      cached = { connected: true, ...snapshot, error: null, updatedAt: Date.now() };
+      if (Array.isArray(snapshot.activeTasks) && snapshot.activeTasks.length > 0) {
+        rememberedLastTask = snapshot.activeTasks[0];
+      } else if (snapshot.lastTask) {
+        rememberedLastTask = snapshot.lastTask;
+      }
+      cached = {
+        connected: true,
+        ...snapshot,
+        lastTask: rememberedLastTask || snapshot.lastTask || null,
+        error: null,
+        updatedAt: Date.now()
+      };
       nextReconnectAt = 0;
     } catch (error) {
       cached = { ...cached, connected: false, error: error.message, updatedAt: Date.now() };

@@ -16,7 +16,8 @@
     { "Name": "Bifurcar tarea de Codex", "Tooltip": "Bifurca la tarea activa de Codex en una tarea nueva." },
     { "Name": "Orientar Codex", "Tooltip": "Envía el texto actual del editor como orientación a la tarea en ejecución." },
     { "Name": "Micrófono de Codex", "Tooltip": "Activa o desactiva la acción de micrófono de Codex." },
-    { "Name": "Enviar a Codex", "Tooltip": "Envía o pone en cola el texto actual del editor de Codex." }
+    { "Name": "Enviar a Codex", "Tooltip": "Envía o pone en cola el texto actual del editor de Codex." },
+    { "Name": "Monitor de tareas de Codex", "Tooltip": "Muestra el tipo de tarea activa (WORK/CODEX) y el modelo. Alterna entre tareas si hay varias en ejecución, o muestra el modelo de la última tarea." }
   ],
   "Localization": {
     "BridgeSetup": "Configuración de Codex Bridge",
