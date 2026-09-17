@@ -427,7 +427,35 @@ function sessionCardIconData({
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
 
-function proceedIconData() {
+function proceedIconData({ connected = true, hasAction = false } = {}) {
+  if (!connected) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <rect width="196" height="196" rx="24" fill="#13161a"/>
+      <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="#262c36" stroke-width="2"/>
+      <g transform="translate(98, 76)">
+        <circle cx="0" cy="0" r="32" fill="#1c2128" stroke="#30363d" stroke-width="2"/>
+        <path d="M-10 -2 L-3 6 L12 -8" fill="none" stroke="#64748b" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <text x="98" y="142" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="15" font-weight="900" fill="#64748b" letter-spacing="1">PROCEED</text>
+      <text x="98" y="162" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="800" fill="#ef4444" letter-spacing="0.8">OFFLINE</text>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+  }
+
+  if (!hasAction) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <rect width="196" height="196" rx="24" fill="#13161a"/>
+      <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="#262d35" stroke-width="2"/>
+      <g transform="translate(98, 76)">
+        <circle cx="0" cy="0" r="32" fill="#1a2026" stroke="#334155" stroke-width="2"/>
+        <path d="M-10 -2 L-3 6 L12 -8" fill="none" stroke="#475569" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <text x="98" y="142" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="15" font-weight="900" fill="#64748b" letter-spacing="1">PROCEED</text>
+      <text x="98" y="162" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="700" fill="#475569" letter-spacing="0.8">NO PENDING</text>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+  }
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
     <defs>
       <linearGradient id="bgProceed" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -440,18 +468,46 @@ function proceedIconData() {
       </filter>
     </defs>
     <rect width="196" height="196" rx="24" fill="url(#bgProceed)"/>
-    <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="#10b981" stroke-width="2"/>
+    <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="#10b981" stroke-width="3" filter="url(#glowGreen)"/>
     <g transform="translate(98, 76)">
       <circle cx="0" cy="0" r="32" fill="#10b981" filter="url(#glowGreen)"/>
       <path d="M-10 -2 L-3 6 L12 -8" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
     </g>
-    <text x="98" y="142" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="15" font-weight="900" fill="#ffffff" letter-spacing="1">PROCEED</text>
+    <text x="98" y="142" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="16" font-weight="900" fill="#34d399" letter-spacing="1">PROCEED</text>
     <text x="98" y="162" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="800" fill="#6ee7b7" letter-spacing="0.8">APPROVE PLAN</text>
   </svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
 
-function cancelIconData() {
+function cancelIconData({ connected = true, isRunning = false } = {}) {
+  if (!connected) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <rect width="196" height="196" rx="24" fill="#13161a"/>
+      <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="#262c36" stroke-width="2"/>
+      <g transform="translate(98, 76)">
+        <circle cx="0" cy="0" r="32" fill="#1c2128" stroke="#30363d" stroke-width="2"/>
+        <path d="M-8 -8 L8 8 M8 -8 L-8 8" fill="none" stroke="#64748b" stroke-width="4.5" stroke-linecap="round"/>
+      </g>
+      <text x="98" y="142" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="15" font-weight="900" fill="#64748b" letter-spacing="1">STOP</text>
+      <text x="98" y="162" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="800" fill="#ef4444" letter-spacing="0.8">OFFLINE</text>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+  }
+
+  if (!isRunning) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <rect width="196" height="196" rx="24" fill="#13161a"/>
+      <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="#262d35" stroke-width="2"/>
+      <g transform="translate(98, 76)">
+        <circle cx="0" cy="0" r="32" fill="#1a2026" stroke="#334155" stroke-width="2"/>
+        <path d="M-8 -8 L8 8 M8 -8 L-8 8" fill="none" stroke="#475569" stroke-width="4.5" stroke-linecap="round"/>
+      </g>
+      <text x="98" y="142" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="15" font-weight="900" fill="#64748b" letter-spacing="1">STOP</text>
+      <text x="98" y="162" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="700" fill="#475569" letter-spacing="0.8">IDLE</text>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+  }
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
     <defs>
       <linearGradient id="bgCancel" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -464,12 +520,12 @@ function cancelIconData() {
       </filter>
     </defs>
     <rect width="196" height="196" rx="24" fill="url(#bgCancel)"/>
-    <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="#ef4444" stroke-width="2"/>
+    <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="#ef4444" stroke-width="3" filter="url(#glowRed)"/>
     <g transform="translate(98, 76)">
       <circle cx="0" cy="0" r="32" fill="#ef4444" filter="url(#glowRed)"/>
       <path d="M-8 -8 L8 8 M8 -8 L-8 8" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round"/>
     </g>
-    <text x="98" y="142" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="15" font-weight="900" fill="#ffffff" letter-spacing="1">STOP</text>
+    <text x="98" y="142" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="16" font-weight="900" fill="#ffffff" letter-spacing="1">STOP</text>
     <text x="98" y="162" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="800" fill="#fca5a5" letter-spacing="0.8">CANCEL TASK</text>
   </svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
@@ -867,9 +923,20 @@ function renderInstance(instance) {
   if (!name) return;
 
   if (name === "proceed") {
-    sendSvgState(instance, proceedIconData());
+    const connected = Boolean(latestState?.connected);
+    const hasAction = connected && Boolean(
+      (latestState?.pendingAttentionCount > 0) ||
+      latestState?.activeTasks?.some((t) => t?.pendingFeedback || t?.status === "attention" || t?.status === "waiting_for_input")
+    );
+    sendSvgState(instance, proceedIconData({ connected, hasAction }));
   } else if (name === "cancel") {
-    sendSvgState(instance, cancelIconData());
+    const connected = Boolean(latestState?.connected);
+    const isRunning = connected && Boolean(
+      latestState?.agentStatus === "PLANNING" ||
+      latestState?.agentStatus === "EXECUTING" ||
+      latestState?.activeTasks?.some((t) => t?.status === "working" || t?.status === "planning" || t?.status === "executing")
+    );
+    sendSvgState(instance, cancelIconData({ connected, isRunning }));
   } else if (name === "attention") {
     sendSvgState(instance, attentionIconData(latestState?.pendingAttentionCount || 0));
   } else if (name === "subagents") {

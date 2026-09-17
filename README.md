@@ -9,20 +9,24 @@ turns it into a native Ulanzi Studio plugin. It shows recent tasks, switches to
 the exact task displayed on a key, and provides Fast, Usage, Pin, New, Fork,
 Steer, Mic, Submit, and Latest Task & Scroll Encoder actions.
 
-![OpenCodexMicro on an Ulanzi D200 Series](docs/images/codex-keyboard-hero.png)
+![OpenCodexMicro on an Ulanzi D200 Series](docs/images/ulanzi-deck-showcase.jpg)
 
-## What it does
+## Features Overview
+
+<p align="center">
+  <img src="docs/images/ulanzi-agent-keys.jpg" alt="Ulanzi Deck Agent Keys" width="85%" />
+</p>
 
 | Feature | Behavior |
 | --- | --- |
-| Five live task actions | Show Codex's Most Recent tasks with idle, working (with elapsed timer), complete, attention, or error state |
-| Exact task switching | Route the selected thread through Codex's own Micro event bus |
-| Codex controls | Fast, Usage (with reset countdown), Approve, Deny, Attention Alert, Pin, New, Fork, Steer, Mic, and Submit |
-| Encoder navigation | Press to open task 1; turn left/right to scroll up/down through Ulanzi Studio's hotkey protocol |
-| Live usage | Draw the remaining Codex allowance and reset countdown directly on the key; press to return to Codex |
-| Attention Alert | Display count of threads needing approval or intervention and jump directly to them |
-| Ulanzi Studio integration | Let Ulanzi Studio own the device and manage the key layout |
-| Local-only transport | Bind CDP and the Bridge API to loopback addresses only |
+| **Five Live Task / Session Cards** | Display Codex & Antigravity recent tasks with model tags (`5.6 TERRA`, `Claude 3.7`), live elapsed timers, state badges (`WORKING`, `COMPLETED`, `ATTENTION`, `IDLE`), and conversation titles. |
+| **Dedicated 5H & Weekly Usage Gauges** | Large circular progress rings showing remaining 5-Hour and Weekly allowances with live countdown to reset (`RESET 2H 15M`, `RESET 5H`, `RESET 7D`). |
+| **Agent Controls & Approvals** | Instant `APPROVE` / `PROCEED`, `CANCEL` / `DENY`, and Attention alert notification counters. |
+| **AI Slash Commands** | Dedicated single-tap buttons for `/boost`, `/grill-me`, and `/goal` autonomous agent execution. |
+| **Exact Task Switching** | Route the selected thread through Codex's and Antigravity's live Micro event bus. |
+| **Encoder Navigation** | Press to open the latest task; turn left/right to scroll up/down through Ulanzi Studio's hotkey protocol. |
+| **Spotify Playback Suite** | Display live song title, artist, and playback status directly on deck LCD buttons. |
+| **Local-only Transport** | Bind CDP and the Bridge APIs strictly to loopback addresses (`127.0.0.1`). |
 
 This Ulanzi-maintained project is an unofficial integration with Codex Desktop
 for **macOS, Ulanzi Studio, and Ulanzi D200 Series**. It is not affiliated with or
