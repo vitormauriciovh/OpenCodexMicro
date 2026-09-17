@@ -146,6 +146,26 @@
       "States": [{ "Name": "Usage", "Image": "assets/icons/usage.png" }]
     },
     {
+      "Name": "Antigravity 5H Usage",
+      "Icon": "assets/icons/usage.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.usage5h",
+      "Tooltip": "Display remaining 5-hour Antigravity allowance and reset countdown.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "5H Usage", "Image": "assets/icons/usage.png" }]
+    },
+    {
+      "Name": "Antigravity Weekly Usage",
+      "Icon": "assets/icons/usage.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.usageweekly",
+      "Tooltip": "Display remaining weekly Antigravity allowance and reset countdown.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Weekly Usage", "Image": "assets/icons/usage.png" }]
+    },
+    {
       "Name": "Antigravity New Session",
       "Icon": "assets/icons/new.png",
       "PropertyInspectorPath": "property-inspector/setup.html",

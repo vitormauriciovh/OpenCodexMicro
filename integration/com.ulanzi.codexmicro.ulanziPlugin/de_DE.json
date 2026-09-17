@@ -10,6 +10,8 @@
     { "Name": "Codex-Aufgabe 5", "Tooltip": "Öffnet den letzten Codex-Aufgabenplatz 5 und zeigt seinen Live-Status." },
     { "Name": "Codex-Schnellmodus", "Tooltip": "Schaltet den Schnellmodus für die aktive Codex-Aufgabe um." },
     { "Name": "Codex-Nutzung", "Tooltip": "Zeigt das verbleibende Codex-Nutzungskontingent und fokussiert Codex beim Drücken." },
+    { "Name": "Codex 5H-Nutzung", "Tooltip": "Zeigt das 5-Stunden-Nutzungskontingent von Codex und den Reset-Countdown." },
+    { "Name": "Codex Wöchentliche Nutzung", "Tooltip": "Zeigt das wöchentliche Nutzungskontingent von Codex und den Reset-Countdown." },
     { "Name": "Codex-Aufgabe anheften", "Tooltip": "Heftet die aktive Codex-Aufgabe an oder löst sie." },
     { "Name": "Neue Codex-Aufgabe", "Tooltip": "Erstellt eine neue Codex-Aufgabe." },
     { "Name": "Letzte Aufgabe & Scrollen", "Tooltip": "Drücken öffnet die letzte Codex-Aufgabe. Links drehen scrollt nach oben, rechts drehen nach unten." },

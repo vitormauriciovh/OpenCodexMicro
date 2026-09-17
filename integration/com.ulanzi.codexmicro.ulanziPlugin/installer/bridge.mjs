@@ -4133,6 +4133,26 @@ var SNAPSHOT_EXPRESSION = `(async () => {
       const data = query?.state?.data;
       const rateLimit = data?.rate_limit;
       if (!rateLimit || typeof rateLimit !== "object") continue;
+      const parseResetTimestamp = (win, nowTime) => {
+        if (!win || typeof win !== "object") return null;
+        const raw = win.reset_at ?? win.resets_at ?? win.reset_time ?? win.resetAt ?? win.resetsAt;
+        if (raw != null) {
+          if (typeof raw === "number" && Number.isFinite(raw)) {
+            return raw > 1e11 ? raw : raw * 1000;
+          }
+          if (typeof raw === "string") {
+            const parsed = Date.parse(raw);
+            if (Number.isFinite(parsed)) return parsed;
+            const num = Number(raw);
+            if (Number.isFinite(num)) return num > 1e11 ? num : num * 1000;
+          }
+        }
+        const relSec = Number(win.reset_after_seconds ?? win.reset_in_seconds ?? win.resets_in ?? win.reset_in ?? win.reset_after);
+        if (Number.isFinite(relSec) && relSec > 0) {
+          return nowTime + relSec * 1000;
+        }
+        return null;
+      };
       const normalizeWindow = (window, role) => {
         if (!window || typeof window !== "object") return null;
         const usedPercent = Number(window.used_percent);
@@ -4143,12 +4163,15 @@ var SNAPSHOT_EXPRESSION = `(async () => {
           : minutes != null && Math.abs(minutes - 10080) <= 1 ? "weekly"
             : "other";
         const used = Math.min(100, Math.max(0, usedPercent));
+        const parsedReset = parseResetTimestamp(window, now);
+        const defaultWindowMs = kind === "weekly" ? 7 * 86400 * 1000 : 5 * 3600 * 1000;
+        const fallbackReset = (updatedAt || now) + defaultWindowMs;
         return {
           id: kind === "other" ? role : kind,
           kind,
           usedPercent: used,
           remainingPercent: 100 - used,
-          resetsAt: Number(window.reset_at) || null
+          resetsAt: parsedReset || fallbackReset
         };
       };
       usage = {
@@ -4218,6 +4241,7 @@ var SNAPSHOT_EXPRESSION = `(async () => {
     const running = isSlotRunning || isMetaRunning;
     const taskType = isWorkTask(meta) ? "WORK" : "CODEX";
     const model = formatModel(rawModel);
+    const tokenUsage = meta?.latestTokenUsageInfo || null;
     return {
       id: slot.id,
       threadKey: slot.threadKey ?? null,
@@ -4228,6 +4252,7 @@ var SNAPSHOT_EXPRESSION = `(async () => {
       taskType,
       model,
       rawModel,
+      tokenUsage,
       selected: Boolean(slot.selected) || Boolean(
         activeThreadKey && threadId === normalizeThreadKey(activeThreadKey)
       )
@@ -4246,7 +4271,8 @@ var SNAPSHOT_EXPRESSION = `(async () => {
         status: slot.status,
         taskType: slot.taskType,
         model: slot.model,
-        rawModel: slot.rawModel
+        rawModel: slot.rawModel,
+        tokenUsage: slot.tokenUsage
       });
       seenRunningKeys.add(slot.threadId);
     }
@@ -4265,7 +4291,8 @@ var SNAPSHOT_EXPRESSION = `(async () => {
           status: meta.threadRuntimeStatus?.type || "working",
           taskType: isWorkTask(meta) ? "WORK" : "CODEX",
           model: formatModel(rawModel),
-          rawModel
+          rawModel,
+          tokenUsage: meta?.latestTokenUsageInfo || null
         });
         seenRunningKeys.add(id);
       }
@@ -4286,7 +4313,8 @@ var SNAPSHOT_EXPRESSION = `(async () => {
       status: meta.threadRuntimeStatus?.type || "idle",
       taskType: isWorkTask(meta) ? "WORK" : "CODEX",
       model: formatModel(rawModel),
-      rawModel
+      rawModel,
+      tokenUsage: meta?.latestTokenUsageInfo || null
     };
   } else if (enrichedSlots[0]?.threadKey) {
     lastTask = enrichedSlots[0];

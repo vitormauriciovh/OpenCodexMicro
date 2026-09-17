@@ -21,6 +21,8 @@ const USAGE_BASE64 = readFileSync(
 const ACTION_LABELS = Object.freeze({
   fast: "FAST",
   usage: "USAGE",
+  usage5h: "5H USAGE",
+  usageweekly: "WK USAGE",
   pin: "PIN",
   new: "NEW",
   navigate: "LATEST",
@@ -85,8 +87,7 @@ function formatElapsed(ms) {
   const sec = Math.floor(ms / 1000);
   if (sec < 60) return `${sec}s`;
   const min = Math.floor(sec / 60);
-  const remSec = sec % 60;
-  if (min < 60) return `${min}m ${remSec}s`;
+  if (min < 60) return `${min}m`;
   const hr = Math.floor(min / 60);
   const remMin = min % 60;
   return `${hr}h ${remMin}m`;
@@ -123,11 +124,25 @@ function usageRemaining(usage) {
   };
 }
 
-function formatResetCountdown(resetsAt) {
-  if (!resetsAt || !Number.isFinite(resetsAt)) return null;
-  const targetMs = resetsAt > 1e11 ? resetsAt : resetsAt * 1000;
+function formatResetCountdown(resetsAt, defaultLabel = null) {
+  if (!resetsAt) return defaultLabel;
+  let targetMs;
+  if (typeof resetsAt === "number" && Number.isFinite(resetsAt)) {
+    targetMs = resetsAt > 1e11 ? resetsAt : resetsAt * 1000;
+  } else if (typeof resetsAt === "string") {
+    const parsed = Date.parse(resetsAt);
+    if (Number.isFinite(parsed)) {
+      targetMs = parsed;
+    } else {
+      const num = Number(resetsAt);
+      if (Number.isFinite(num)) targetMs = num > 1e11 ? num : num * 1000;
+      else return defaultLabel;
+    }
+  } else {
+    return defaultLabel;
+  }
   const diffMs = targetMs - Date.now();
-  if (diffMs <= 0) return null;
+  if (diffMs <= 0) return defaultLabel;
   if (diffMs < 3600000) {
     const mins = Math.max(1, Math.ceil(diffMs / 60000));
     return `RESET ${mins}M`;
@@ -338,6 +353,172 @@ function setDisplay(instance, state, text) {
   });
 }
 
+function escapeXml(unsafe) {
+  return String(unsafe || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function sendSvgState(instance, dataUrl) {
+  if (!instance.active || instance.lastDisplay === dataUrl) return;
+  instance.lastDisplay = dataUrl;
+  send({
+    cmd: "state",
+    param: {
+      statelist: [
+        {
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 1,
+          data: dataUrl,
+          showtext: false,
+          textdata: ""
+        },
+        {
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 0,
+          state: 0,
+          showtext: false,
+          textdata: ""
+        }
+      ]
+    }
+  });
+}
+
+function getTaskContextPercent(task) {
+  const tokenUsage = task?.tokenUsage || latestState?.tokenUsage;
+  if (!tokenUsage) return 0;
+  const total = tokenUsage?.total?.totalTokens ?? 0;
+  const contextWindow = tokenUsage?.modelContextWindow || 200000;
+  return Math.min(100, Math.max(0, Math.round((total / contextWindow) * 100)));
+}
+
+function taskCardIconData({
+  headerLeft = "CODEX",
+  headerRight = "Task 1",
+  title = "No Task",
+  status = "idle",
+  elapsed = "",
+  model = "default",
+  ctxPct = 0,
+  connected = true,
+  empty = false
+}) {
+  if (!connected) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <defs>
+        <clipPath id="cardClipOff">
+          <rect width="196" height="196" rx="24"/>
+        </clipPath>
+      </defs>
+      <rect width="196" height="196" rx="24" fill="#13161a"/>
+      <g clip-path="url(#cardClipOff)">
+        <rect x="0" y="0" width="196" height="38" fill="#272e39"/>
+      </g>
+      <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="#262c36" stroke-width="2"/>
+      <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#ffffff" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
+      <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="rgba(255,255,255,0.7)" letter-spacing="0.3">${escapeXml(headerRight)}</text>
+      <text x="98" y="98" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="17" font-weight="800" fill="#8a96a3" letter-spacing="0.5">Bridge Offline</text>
+      <text x="98" y="122" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="#ef4444" letter-spacing="0.4">disconnected</text>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+  }
+
+  if (empty) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <defs>
+        <clipPath id="cardClipEmpty">
+          <rect width="196" height="196" rx="24"/>
+        </clipPath>
+      </defs>
+      <rect width="196" height="196" rx="24" fill="#13161a"/>
+      <g clip-path="url(#cardClipEmpty)">
+        <rect x="0" y="0" width="196" height="38" fill="#21262d"/>
+      </g>
+      <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="#262c36" stroke-width="2"/>
+      <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#8a96a3" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
+      <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="#64748b" letter-spacing="0.3">${escapeXml(headerRight)}</text>
+      <text x="98" y="105" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="17" font-weight="800" fill="#64748b" letter-spacing="0.5">No Task</text>
+      <text x="98" y="128" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="600" fill="#475569" letter-spacing="0.4">idle</text>
+      <text x="12" y="162" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#475569">—</text>
+      <text x="184" y="162" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#475569">ctx 0%</text>
+      <rect x="12" y="172" width="172" height="7" rx="3.5" fill="#1e242c"/>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+  }
+
+  const s = String(status || "").toLowerCase();
+  const isWorking = s === "working" || s === "running" || s === "thinking" || s === "in_progress" || s === "executing" || s === "planning";
+  const isAttention = s === "attention" || s === "waiting" || s === "feedback";
+  const isError = s === "error" || s === "failed";
+  const isDone = s === "complete" || s === "completed" || s === "done";
+
+  let headerBg = "#334155";
+  let subColor = "#94a3b8";
+  let subText = "idle";
+
+  if (isWorking) {
+    headerBg = "#22c55e";
+    subColor = "#22c55e";
+    subText = elapsed ? `${s === "thinking" ? "thinking" : "working"} ${elapsed}` : (s === "thinking" ? "thinking" : "working");
+  } else if (isAttention) {
+    headerBg = "#f59e0b";
+    subColor = "#f59e0b";
+    subText = elapsed ? `waiting ${elapsed}` : "waiting";
+  } else if (isError) {
+    headerBg = "#ef4444";
+    subColor = "#ef4444";
+    subText = "error";
+  } else if (isDone) {
+    headerBg = "#3b82f6";
+    subColor = "#60a5fa";
+    subText = elapsed ? `done ${elapsed}` : "done";
+  }
+
+  const cleanTitle = String(title || "Untitled").trim();
+  const titleDisplay = cleanTitle.length > 14 ? cleanTitle.slice(0, 13) + "…" : cleanTitle;
+  const titleFontSize = titleDisplay.length > 11 ? "18" : "20";
+
+  const cleanModel = String(model || "default").trim().toLowerCase();
+  const modelDisplay = cleanModel.length > 11 ? cleanModel.slice(0, 10) + "…" : cleanModel;
+
+  const validPct = Math.max(0, Math.min(100, Math.round(Number(ctxPct) || 0)));
+  const barWidth = Math.max(0, Math.min(172, Math.round((validPct / 100) * 172)));
+  const barColor = validPct > 85 ? "#ef4444" : "#f59e0b";
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+    <defs>
+      <clipPath id="cardClip">
+        <rect width="196" height="196" rx="24"/>
+      </clipPath>
+    </defs>
+    <rect width="196" height="196" rx="24" fill="#13161a"/>
+    <g clip-path="url(#cardClip)">
+      <rect x="0" y="0" width="196" height="38" fill="${headerBg}"/>
+    </g>
+    <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="${isWorking ? '#16a34a' : isAttention ? '#d97706' : '#262c36'}" stroke-width="2"/>
+    <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#ffffff" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
+    <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="rgba(255,255,255,0.95)" letter-spacing="0.3">${escapeXml(headerRight)}</text>
+    
+    <text x="98" y="94" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="${titleFontSize}" font-weight="800" fill="#ffffff" letter-spacing="0.4">${escapeXml(titleDisplay)}</text>
+    <text x="98" y="120" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="${subColor}" letter-spacing="0.3">${escapeXml(subText)}</text>
+    
+    <text x="12" y="162" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#f59e0b" letter-spacing="0.2">${escapeXml(modelDisplay)}</text>
+    <text x="184" y="162" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#94a3b8" letter-spacing="0.2">ctx ${validPct}%</text>
+    
+    <rect x="12" y="172" width="172" height="7" rx="3.5" fill="#21262d"/>
+    ${barWidth > 0 ? `<rect x="12" y="172" width="${barWidth}" height="7" rx="3.5" fill="${barColor}"/>` : ""}
+  </svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+
 function setTaskDisplay(instance, path, text) {
   const digest = `path:${path}:${text}`;
   if (!instance.active || instance.lastDisplay === digest) return;
@@ -354,6 +535,114 @@ function setTaskDisplay(instance, path, text) {
         showtext: true,
         textdata: text
       }]
+    }
+  });
+}
+
+function singleUsageIconData({
+  header = "CODEX 5H",
+  remaining = null,
+  resetsAt = null,
+  connected = true
+}) {
+  const isWeekly = header.includes("WK") || header.includes("WEEK");
+  const defaultReset = isWeekly ? "RESET 7D" : "RESET 5H";
+  const resetLabel = formatResetCountdown(resetsAt, defaultReset);
+
+  if (!connected) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <rect width="196" height="196" rx="24" fill="#13161a"/>
+      <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="#262c36" stroke-width="2"/>
+      <!-- Top Badge -->
+      <g transform="translate(98, 28)">
+        <rect x="-58" y="-14" width="116" height="28" rx="14" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+        <text x="0" y="5.5" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#94a3b8" letter-spacing="0.8">${escapeXml(header)}</text>
+      </g>
+      <!-- Offline Ring Track -->
+      <circle cx="98" cy="96" r="38" fill="none" stroke="#21262d" stroke-width="8"/>
+      <text x="98" y="105" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="28" font-weight="900" fill="#64748b">—</text>
+      <text x="98" y="168" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="800" fill="#ef4444" letter-spacing="0.6">OFFLINE</text>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+  }
+
+  const r = 38;
+  const c = 2 * Math.PI * r;
+  const val = remaining === null ? 0 : Math.max(0, Math.min(100, Math.round(remaining)));
+  const filled = (c * val) / 100;
+  const col = getUsageProgressColor(remaining);
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+    <defs>
+      <filter id="glowSingle" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="3" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <rect width="196" height="196" rx="24" fill="#13161a"/>
+    <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="#262c36" stroke-width="2"/>
+    
+    <!-- Top Badge -->
+    <g transform="translate(98, 28)">
+      <rect x="-58" y="-14" width="116" height="28" rx="14" fill="#1e242c" stroke="#303844" stroke-width="1.2"/>
+      <text x="0" y="5.5" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#f1f5f9" letter-spacing="0.8">${escapeXml(header)}</text>
+    </g>
+
+    <!-- Gauge Ring -->
+    <circle cx="98" cy="96" r="${r}" fill="none" stroke="#21262d" stroke-width="8"/>
+    ${remaining !== null ? `
+      <circle cx="98" cy="96" r="${r}" fill="none" stroke="${col}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${filled} ${c - filled}" transform="rotate(-90 98 96)"/>
+    ` : ""}
+
+    <!-- Center Big Value -->
+    <text x="98" y="105" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif">
+      <tspan font-size="28" font-weight="900" fill="#ffffff" letter-spacing="-0.5">${remaining === null ? "—" : val}</tspan>
+      ${remaining !== null ? `<tspan font-size="14" font-weight="700" fill="#94a3b8" dx="1">%</tspan>` : ""}
+    </text>
+
+    <!-- Bottom Countdown / Status -->
+    <text x="98" y="168" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="800" fill="#cbd5e1" letter-spacing="0.5">${escapeXml(resetLabel)}</text>
+  </svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+
+function setSingleUsageDisplay(instance, windowKind) {
+  const usage = latestState?.connected ? latestState.usage : null;
+  const windows = Array.isArray(usage?.windows) ? usage.windows : [];
+  const window = windows.find((item) => item?.kind === windowKind);
+  const remaining = window ? Number(window.remainingPercent) : null;
+  const resetsAt = window?.resetsAt || null;
+  const is5h = windowKind === "five-hour";
+  const header = is5h ? "CODEX 5H" : "CODEX WK";
+  const connected = Boolean(latestState?.connected);
+  const defaultReset = is5h ? "RESET 5H" : "RESET 7D";
+  const resetLabel = formatResetCountdown(resetsAt, defaultReset);
+  const digest = `singleUsage:${windowKind}:${connected}:${remaining}:${resetLabel}`;
+  if (!instance.active || instance.lastDisplay === digest) return;
+  instance.lastDisplay = digest;
+  send({
+    cmd: "state",
+    param: {
+      statelist: [
+        {
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 1,
+          data: singleUsageIconData({ header, remaining, resetsAt, connected }),
+          showtext: false,
+          textdata: ""
+        },
+        {
+          uuid: instance.uuid,
+          actionid: instance.actionid,
+          key: instance.key,
+          type: 0,
+          state: 0,
+          showtext: false,
+          textdata: ""
+        }
+      ]
     }
   });
 }
@@ -1219,6 +1508,14 @@ function renderInstance(instance) {
       setUsageDisplay(instance, latestState?.connected ? latestState.usage : null);
       return;
     }
+    if (action === "usage5h") {
+      setSingleUsageDisplay(instance, "five-hour");
+      return;
+    }
+    if (action === "usageweekly") {
+      setSingleUsageDisplay(instance, "weekly");
+      return;
+    }
     if (action === "taskmonitor") {
       setTaskMonitorDisplay(instance);
       return;
@@ -1251,36 +1548,82 @@ function renderInstance(instance) {
       setPromptDisplay(instance, action);
       return;
     }
-    if (!latestState?.connected) {
-      if (action === "navigate") {
-        setTaskDisplay(instance, TASK_ICON_PATHS.idle, "Bridge Offline");
-      } else {
-        setDisplay(instance, 0, "Bridge Offline");
-      }
-      return;
-    }
     if (action === "navigate") {
-      const task = latestState.slots?.[0];
-      if (!task?.threadKey) {
-        setTaskDisplay(instance, TASK_ICON_PATHS.idle, "Latest Task");
+      if (!latestState?.connected) {
+        sendSvgState(instance, taskCardIconData({
+          headerLeft: "CODEX",
+          headerRight: "Latest",
+          connected: false
+        }));
         return;
       }
-      setTaskDisplay(instance, taskIconPath(task.status), shortTitle(task.title));
+      const task = latestState.slots?.[0];
+      if (!task?.threadKey) {
+        sendSvgState(instance, taskCardIconData({
+          headerLeft: "CODEX",
+          headerRight: "Latest",
+          connected: true,
+          empty: true
+        }));
+        return;
+      }
+      const startTime = task.threadKey ? taskStartTimes.get(task.threadKey) : null;
+      const elapsed = startTime ? formatElapsed(Date.now() - startTime) : "";
+      const ctxPct = getTaskContextPercent(task);
+      const model = task.rawModel || task.model || "default";
+      sendSvgState(instance, taskCardIconData({
+        headerLeft: "CODEX",
+        headerRight: "Latest",
+        title: task.title || "Untitled",
+        status: task.status || "idle",
+        elapsed,
+        model,
+        ctxPct,
+        connected: true,
+        empty: false
+      }));
+      return;
+    }
+    if (!latestState?.connected) {
+      setDisplay(instance, 0, "Bridge Offline");
       return;
     }
     setDisplay(instance, 0, ACTION_LABELS[action] || "CODEX");
     return;
   }
   if (!latestState?.connected) {
-    setTaskDisplay(instance, TASK_ICON_PATHS.idle, "Bridge Offline");
+    sendSvgState(instance, taskCardIconData({
+      headerLeft: "CODEX",
+      headerRight: `Task ${slot + 1}`,
+      connected: false
+    }));
     return;
   }
   const task = latestState.slots?.[slot];
   if (!task?.threadKey) {
-    setTaskDisplay(instance, TASK_ICON_PATHS.idle, `Task ${slot + 1}`);
+    sendSvgState(instance, taskCardIconData({
+      headerLeft: "CODEX",
+      headerRight: `Task ${slot + 1}`,
+      connected: true,
+      empty: true
+    }));
     return;
   }
-  setTaskDisplay(instance, taskIconPath(task.status), shortTitle(task.title));
+  const startTime = task.threadKey ? taskStartTimes.get(task.threadKey) : null;
+  const elapsed = startTime ? formatElapsed(Date.now() - startTime) : "";
+  const ctxPct = getTaskContextPercent(task);
+  const model = task.rawModel || task.model || "default";
+  sendSvgState(instance, taskCardIconData({
+    headerLeft: "CODEX",
+    headerRight: `Task ${slot + 1}`,
+    title: task.title || "Untitled",
+    status: task.status || "idle",
+    elapsed,
+    model,
+    ctxPct,
+    connected: true,
+    empty: false
+  }));
 }
 
 function renderAll() {
@@ -1334,7 +1677,7 @@ async function invoke(instance, pressed) {
     }
     const action = actionName(instance.uuid);
     if (!action) throw new Error(`Unknown Codex action: ${instance.uuid}`);
-    if (action === "usage") {
+    if (action === "usage" || action === "usage5h" || action === "usageweekly") {
       if (pressed) await bridgeRequest("/focus", "POST");
       return;
     }

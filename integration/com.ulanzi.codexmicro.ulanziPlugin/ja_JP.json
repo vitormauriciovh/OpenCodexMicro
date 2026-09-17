@@ -10,6 +10,8 @@
     { "Name": "Codex タスク 5", "Tooltip": "最近の Codex タスクスロット 5 を開き、リアルタイム状態を表示します。" },
     { "Name": "Codex 高速モード", "Tooltip": "アクティブな Codex タスクの高速モードを切り替えます。" },
     { "Name": "Codex 使用量", "Tooltip": "Codex の残り使用量を表示し、押すと Codex にフォーカスします。" },
+    { "Name": "Codex 5時間使用量", "Tooltip": "Codexの5時間残り使用枠とリセット時間を表示します。" },
+    { "Name": "Codex 週間使用量", "Tooltip": "Codexの週間残り使用枠とリセット時間を表示します。" },
     { "Name": "Codex タスクをピン留め", "Tooltip": "アクティブな Codex タスクをピン留めまたは解除します。" },
     { "Name": "新しい Codex タスク", "Tooltip": "新しい Codex タスクを作成します。" },
     { "Name": "最新タスクとスクロール", "Tooltip": "押すと最新の Codex タスクを開きます。左回転で上、右回転で下にスクロールします。" },

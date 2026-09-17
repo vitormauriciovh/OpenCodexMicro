@@ -80,9 +80,10 @@ export class AntigravityStateReader {
       const content = await fs.readFile(transcriptPath, "utf-8");
       const lines = content.trim().split("\n").filter(Boolean);
 
-      // Extract title: first try latest user message, fallback to initial message
+      // Extract title & model:
       let initialTitle = convId.slice(0, 8);
       let latestPrompt = "";
+      let detectedModel = null;
       for (let i = 0; i < lines.length; i++) {
         try {
           const entry = JSON.parse(lines[i]);
@@ -96,9 +97,31 @@ export class AntigravityStateReader {
               latestPrompt = cleanText.slice(0, 32);
             }
           }
+          const contentStr = typeof entry.content === "string" ? entry.content : "";
+          const modelMatch = contentStr.match(/Model Selection`?\s*from\s*[^ ]+\s*to\s*([^<\n\r]+)/i);
+          if (modelMatch) {
+            detectedModel = modelMatch[1].trim();
+          }
         } catch {}
       }
       title = latestPrompt || initialTitle;
+
+      const formatAgyModel = (raw) => {
+        if (!raw) return "gemini-2.5";
+        const s = String(raw).toLowerCase();
+        if (s.includes("flash-lite") || s.includes("flash_lite")) return "flash-lite";
+        if (s.includes("3.7") || (s.includes("flash") && s.includes("3.7"))) return "flash-3.7";
+        if (s.includes("flash")) return "flash";
+        if (s.includes("2.5") || (s.includes("pro") && s.includes("2.5"))) return "pro-2.5";
+        if (s.includes("pro")) return "pro";
+        if (s.includes("gemini")) return "gemini";
+        if (s.includes("claude") || s.includes("sonnet") || s.includes("opus")) return "claude";
+        if (s.includes("gpt") || s.includes("o1") || s.includes("o3")) return "gpt-4o";
+        return "gemini-2.5";
+      };
+
+      const model = formatAgyModel(detectedModel);
+      const ctxPct = Math.min(99, Math.max(5, Math.round((content.length / 600000) * 100)));
 
       agentStatus = "IDLE";
       // Check the latest entries for current activity
@@ -157,24 +180,42 @@ export class AntigravityStateReader {
           agentStatus = "IDLE";
         }
       }
+
+      return {
+        id: convId,
+        threadKey: convId,
+        title,
+        status,
+        agentStatus: agentStatus || "IDLE",
+        startedAt,
+        model,
+        ctxPct,
+        pendingFeedback,
+        subagentsCount,
+        hasPlan,
+        hasWalkthrough,
+        mtimeMs: transcriptMtimeMs,
+        fullPath: convPath
+      };
     } catch {
       // transcript read error or empty
+      return {
+        id: convId,
+        threadKey: convId,
+        title,
+        status,
+        agentStatus: agentStatus || "IDLE",
+        startedAt,
+        model: "gemini-2.5",
+        ctxPct: 0,
+        pendingFeedback,
+        subagentsCount,
+        hasPlan,
+        hasWalkthrough,
+        mtimeMs: transcriptMtimeMs,
+        fullPath: convPath
+      };
     }
-
-    return {
-      id: convId,
-      threadKey: convId,
-      title,
-      status,
-      agentStatus: agentStatus || "IDLE",
-      startedAt,
-      pendingFeedback,
-      subagentsCount,
-      hasPlan,
-      hasWalkthrough,
-      mtimeMs: transcriptMtimeMs,
-      fullPath: convPath
-    };
   }
 
   async snapshot() {
@@ -217,6 +258,8 @@ export class AntigravityStateReader {
         title: task.title,
         status: task.status,
         startedAt: task.startedAt,
+        model: task.model,
+        ctxPct: task.ctxPct,
         selected: id === 0
       };
     });
@@ -229,6 +272,8 @@ export class AntigravityStateReader {
       status: t.status,
       agentStatus: t.agentStatus || "IDLE",
       startedAt: t.startedAt,
+      model: t.model,
+      ctxPct: t.ctxPct,
       pendingFeedback: t.pendingFeedback,
       hasPlan: t.hasPlan,
       hasWalkthrough: t.hasWalkthrough,
@@ -326,9 +371,11 @@ export class AntigravityStateReader {
       } catch {}
     }
 
-    const fiveHourUsed = Math.min(99, Math.max(1, Math.round((turnsLast5h / 50) * 100)));
-    const fiveHourRemaining = liveQuota ? liveQuota.fiveHourRemaining : Math.max(1, 100 - fiveHourUsed);
-    const fiveHourReset = liveQuota?.fiveHourReset || (oldestIn5h ? oldestIn5h + 5 * 3600 * 1000 : now + 5 * 3600 * 1000);
+    const fiveHourReset = (liveQuota?.fiveHourReset && liveQuota.fiveHourReset > now)
+      ? liveQuota.fiveHourReset
+      : (oldestIn5h && oldestIn5h + 5 * 3600 * 1000 > now
+          ? oldestIn5h + 5 * 3600 * 1000
+          : now + 5 * 3600 * 1000);
 
     // Weekly limit: calculated from weekly rolling activity (calibrated to quota scale)
     const weeklyUsed = Math.min(99, Math.max(1, Math.round((turnsLast7d / 200) * 100)));

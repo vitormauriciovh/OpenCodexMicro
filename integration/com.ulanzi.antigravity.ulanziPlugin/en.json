@@ -49,6 +49,14 @@
     "Name": "Antigravity Usage",
     "Tooltip": "Display remaining Antigravity context window and session allowance with reset countdown."
   },
+  "com.ulanzi.ulanzistudio.antigravity.usage5h": {
+    "Name": "Antigravity 5H Usage",
+    "Tooltip": "Display remaining 5-hour Antigravity usage allowance and reset countdown."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.usageweekly": {
+    "Name": "Antigravity Weekly Usage",
+    "Tooltip": "Display remaining weekly Antigravity usage allowance and reset countdown."
+  },
   "com.ulanzi.ulanzistudio.antigravity.new": {
     "Name": "Antigravity New Session",
     "Tooltip": "Focus VS Code to start a new Antigravity session."

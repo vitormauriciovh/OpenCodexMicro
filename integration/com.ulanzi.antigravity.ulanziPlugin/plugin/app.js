@@ -25,6 +25,8 @@ const ACTION_LABELS = Object.freeze({
   plan: "PLAN",
   walkthrough: "WALKTHROUGH",
   usage: "USAGE",
+  usage5h: "5H USAGE",
+  usageweekly: "WK USAGE",
   new: "NEW",
   navigate: "LATEST",
   hud: "HUD",
@@ -87,8 +89,7 @@ function formatElapsed(ms) {
   const sec = Math.floor(ms / 1000);
   if (sec < 60) return `${sec}s`;
   const min = Math.floor(sec / 60);
-  const remSec = sec % 60;
-  if (min < 60) return `${min}m ${remSec}s`;
+  if (min < 60) return `${min}m`;
   const hr = Math.floor(min / 60);
   const remMin = min % 60;
   return `${hr}h ${remMin}m`;
@@ -111,11 +112,25 @@ function usageRemaining(usage) {
   };
 }
 
-function formatResetCountdown(resetsAt) {
-  if (!resetsAt || !Number.isFinite(resetsAt)) return null;
-  const targetMs = resetsAt > 1e11 ? resetsAt : resetsAt * 1000;
+function formatResetCountdown(resetsAt, defaultLabel = null) {
+  if (!resetsAt) return defaultLabel;
+  let targetMs;
+  if (typeof resetsAt === "number" && Number.isFinite(resetsAt)) {
+    targetMs = resetsAt > 1e11 ? resetsAt : resetsAt * 1000;
+  } else if (typeof resetsAt === "string") {
+    const parsed = Date.parse(resetsAt);
+    if (Number.isFinite(parsed)) {
+      targetMs = parsed;
+    } else {
+      const num = Number(resetsAt);
+      if (Number.isFinite(num)) targetMs = num > 1e11 ? num : num * 1000;
+      else return defaultLabel;
+    }
+  } else {
+    return defaultLabel;
+  }
   const diffMs = targetMs - Date.now();
-  if (diffMs <= 0) return null;
+  if (diffMs <= 0) return defaultLabel;
   if (diffMs < 3600000) {
     const mins = Math.max(1, Math.ceil(diffMs / 60000));
     return `RESET ${mins}M`;
@@ -205,6 +220,71 @@ function usageIconData(usage) {
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
 
+function singleUsageIconData({
+  header = "AGY 5H",
+  remaining = null,
+  resetsAt = null,
+  connected = true
+}) {
+  const isWeekly = header.includes("WK") || header.includes("WEEK");
+  const defaultReset = isWeekly ? "RESET 7D" : "RESET 5H";
+  const resetLabel = formatResetCountdown(resetsAt, defaultReset);
+
+  if (!connected) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <rect width="196" height="196" rx="24" fill="#13161a"/>
+      <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="#262c36" stroke-width="2"/>
+      <g transform="translate(98, 28)">
+        <rect x="-58" y="-14" width="116" height="28" rx="14" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+        <text x="0" y="5.5" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#94a3b8" letter-spacing="0.8">${escapeXml(header)}</text>
+      </g>
+      <circle cx="98" cy="96" r="38" fill="none" stroke="#21262d" stroke-width="8"/>
+      <text x="98" y="105" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="28" font-weight="900" fill="#64748b">—</text>
+      <text x="98" y="168" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="800" fill="#ef4444" letter-spacing="0.6">OFFLINE</text>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+  }
+
+  const r = 38;
+  const c = 2 * Math.PI * r;
+  const val = remaining === null ? 0 : Math.max(0, Math.min(100, Math.round(remaining)));
+  const filled = (c * val) / 100;
+  const col = getUsageProgressColor(remaining);
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+    <defs>
+      <filter id="glowSingleAgy" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="3" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+    <rect width="196" height="196" rx="24" fill="#13161a"/>
+    <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="#262c36" stroke-width="2"/>
+    
+    <!-- Top Badge -->
+    <g transform="translate(98, 28)">
+      <rect x="-58" y="-14" width="116" height="28" rx="14" fill="#1e242c" stroke="#303844" stroke-width="1.2"/>
+      <text x="0" y="5.5" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#f1f5f9" letter-spacing="0.8">${escapeXml(header)}</text>
+    </g>
+
+    <!-- Gauge Ring -->
+    <circle cx="98" cy="96" r="${r}" fill="none" stroke="#21262d" stroke-width="8"/>
+    ${remaining !== null ? `
+      <circle cx="98" cy="96" r="${r}" fill="none" stroke="${col}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${filled} ${c - filled}" transform="rotate(-90 98 96)"/>
+    ` : ""}
+
+    <!-- Center Big Value -->
+    <text x="98" y="105" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif">
+      <tspan font-size="28" font-weight="900" fill="#ffffff" letter-spacing="-0.5">${remaining === null ? "—" : val}</tspan>
+      ${remaining !== null ? `<tspan font-size="14" font-weight="700" fill="#94a3b8" dx="1">%</tspan>` : ""}
+    </text>
+
+    <!-- Bottom Countdown / Status -->
+    <text x="98" y="168" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="800" fill="#cbd5e1" letter-spacing="0.5">${escapeXml(resetLabel)}</text>
+  </svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+
 function contextOf(message) {
   return String(message.actionid || `${message.uuid}___${message.key}`);
 }
@@ -228,69 +308,121 @@ function escapeXml(str) {
     .replace(/'/g, "&apos;");
 }
 
-function sessionIconData({
-  slot = 1,
-  title = "Ready",
+function sessionCardIconData({
+  headerLeft = "AGY",
+  headerRight = "Session 1",
+  title = "No Session",
   status = "idle",
-  elapsed = ""
+  elapsed = "",
+  model = "gemini-2.5",
+  ctxPct = 0,
+  connected = true,
+  empty = false
 }) {
-  const isRunning = status === "working" || status === "running";
-  const isAttention = status === "attention";
-  const isError = status === "error";
-
-  let statusText = "IDLE";
-  let statusBg = "#334155";
-  let statusBorder = "#475569";
-  let statusColor = "#94a3b8";
-
-  if (isRunning) {
-    statusText = elapsed && elapsed !== "0s" ? `RUNNING ${elapsed}` : "RUNNING";
-    statusBg = "#1e3a8a";
-    statusBorder = "#3b82f6";
-    statusColor = "#60a5fa";
-  } else if (isAttention) {
-    statusText = "FEEDBACK NEEDED";
-    statusBg = "#78350f";
-    statusBorder = "#f59e0b";
-    statusColor = "#fbbf24";
-  } else if (isError) {
-    statusText = "ERROR";
-    statusBg = "#7f1d1d";
-    statusBorder = "#ef4444";
-    statusColor = "#f87171";
+  if (!connected) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <defs>
+        <clipPath id="cardClipOffAgy">
+          <rect width="196" height="196" rx="24"/>
+        </clipPath>
+      </defs>
+      <rect width="196" height="196" rx="24" fill="#13161a"/>
+      <g clip-path="url(#cardClipOffAgy)">
+        <rect x="0" y="0" width="196" height="38" fill="#272e39"/>
+      </g>
+      <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="#262c36" stroke-width="2"/>
+      <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#ffffff" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
+      <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="rgba(255,255,255,0.7)" letter-spacing="0.3">${escapeXml(headerRight)}</text>
+      <text x="98" y="98" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="17" font-weight="800" fill="#8a96a3" letter-spacing="0.5">Bridge Offline</text>
+      <text x="98" y="122" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="#ef4444" letter-spacing="0.4">disconnected</text>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
   }
 
-  const cleanTitle = escapeXml(title.slice(0, 22));
+  if (empty) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <defs>
+        <clipPath id="cardClipEmptyAgy">
+          <rect width="196" height="196" rx="24"/>
+        </clipPath>
+      </defs>
+      <rect width="196" height="196" rx="24" fill="#13161a"/>
+      <g clip-path="url(#cardClipEmptyAgy)">
+        <rect x="0" y="0" width="196" height="38" fill="#21262d"/>
+      </g>
+      <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="#262c36" stroke-width="2"/>
+      <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#8a96a3" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
+      <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="#64748b" letter-spacing="0.3">${escapeXml(headerRight)}</text>
+      <text x="98" y="105" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="17" font-weight="800" fill="#64748b" letter-spacing="0.5">No Session</text>
+      <text x="98" y="128" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="600" fill="#475569" letter-spacing="0.4">idle</text>
+      <text x="12" y="162" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#475569">—</text>
+      <text x="184" y="162" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#475569">ctx 0%</text>
+      <rect x="12" y="172" width="172" height="7" rx="3.5" fill="#1e242c"/>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+  }
+
+  const s = String(status || "").toLowerCase();
+  const isWorking = s === "working" || s === "running" || s === "thinking" || s === "in_progress" || s === "executing" || s === "planning";
+  const isAttention = s === "attention" || s === "waiting" || s === "feedback";
+  const isError = s === "error" || s === "failed";
+  const isDone = s === "complete" || s === "completed" || s === "done";
+
+  let headerBg = "#334155";
+  let subColor = "#94a3b8";
+  let subText = "idle";
+
+  if (isWorking) {
+    headerBg = "#22c55e";
+    subColor = "#22c55e";
+    subText = elapsed ? `${s === "thinking" ? "thinking" : "working"} ${elapsed}` : (s === "thinking" ? "thinking" : "working");
+  } else if (isAttention) {
+    headerBg = "#f59e0b";
+    subColor = "#f59e0b";
+    subText = elapsed ? `waiting ${elapsed}` : "waiting";
+  } else if (isError) {
+    headerBg = "#ef4444";
+    subColor = "#ef4444";
+    subText = "error";
+  } else if (isDone) {
+    headerBg = "#3b82f6";
+    subColor = "#60a5fa";
+    subText = elapsed ? `done ${elapsed}` : "done";
+  }
+
+  const cleanTitle = String(title || "Untitled").trim();
+  const titleDisplay = cleanTitle.length > 14 ? cleanTitle.slice(0, 13) + "…" : cleanTitle;
+  const titleFontSize = titleDisplay.length > 11 ? "18" : "20";
+
+  const cleanModel = String(model || "gemini-2.5").trim().toLowerCase();
+  const modelDisplay = cleanModel.length > 11 ? cleanModel.slice(0, 10) + "…" : cleanModel;
+
+  const validPct = Math.max(0, Math.min(100, Math.round(Number(ctxPct) || 0)));
+  const barWidth = Math.max(0, Math.min(172, Math.round((validPct / 100) * 172)));
+  const barColor = validPct > 85 ? "#ef4444" : "#f59e0b";
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
     <defs>
-      <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#0f172a"/>
-        <stop offset="100%" stop-color="#020617"/>
-      </linearGradient>
-      <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stop-color="#8b5cf6"/>
-        <stop offset="100%" stop-color="#6366f1"/>
-      </linearGradient>
+      <clipPath id="cardClipAgy">
+        <rect width="196" height="196" rx="24"/>
+      </clipPath>
     </defs>
-    <rect width="196" height="196" rx="24" fill="url(#bgGrad)"/>
-    <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="${isRunning ? '#3b82f6' : isAttention ? '#f59e0b' : '#1e293b'}" stroke-width="2"/>
+    <rect width="196" height="196" rx="24" fill="#13161a"/>
+    <g clip-path="url(#cardClipAgy)">
+      <rect x="0" y="0" width="196" height="38" fill="${headerBg}"/>
+    </g>
+    <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="${isWorking ? '#16a34a' : isAttention ? '#d97706' : '#262c36'}" stroke-width="2"/>
+    <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#ffffff" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
+    <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="rgba(255,255,255,0.95)" letter-spacing="0.3">${escapeXml(headerRight)}</text>
     
-    <!-- Top badge: SESSION # -->
-    <g transform="translate(98, 36)">
-      <rect x="-46" y="-13" width="92" height="26" rx="13" fill="url(#headerGrad)"/>
-      <text x="0" y="5" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="11" font-weight="800" fill="#ffffff" letter-spacing="1">SESSION ${slot}</text>
-    </g>
-
-    <!-- Center Title -->
-    <text x="98" y="98" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="#f1f5f9" letter-spacing="0.3">${cleanTitle}</text>
-
-    <!-- Status Pill -->
-    <g transform="translate(98, 154)">
-      <rect x="-68" y="-14" width="136" height="28" rx="14" fill="${statusBg}" stroke="${statusBorder}" stroke-width="1.2"/>
-      <circle cx="-50" cy="0" r="4" fill="${statusColor}"/>
-      <text x="4" y="4" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="800" fill="${statusColor}" letter-spacing="0.5">${statusText}</text>
-    </g>
+    <text x="98" y="94" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="${titleFontSize}" font-weight="800" fill="#ffffff" letter-spacing="0.4">${escapeXml(titleDisplay)}</text>
+    <text x="98" y="120" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="${subColor}" letter-spacing="0.3">${escapeXml(subText)}</text>
+    
+    <text x="12" y="162" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#f59e0b" letter-spacing="0.2">${escapeXml(modelDisplay)}</text>
+    <text x="184" y="162" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#94a3b8" letter-spacing="0.2">ctx ${validPct}%</text>
+    
+    <rect x="12" y="172" width="172" height="7" rx="3.5" fill="#21262d"/>
+    ${barWidth > 0 ? `<rect x="12" y="172" width="${barWidth}" height="7" rx="3.5" fill="${barColor}"/>` : ""}
   </svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
@@ -697,16 +829,37 @@ function renderInstance(instance) {
 
   if (slot !== null) {
     if (!latestState?.connected) {
-      setTaskDisplay(instance, TASK_ICON_PATHS.idle, "Bridge Offline");
+      sendSvgState(instance, sessionCardIconData({
+        headerLeft: "AGY",
+        headerRight: `Session ${slot + 1}`,
+        connected: false
+      }));
       return;
     }
     const task = activeTasks[slot] || slots[slot];
     if (!task?.threadKey) {
-      setTaskDisplay(instance, TASK_ICON_PATHS.idle, `Session ${slot + 1}`);
+      sendSvgState(instance, sessionCardIconData({
+        headerLeft: "AGY",
+        headerRight: `Session ${slot + 1}`,
+        connected: true,
+        empty: true
+      }));
       return;
     }
+    const startTime = task.threadKey ? sessionStartTimes.get(task.threadKey) : null;
+    const elapsed = startTime ? formatElapsed(Date.now() - startTime) : "";
     const displayStatus = task.status || task.agentStatus || "idle";
-    setTaskDisplay(instance, taskIconPath(displayStatus), shortTitle(task.title));
+    sendSvgState(instance, sessionCardIconData({
+      headerLeft: "AGY",
+      headerRight: `Session ${slot + 1}`,
+      title: task.title || "Untitled",
+      status: displayStatus,
+      elapsed,
+      model: task.model || "gemini-2.5",
+      ctxPct: task.ctxPct || 0,
+      connected: true,
+      empty: false
+    }));
     return;
   }
 
@@ -727,20 +880,61 @@ function renderInstance(instance) {
     sendSvgState(instance, walkthroughIconData());
   } else if (name === "usage") {
     sendSvgState(instance, usageIconData(latestState?.usage));
+  } else if (name === "usage5h") {
+    const usage = latestState?.connected ? latestState.usage : null;
+    const { fiveHour } = usageRemaining(usage);
+    const window = usage?.windows?.find((item) => item?.kind === "five-hour");
+    sendSvgState(instance, singleUsageIconData({
+      header: "AGY 5H",
+      remaining: fiveHour,
+      resetsAt: window?.resetsAt || null,
+      connected: Boolean(latestState?.connected)
+    }));
+  } else if (name === "usageweekly") {
+    const usage = latestState?.connected ? latestState.usage : null;
+    const { weekly } = usageRemaining(usage);
+    const window = usage?.windows?.find((item) => item?.kind === "weekly");
+    sendSvgState(instance, singleUsageIconData({
+      header: "AGY WK",
+      remaining: weekly,
+      resetsAt: window?.resetsAt || null,
+      connected: Boolean(latestState?.connected)
+    }));
   } else if (name === "new") {
     sendSvgState(instance, newSessionIconData());
   } else if (name === "navigate") {
     if (!latestState?.connected) {
-      setTaskDisplay(instance, TASK_ICON_PATHS.idle, "Bridge Offline");
+      sendSvgState(instance, sessionCardIconData({
+        headerLeft: "AGY",
+        headerRight: "Latest",
+        connected: false
+      }));
       return;
     }
     const latestTask = activeTasks[0] || slots[0];
     if (!latestTask?.threadKey) {
-      setTaskDisplay(instance, TASK_ICON_PATHS.idle, "Latest Session");
+      sendSvgState(instance, sessionCardIconData({
+        headerLeft: "AGY",
+        headerRight: "Latest",
+        connected: true,
+        empty: true
+      }));
       return;
     }
+    const startTime = latestTask?.threadKey ? sessionStartTimes.get(latestTask.threadKey) : null;
+    const elapsed = startTime ? formatElapsed(Date.now() - startTime) : "";
     const displayStatus = latestTask.status || latestTask.agentStatus || "idle";
-    setTaskDisplay(instance, taskIconPath(displayStatus), shortTitle(latestTask.title));
+    sendSvgState(instance, sessionCardIconData({
+      headerLeft: "AGY",
+      headerRight: "Latest",
+      title: latestTask.title || "Untitled",
+      status: displayStatus,
+      elapsed,
+      model: latestTask.model || "gemini-2.5",
+      ctxPct: latestTask.ctxPct || 0,
+      connected: true,
+      empty: false
+    }));
   } else if (name === "hud") {
     const latestTask = activeTasks[0] || slots[0] || null;
     const startTime = latestTask?.threadKey ? sessionStartTimes.get(latestTask.threadKey) : null;
@@ -806,7 +1000,7 @@ async function invoke(instance, pressed) {
   const name = actionName(instance.uuid);
   if (!name) return;
 
-  if (name === "usage" || name === "new" || name === "hud") {
+  if (name === "usage" || name === "usage5h" || name === "usageweekly" || name === "new" || name === "hud") {
     await fetch(`${BRIDGE_URL}/focus`, { method: "POST", signal: AbortSignal.timeout(1500) }).catch(() => {});
     return;
   }

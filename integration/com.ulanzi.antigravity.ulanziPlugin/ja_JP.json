@@ -49,6 +49,14 @@
     "Name": "Antigravity 使用量 / クォータ",
     "Tooltip": "コンテキストウィンドウとセッション残量、リセットまでのカウントダウンを表示します。"
   },
+  "com.ulanzi.ulanzistudio.antigravity.usage5h": {
+    "Name": "Antigravity 5時間使用量",
+    "Tooltip": "Antigravity の5時間枠の残量とリセットまでのカウントダウンを表示します。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.usageweekly": {
+    "Name": "Antigravity 週間使用量",
+    "Tooltip": "Antigravity の週間枠の残量とリセットまでのカウントダウンを表示します。"
+  },
   "com.ulanzi.ulanzistudio.antigravity.new": {
     "Name": "Antigravity 新規セッション",
     "Tooltip": "VS Code にフォーカスして新しいセッションを開始します。"

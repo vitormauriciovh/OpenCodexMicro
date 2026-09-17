@@ -49,6 +49,14 @@
     "Name": "Antigravity Nutzung / Quote",
     "Tooltip": "Zeigt verbleibenden Kontext und Sitzungskontingent mit Reset-Countdown an."
   },
+  "com.ulanzi.ulanzistudio.antigravity.usage5h": {
+    "Name": "Antigravity 5-Std.-Nutzung",
+    "Tooltip": "Zeigt verbleibendes 5-Stunden-Kontingent für Antigravity und Reset-Countdown an."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.usageweekly": {
+    "Name": "Antigravity Wöchentliche Nutzung",
+    "Tooltip": "Zeigt verbleibendes wöchentliches Kontingent für Antigravity und Reset-Countdown an."
+  },
   "com.ulanzi.ulanzistudio.antigravity.new": {
     "Name": "Antigravity Neue Sitzung",
     "Tooltip": "Fokussiert VS Code für ein neues Antigravity-Gespräch."

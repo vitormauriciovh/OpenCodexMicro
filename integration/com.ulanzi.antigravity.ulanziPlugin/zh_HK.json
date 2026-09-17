@@ -49,6 +49,14 @@
     "Name": "Antigravity 用量與配額",
     "Tooltip": "顯示 Antigravity 上下文視窗與會話配額剩餘量及重置倒計時。"
   },
+  "com.ulanzi.ulanzistudio.antigravity.usage5h": {
+    "Name": "Antigravity 5小時用量",
+    "Tooltip": "顯示 Antigravity 5小時配額剩餘量及重置倒計時。"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.usageweekly": {
+    "Name": "Antigravity 周用量",
+    "Tooltip": "顯示 Antigravity 每周配額剩餘量及重置倒計時。"
+  },
   "com.ulanzi.ulanzistudio.antigravity.new": {
     "Name": "Antigravity 新會話",
     "Tooltip": "聚焦 VS Code 並開始新 Antigravity 對話。"

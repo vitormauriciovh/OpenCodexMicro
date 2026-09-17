@@ -10,6 +10,8 @@
     { "Name": "Codex Task 5", "Tooltip": "Open recent Codex task slot 5 and show its live status." },
     { "Name": "Codex Fast", "Tooltip": "Toggle Fast mode for the active Codex task." },
     { "Name": "Codex Usage", "Tooltip": "Show the remaining Codex usage allowance and focus Codex when pressed." },
+    { "Name": "Codex 5H Usage", "Tooltip": "Display remaining 5-hour Codex usage allowance and reset countdown." },
+    { "Name": "Codex Weekly Usage", "Tooltip": "Display remaining weekly Codex usage allowance and reset countdown." },
     { "Name": "Pin Codex Task", "Tooltip": "Pin or unpin the active Codex task." },
     { "Name": "New Codex Task", "Tooltip": "Create a new Codex task." },
     { "Name": "Latest Task & Scroll", "Tooltip": "Press to open the latest Codex task. Turn left to scroll up and right to scroll down." },

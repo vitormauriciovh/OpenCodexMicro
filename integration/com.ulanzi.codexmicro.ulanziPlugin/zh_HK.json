@@ -10,6 +10,8 @@
     { "Name": "Codex 任務 5", "Tooltip": "開啟最近的 Codex 任務欄位 5，並顯示即時狀態。" },
     { "Name": "Codex 快速模式", "Tooltip": "切換目前 Codex 任務的快速模式。" },
     { "Name": "Codex 用量", "Tooltip": "顯示 Codex 剩餘用量，按下時聚焦 Codex。" },
+    { "Name": "Codex 5小時用量", "Tooltip": "顯示 Codex 5小時剩餘用量及重設倒數計時。" },
+    { "Name": "Codex 週用量", "Tooltip": "顯示 Codex 每週剩餘用量及重設倒數計時。" },
     { "Name": "固定 Codex 任務", "Tooltip": "固定或取消固定目前的 Codex 任務。" },
     { "Name": "新增 Codex 任務", "Tooltip": "建立新的 Codex 任務。" },
     { "Name": "最新任務與捲動", "Tooltip": "按下開啟最新的 Codex 任務；向左轉向上捲動，向右轉向下捲動。" },

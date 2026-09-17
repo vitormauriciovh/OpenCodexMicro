@@ -96,6 +96,26 @@
       "States": [{ "Name": "Usage", "Image": "assets/icons/usage.png" }]
     },
     {
+      "Name": "Codex 5H Usage",
+      "Icon": "assets/icons/usage.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.usage5h",
+      "Tooltip": "Display remaining 5-hour Codex usage allowance and reset countdown.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "5H Usage", "Image": "assets/icons/usage.png" }]
+    },
+    {
+      "Name": "Codex Weekly Usage",
+      "Icon": "assets/icons/usage.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.usageweekly",
+      "Tooltip": "Display remaining weekly Codex usage allowance and reset countdown.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Weekly Usage", "Image": "assets/icons/usage.png" }]
+    },
+    {
       "Name": "Pin Codex Task",
       "Icon": "assets/icons/pin.png",
       "PropertyInspectorPath": "property-inspector/setup.html",

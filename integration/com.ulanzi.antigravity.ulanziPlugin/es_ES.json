@@ -49,6 +49,14 @@
     "Name": "Antigravity Uso / Cuota",
     "Tooltip": "Muestra el uso de la ventana de contexto y cuota de sesión con cuenta regresiva."
   },
+  "com.ulanzi.ulanzistudio.antigravity.usage5h": {
+    "Name": "Antigravity Uso 5 Horas",
+    "Tooltip": "Muestra la cuota restante de 5 horas de Antigravity y cuenta regresiva de reinicio."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.usageweekly": {
+    "Name": "Antigravity Uso Semanal",
+    "Tooltip": "Muestra la cuota restante semanal de Antigravity y cuenta regresiva de reinicio."
+  },
   "com.ulanzi.ulanzistudio.antigravity.new": {
     "Name": "Antigravity Nueva Sesión",
     "Tooltip": "Enfoca VS Code para iniciar una nueva conversación de Antigravity."

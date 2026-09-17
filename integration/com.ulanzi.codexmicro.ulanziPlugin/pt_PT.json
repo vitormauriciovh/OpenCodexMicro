@@ -10,6 +10,8 @@
     { "Name": "Tarefa Codex 5", "Tooltip": "Abre a posição 5 das tarefas recentes do Codex e mostra o estado em tempo real." },
     { "Name": "Modo rápido Codex", "Tooltip": "Alterna o modo rápido da tarefa ativa do Codex." },
     { "Name": "Utilização do Codex", "Tooltip": "Mostra a utilização restante do Codex e foca o Codex ao premir." },
+    { "Name": "Utilização 5H Codex", "Tooltip": "Mostra a quota de 5 horas restante do Codex e a contagem de reset." },
+    { "Name": "Utilização Semanal Codex", "Tooltip": "Mostra a quota semanal restante do Codex e a contagem de reset." },
     { "Name": "Fixar tarefa Codex", "Tooltip": "Fixa ou desafixa a tarefa ativa do Codex." },
     { "Name": "Nova tarefa Codex", "Tooltip": "Cria uma nova tarefa do Codex." },
     { "Name": "Tarefa recente e deslocamento", "Tooltip": "Prima para abrir a tarefa mais recente do Codex. Rode para a esquerda para subir e para a direita para descer." },
