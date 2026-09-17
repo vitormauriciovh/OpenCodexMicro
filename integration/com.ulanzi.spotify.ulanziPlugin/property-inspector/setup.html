@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spotify Music Picker Setup</title>
+  <style>
+    :root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    html, body { margin: 0; background: transparent; color: #e8e8e8; font-size: 13px; }
+    * { box-sizing: border-box; }
+    main { padding: 12px 14px 10px; }
+    h1 { margin: 0 0 5px; font-size: 15px; font-weight: 650; display: flex; align-items: center; gap: 8px; }
+    .spotify-logo { width: 20px; height: 20px; fill: #1DB954; flex-shrink: 0; }
+    .intro { margin: 0 0 10px; color: #aeb3ba; line-height: 1.35; font-size: 12px; }
+    
+    .panel { border: 1px solid rgba(255,255,255,.12); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.035); margin-bottom: 12px; }
+    .row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; min-height: 35px; padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .row:last-child { border-bottom: 0; }
+    .value { display: inline-flex; align-items: center; gap: 6px; color: #aeb3ba; text-align: right; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #72777f; box-shadow: 0 0 0 2px rgba(114,119,127,.15); }
+    .value.good { color: #1DB954; }
+    .value.good .dot { background: #1DB954; box-shadow: 0 0 0 2px rgba(29,185,84,.25); }
+    .value.warn { color: #f0bc68; }
+    .value.warn .dot { background: #e6a84b; box-shadow: 0 0 0 2px rgba(230,168,75,.15); }
+    .value.bad { color: #ef8585; }
+    .value.bad .dot { background: #e45f5f; box-shadow: 0 0 0 2px rgba(228,95,95,.15); }
+
+    .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; margin-bottom: 12px; }
+    .section-title { font-size: 12px; font-weight: 700; color: #1DB954; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
+    
+    .guide-steps { margin: 0 0 10px 0; padding-left: 18px; color: #b3b3b3; font-size: 11px; line-height: 1.45; }
+    .guide-steps li { margin-bottom: 4px; }
+    .code-box { background: rgba(0,0,0,0.4); padding: 3px 6px; border-radius: 4px; font-family: monospace; color: #1DB954; user-select: all; }
+
+    input[type="text"], textarea {
+      width: 100%;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      color: #ffffff;
+      padding: 8px;
+      font-size: 12px;
+      font-family: inherit;
+    }
+    textarea { font-family: monospace; font-size: 11px; resize: vertical; height: 75px; line-height: 1.4; }
+    input[type="text"]:focus, textarea:focus {
+      outline: none;
+      border-color: #1DB954;
+      box-shadow: 0 0 0 2px rgba(29,185,84,0.2);
+    }
+    
+    .message { min-height: 18px; margin: 6px 1px; color: #aeb3ba; font-size: 12px; }
+    .message.error { color: #ef8585; }
+    .message.success { color: #1DB954; }
+    
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 6px; }
+    button { min-height: 33px; border: 1px solid rgba(255,255,255,.14); border-radius: 6px; color: #f3f3f3; background: rgba(255,255,255,.08); cursor: pointer; font-size: 12px; font-weight: 600; }
+    button:hover:not(:disabled) { background: rgba(255,255,255,.13); }
+    button.primary { border-color: #1DB954; background: #1DB954; color: #000000; }
+    button.primary:hover:not(:disabled) { background: #1ed760; }
+    button.full { grid-column: span 2; }
+    button:disabled { cursor: default; opacity: .45; }
+    .version { margin-top: 10px; color: #777e87; font-size: 11px; text-align: right; }
+    a { color: #1DB954; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>
+      <svg class="spotify-logo" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.48.66.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+      Spotify Music Picker
+    </h1>
+    <p class="intro">Controle de música e sincronização de playlists para o seu Ulanzi D200.</p>
+    
+    <!-- Status Panel -->
+    <section class="panel">
+      <div class="row">
+        <span>Spotify Desktop (Mac)</span>
+        <span id="serviceValue" class="value"><i class="dot"></i><span id="serviceText">Verificando...</span></span>
+      </div>
+      <div class="row">
+        <span>Conta Web API</span>
+        <span id="authValue" class="value"><i class="dot"></i><span id="authText">Não conectada</span></span>
+      </div>
+      <div class="row">
+        <span>Faixa Atual</span>
+        <span id="trackValue" class="value" style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">-</span>
+      </div>
+      <div class="row">
+        <span>Playlists no Deck</span>
+        <span id="playlistsCount" class="value">0</span>
+      </div>
+    </section>
+
+    <!-- Option A: Spotify Web API OAuth -->
+    <div class="card">
+      <div class="section-title">Opção A: Conectar com Spotify (Automático)</div>
+      <ol class="guide-steps">
+        <li>Acesse o <a href="https://developer.spotify.com/dashboard" target="_blank">Spotify Developer Dashboard</a> e clique em <b>Create App</b>.</li>
+        <li>Em <b>Redirect URIs</b>, adicione: <span class="code-box">http://127.0.0.1:17375/callback</span></li>
+        <li>Em <i>Which API/SDKs are you planning to use?</i> marque <b>Web API</b> e salve.</li>
+        <li>Copie o seu <b>Client ID</b> e cole abaixo:</li>
+      </ol>
+      <input type="text" id="clientIdInput" placeholder="Cole seu Client ID do Spotify aqui..." style="margin-bottom:8px;">
+      <div class="actions">
+        <button id="connectBtn" class="primary full" onclick="startSpotifyOAuth()">Conectar com Spotify</button>
+        <button id="syncBtn" class="full" onclick="syncFromSpotifyApi()" style="margin-top:2px;">Atualizar Listas da Conta</button>
+      </div>
+    </div>
+
+    <!-- Option B: Manual Links -->
+    <div class="card">
+      <div class="section-title">Opção B: Links Manuais de Playlists</div>
+      <textarea id="playlistLinks" placeholder="Ou cole links diretos de playlists (um por linha)..."></textarea>
+      <div class="actions">
+        <button id="saveManualBtn" class="full" onclick="savePlaylists()">Salvar Links Manuais</button>
+      </div>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <div class="version">Spotify Music Picker v0.4.1</div>
+  </main>
+
+  <script>
+    const HTTP_URL = "http://127.0.0.1:17375";
+
+    async function checkStatus() {
+      const msg = document.getElementById("message");
+      const serviceValue = document.getElementById("serviceValue");
+      const serviceText = document.getElementById("serviceText");
+      const authValue = document.getElementById("authValue");
+      const authText = document.getElementById("authText");
+      const trackValue = document.getElementById("trackValue");
+      const playlistsCount = document.getElementById("playlistsCount");
+      const linksArea = document.getElementById("playlistLinks");
+      const clientIdInput = document.getElementById("clientIdInput");
+
+      try {
+        const res = await fetch(`${HTTP_URL}/status`);
+        if (res.ok) {
+          const data = await res.json();
+          const state = data.state || {};
+          
+          if (state.isRunning) {
+            serviceValue.className = "value good";
+            serviceText.textContent = state.playerState === "playing" ? "Reproduzindo" : "Pausado";
+            if (state.track?.name) {
+              trackValue.textContent = `${state.track.name} - ${state.track.artist}`;
+              trackValue.title = `${state.track.name} - ${state.track.artist} (${state.track.album})`;
+            } else {
+              trackValue.textContent = "Nenhuma faixa ativa";
+            }
+          } else {
+            serviceValue.className = "value warn";
+            serviceText.textContent = "Spotify Fechado";
+            trackValue.textContent = "Abra o Spotify no Mac";
+          }
+
+          const currentPlaylists = data.playlists || [];
+          playlistsCount.textContent = String(currentPlaylists.length);
+
+          if (!linksArea.value && currentPlaylists.length > 0) {
+            linksArea.value = currentPlaylists.map(p => p.url).filter(Boolean).join("\n");
+          }
+        }
+
+        const authRes = await fetch(`${HTTP_URL}/auth/status`);
+        if (authRes.ok) {
+          const authData = await authRes.json();
+          if (authData.isAuthenticated) {
+            authValue.className = "value good";
+            authText.textContent = "Conectada ✓";
+          } else {
+            authValue.className = "value";
+            authText.textContent = "Não conectada";
+          }
+        }
+      } catch (e) {
+        serviceValue.className = "value bad";
+        serviceText.textContent = "Plugin offline";
+      }
+    }
+
+    async function startSpotifyOAuth() {
+      const clientId = document.getElementById("clientIdInput").value.trim();
+      const msg = document.getElementById("message");
+
+      if (!clientId) {
+        msg.className = "message error";
+        msg.textContent = "Por favor, insira o seu Client ID do Spotify.";
+        return;
+      }
+
+      msg.className = "message";
+      msg.textContent = "Iniciando autorização no navegador...";
+
+      try {
+        const res = await fetch(`${HTTP_URL}/auth/start?clientId=${encodeURIComponent(clientId)}`);
+        const data = await res.json();
+        if (data.ok && data.url) {
+          msg.className = "message success";
+          msg.innerHTML = `O navegador foi aberto! Se a página não carregou automaticamente, <a href="${data.url}" target="_blank" style="color:#1DB954;font-weight:bold;text-decoration:underline;">clique aqui para autorizar</a>.`;
+        } else {
+          throw new Error(data.error || "Falha ao gerar link");
+        }
+      } catch (e) {
+        msg.className = "message error";
+        msg.textContent = "Erro: " + e.message;
+      }
+    }
+
+    async function syncFromSpotifyApi() {
+      const msg = document.getElementById("message");
+      const btn = document.getElementById("syncBtn");
+      btn.disabled = true;
+      msg.className = "message";
+      msg.textContent = "Buscando playlists da sua conta...";
+
+      try {
+        const res = await fetch(`${HTTP_URL}/sync`, { method: "POST" });
+        const data = await res.json();
+        if (data.ok) {
+          msg.className = "message success";
+          msg.textContent = `${data.count} playlists sincronizadas com o Deck!`;
+          await checkStatus();
+        } else {
+          throw new Error(data.error || "Falha ao sincronizar");
+        }
+      } catch (e) {
+        msg.className = "message error";
+        msg.textContent = "Erro: " + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function savePlaylists() {
+      const linksArea = document.getElementById("playlistLinks");
+      const msg = document.getElementById("message");
+      const saveBtn = document.getElementById("saveManualBtn");
+
+      const links = linksArea.value.split("\n").map(l => l.trim()).filter(Boolean);
+      if (links.length === 0) {
+        msg.className = "message error";
+        msg.textContent = "Insira pelo menos um link de playlist.";
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Carregando capas...";
+      msg.className = "message";
+      msg.textContent = "Buscando informações e capas das playlists...";
+
+      try {
+        const res = await fetch(`${HTTP_URL}/playlists`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ links })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          msg.className = "message success";
+          msg.textContent = `${data.count} playlists sincronizadas com o Deck!`;
+          await checkStatus();
+        } else {
+          throw new Error(data.error || "Erro ao salvar");
+        }
+      } catch (e) {
+        msg.className = "message error";
+        msg.textContent = "Erro: " + e.message;
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Salvar Links Manuais";
+      }
+    }
+
+    checkStatus();
+    setInterval(checkStatus, 3000);
+  </script>
+</body>
+</html>
