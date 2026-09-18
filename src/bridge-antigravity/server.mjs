@@ -31,7 +31,7 @@ const wss = new WebSocketServer({ noServer: true });
 const wsClients = new Set();
 
 function broadcastState() {
-  const digest = `${cached.connected}:${cached.error}:${cached.pendingAttentionCount}:${cached.tokenUsage?.total?.totalTokens}:${cached.subagentsCount}:${cached.activeTasks?.length}:${cached.slots?.map((s) => `${s.id}-${s.status}-${s.selected}`).join(",")}`;
+  const digest = `${cached.connected}:${cached.error}:${cached.agentStatus}:${cached.pendingAttentionCount}:${cached.tokenUsage?.total?.totalTokens}:${cached.subagentsCount}:${cached.activeTasks?.length}:${cached.slots?.map((s) => `${s.id}-${s.status}-${s.selected}`).join(",")}`;
   if (digest === lastBroadcastDigest && wsClients.size > 0) return;
   lastBroadcastDigest = digest;
   const payload = JSON.stringify(cached);
@@ -81,13 +81,16 @@ async function sendSlashCommand(cmdName) {
 tell application "Visual Studio Code" to activate
 delay 0.15
 tell application "System Events"
+  -- Focus the Antigravity chat input before typing
+  keystroke "l" using {command down}
+  delay 0.25
   keystroke "${commandText}"
   delay 0.1
   key code 36
 end tell
 `;
   try {
-    await execFileAsync("/usr/bin/osascript", ["-e", script], { timeout: 3000 });
+    await execFileAsync("/usr/bin/osascript", ["-e", script], { timeout: 5000 });
   } catch (err) {
     console.error("Failed to execute osascript keystroke:", err);
   }
@@ -181,6 +184,17 @@ export const server = createServer(async (request, response) => {
   if (request.method === "POST" && (url.pathname === "/action/proceed" || url.pathname === "/action/approve")) {
     try {
       await focusVSCode();
+      // Directly submit the active confirmation modal, dialog or approval prompt
+      const script = `
+tell application "Visual Studio Code" to activate
+delay 0.1
+tell application "System Events"
+  key code 36
+end tell
+`;
+      try {
+        await execFileAsync("/usr/bin/osascript", ["-e", script], { timeout: 3000 });
+      } catch {}
       return json(response, 200, { ok: true, action: "proceed" });
     } catch (error) {
       return json(response, 500, { ok: false, error: error.message });
@@ -199,6 +213,17 @@ export const server = createServer(async (request, response) => {
   if (request.method === "POST" && (url.pathname === "/action/cancel" || url.pathname === "/action/stop" || url.pathname === "/action/reject")) {
     try {
       await focusVSCode();
+      // Simulate pressing Escape to cancel/stop the current task
+      const script = `
+tell application "Visual Studio Code" to activate
+delay 0.15
+tell application "System Events"
+  key code 53
+end tell
+`;
+      try {
+        await execFileAsync("/usr/bin/osascript", ["-e", script], { timeout: 5000 });
+      } catch {}
       return json(response, 200, { ok: true, action: "cancel" });
     } catch (error) {
       return json(response, 500, { ok: false, error: error.message });
@@ -238,6 +263,24 @@ export const server = createServer(async (request, response) => {
         } catch {}
       }
       return json(response, 200, { ok: true });
+    } catch (error) {
+      return json(response, 500, { ok: false, error: error.message });
+    }
+  }
+
+  const scrollMatch = request.method === "POST" && url.pathname.match(/^\/scroll\/(up|down)$/);
+  if (scrollMatch) {
+    try {
+      const direction = scrollMatch[1];
+      // key code 116 = Page Up, key code 121 = Page Down
+      const keyCode = direction === "up" ? 116 : 121;
+      const script = `
+tell application "System Events"
+  key code ${keyCode}
+end tell
+`;
+      await execFileAsync("/usr/bin/osascript", ["-e", script], { timeout: 3000 });
+      return json(response, 200, { ok: true, direction });
     } catch (error) {
       return json(response, 500, { ok: false, error: error.message });
     }

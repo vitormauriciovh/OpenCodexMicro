@@ -47,25 +47,36 @@ export class AntigravityStateReader {
     let agentStatus = "IDLE";
     let startedAt = null;
     let pendingFeedback = false;
-    let subagentsCount = 0;
+    let subagentsCount = 0;  // Will be parsed from transcript tool_calls
     let hasPlan = false;
     let hasWalkthrough = false;
     let transcriptMtimeMs = convDir.mtimeMs;
     let planMtimeMs = 0;
 
-    // 1. Check implementation_plan.md & metadata
+    // 1. Check all artifact metadata files in conversation directory for requestFeedback
     try {
-      const planMetaPath = path.join(convPath, "implementation_plan.md.metadata.json");
-      const stat = await fs.stat(planMetaPath);
-      planMtimeMs = stat.mtimeMs;
-      const metaRaw = await fs.readFile(planMetaPath, "utf-8");
-      const meta = JSON.parse(metaRaw);
-      hasPlan = true;
-      if (meta.requestFeedback === true || meta.RequestFeedback === true) {
-        pendingFeedback = true;
+      const files = await fs.readdir(convPath);
+      for (const file of files) {
+        if (file.endsWith(".metadata.json")) {
+          try {
+            const metaPath = path.join(convPath, file);
+            const stat = await fs.stat(metaPath);
+            if (stat.mtimeMs > planMtimeMs) {
+              planMtimeMs = stat.mtimeMs;
+            }
+            const metaRaw = await fs.readFile(metaPath, "utf-8");
+            const meta = JSON.parse(metaRaw);
+            if (file.startsWith("implementation_plan")) {
+              hasPlan = true;
+            }
+            if (meta.requestFeedback === true || meta.RequestFeedback === true) {
+              pendingFeedback = true;
+            }
+          } catch {}
+        }
       }
     } catch {
-      // no plan metadata
+      // no metadata files
     }
 
     try {
@@ -83,12 +94,17 @@ export class AntigravityStateReader {
       const content = await fs.readFile(transcriptPath, "utf-8");
       const lines = content.trim().split("\n").filter(Boolean);
 
-      // Extract title & model:
+      // Extract title, model & subagents:
       let initialTitle = convId.slice(0, 8);
       let latestPrompt = "";
       let detectedModel = null;
       let lastUserInputIndex = -1;
       let lastUserInputTime = 0;
+      let invokedSubagentIds = new Set();
+      let killedSubagentIds = new Set();
+      let killedAll = false;
+
+      let lastPlannerResponseIndex = -1;
 
       for (let i = 0; i < lines.length; i++) {
         try {
@@ -108,13 +124,55 @@ export class AntigravityStateReader {
                 latestPrompt = cleanText.slice(0, 32);
               }
             }
+          } else if (entry.type === "PLANNER_RESPONSE") {
+            lastPlannerResponseIndex = i;
           }
           const contentStr = typeof entry.content === "string" ? entry.content : "";
           const modelMatch = contentStr.match(/Model Selection`?\s*from\s*[^ ]+\s*to\s*([^<\n\r]+)/i);
           if (modelMatch) {
             detectedModel = modelMatch[1].trim();
           }
+
+          // Track subagent invocations and kills
+          if (Array.isArray(entry.tool_calls)) {
+            for (const tc of entry.tool_calls) {
+              const tcName = tc?.name || tc?.function?.name || "";
+              if (tcName === "invoke_subagent") {
+                const subs = tc?.arguments?.Subagents || tc?.function?.arguments?.Subagents || [];
+                for (const sub of (Array.isArray(subs) ? subs : [])) {
+                  const id = sub?.conversationId || sub?.TypeName || `sub-${invokedSubagentIds.size}`;
+                  invokedSubagentIds.add(id);
+                }
+                // Also check tool result for created conversation IDs
+                const result = typeof tc?.result === "string" ? tc.result : "";
+                const convIdMatches = result.match(/"conversationId"\s*:\s*"([^"]+)"/g);
+                if (convIdMatches) {
+                  for (const m of convIdMatches) {
+                    const idMatch = m.match(/"([^"]+)"$/);
+                    if (idMatch) invokedSubagentIds.add(idMatch[1]);
+                  }
+                }
+              }
+              if (tcName === "manage_subagents") {
+                const action = tc?.arguments?.Action || tc?.function?.arguments?.Action || "";
+                if (action === "kill_all") {
+                  killedAll = true;
+                } else if (action === "kill") {
+                  const ids = tc?.arguments?.ConversationIds || tc?.function?.arguments?.ConversationIds || [];
+                  for (const id of (Array.isArray(ids) ? ids : [])) {
+                    killedSubagentIds.add(id);
+                  }
+                }
+              }
+            }
+          }
         } catch {}
+      }
+
+      if (killedAll) {
+        subagentsCount = 0;
+      } else {
+        subagentsCount = Math.max(0, invokedSubagentIds.size - killedSubagentIds.size);
       }
       title = latestPrompt || initialTitle;
 
@@ -171,17 +229,28 @@ export class AntigravityStateReader {
         const isRecentlyActive = ageMs < 15000;
         const isRecentlyCompleted = ageMs < 8000;
 
-        // If plan requested feedback and user hasn't sent a newer message since plan was generated
-        const isPlanPendingUserResponse = pendingFeedback && (planMtimeMs > lastUserInputTime);
-        if (!isPlanPendingUserResponse) {
+        // Check if plan or artifact is awaiting feedback and no user reply has followed
+        // ONLY pending if the artifact was modified AFTER the last user input
+        const isPlanPending = pendingFeedback && (planMtimeMs > lastUserInputTime);
+        if (!isPlanPending) {
           pendingFeedback = false;
         }
 
-        if (isPlanPendingUserResponse) {
+        const entryStatus = String(lastEntry?.status || "").toUpperCase();
+        const isWaitingStatus = entryStatus === "WAITING_FOR_INPUT" || entryStatus === "WAITING" || entryStatus === "NEEDS_INPUT";
+
+        // ask_question is actively waiting for user input if the last transcript entry is the PLANNER_RESPONSE invoking it
+        const hasActiveAskQuestion = lastEntry?.type === "PLANNER_RESPONSE" && Array.isArray(lastEntry?.tool_calls) && lastEntry.tool_calls.some(tc => {
+          const name = tc?.name || tc?.function?.name || "";
+          return name === "ask_question";
+        });
+
+        if (isPlanPending || isWaitingStatus || hasActiveAskQuestion) {
           status = "attention";
           agentStatus = "WAITING";
+          pendingFeedback = true;
         } else if (isRecentlyActive) {
-          if (lastEntry?.status === "ERROR") {
+          if (entryStatus === "ERROR") {
             status = "error";
             agentStatus = "ERROR";
           } else if (lastEntry?.type === "USER_INPUT") {
@@ -192,7 +261,7 @@ export class AntigravityStateReader {
             agentStatus = "EXECUTING";
           } else if (lastEntry?.type === "PLANNER_RESPONSE") {
             const hasTools = Array.isArray(lastEntry.tool_calls) && lastEntry.tool_calls.length > 0;
-            if (lastEntry.status !== "DONE" || hasTools) {
+            if (entryStatus !== "DONE") {
               status = "working";
               agentStatus = hasTools ? "EXECUTING" : "PLANNING";
             } else {
@@ -334,10 +403,26 @@ export class AntigravityStateReader {
 
   async fetchLiveAgyQuota() {
     try {
-      const { execSync } = await import("node:child_process");
-      const ps = execSync("ps aux | grep -E \"agy.*--hub-port=\" | grep -v grep", { timeout: 1000 }).toString();
-      const match = ps.match(/--hub-port=(\d+)/);
-      const port = match ? Number(match[1]) : 51548;
+      const { execFile } = await import("node:child_process");
+      const { promisify } = await import("node:util");
+      const execFileAsync = promisify(execFile);
+
+      // Cache the discovered port for 10 seconds to avoid running ps aux every 500ms
+      const now = Date.now();
+      if (this._cachedAgyPort && this._cachedAgyPortTime && (now - this._cachedAgyPortTime) < 10000) {
+        // Use cached port
+      } else {
+        try {
+          const { stdout: ps } = await execFileAsync("/bin/ps", ["aux"], { timeout: 2000 });
+          const lines = ps.split("\n").filter(l => /agy.*--hub-port=/.test(l) && !/grep/.test(l));
+          const match = lines[0]?.match(/--hub-port=(\d+)/);
+          this._cachedAgyPort = match ? Number(match[1]) : 51548;
+        } catch {
+          this._cachedAgyPort = this._cachedAgyPort || 51548;
+        }
+        this._cachedAgyPortTime = now;
+      }
+      const port = this._cachedAgyPort;
 
       const htmlRes = await fetch(`http://127.0.0.1:${port}/`, { signal: AbortSignal.timeout(1000) });
       const html = await htmlRes.text();

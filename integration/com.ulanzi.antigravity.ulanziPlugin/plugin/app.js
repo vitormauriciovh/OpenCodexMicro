@@ -1184,7 +1184,7 @@ async function invoke(instance, pressed) {
   const name = actionName(instance.uuid);
   if (!name) return;
 
-  if (name === "usage" || name === "usage5h" || name === "usageweekly" || name === "tokens" || name === "new" || name === "hud") {
+  if (name === "usage" || name === "usage5h" || name === "usageweekly" || name === "tokens" || name === "new" || name === "hud" || name === "subagents") {
     await fetch(`${BRIDGE_URL}/focus`, { method: "POST", signal: AbortSignal.timeout(1500) }).catch(() => {});
     return;
   }
@@ -1253,8 +1253,14 @@ function handleMessage(raw) {
 
   if (["dialdown", "dialup", "dialrotate"].includes(message.cmd)) {
     const instance = instances.get(contextOf(message)) || addInstance(message);
-    if (actionName(instance.uuid) === "navigate" && message.cmd === "dialdown") {
-      void fetch(`${BRIDGE_URL}/task/0/click`, { method: "POST" }).catch(() => {});
+    if (actionName(instance.uuid) === "navigate") {
+      if (message.cmd === "dialdown") {
+        void fetch(`${BRIDGE_URL}/task/0/click`, { method: "POST" }).catch(() => {});
+      } else if (message.cmd === "dialrotate") {
+        const ticks = message.param?.ticks ?? message.param?.rotate ?? 0;
+        const direction = ticks > 0 ? "down" : "up";
+        void fetch(`${BRIDGE_URL}/scroll/${direction}`, { method: "POST" }).catch(() => {});
+      }
     }
     ack(message);
     return;
