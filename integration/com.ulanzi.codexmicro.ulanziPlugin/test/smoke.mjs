@@ -107,7 +107,7 @@ for (const locale of [
     `${locale} must localize every action name and tooltip`
   );
   assert.deepEqual(
-    [messages.Actions[0].Name, messages.Actions[9].Name, messages.Actions[13].Name],
+    [messages.Actions[0].Name, messages.Actions[11].Name, messages.Actions[15].Name],
     localizedActionNames[locale],
     `${locale} action localization must follow manifest action order`
   );
@@ -228,15 +228,11 @@ try {
       message.cmd === "state" && message.param?.statelist?.[0]?.uuid === taskUuid
     );
     const item = state?.param?.statelist?.[0];
-    assert.equal(item?.type, 2);
-    assert.equal(item?.path, taskPaths[index]);
-    assert.equal(item?.showtext, true);
-    assert.equal(Object.hasOwn(item || {}, "state"), false, "task icon update must not send a state index");
+    assert.equal(item?.type, 1);
+    assert.match(item?.data || "", /^data:image\/svg\+xml;base64,/);
+    assert.equal(item?.showtext, false);
+    assert.equal(item?.textdata, "");
   }
-  const task1State = messages.find(message =>
-    message.cmd === "state" && message.param?.statelist?.[0]?.uuid.endsWith(".task1")
-  );
-  assert.equal(task1State?.param?.statelist?.[0]?.textdata, "Working task");
 
   client.send(JSON.stringify({ cmd: "keydown", uuid: "com.ulanzi.ulanzistudio.codexmicro.task1", actionid: "a1", key: "0_0", param: {} }));
   client.send(JSON.stringify({ cmd: "run", uuid: "com.ulanzi.ulanzistudio.codexmicro.task1", actionid: "a1", key: "0_0", param: {} }));
@@ -270,8 +266,8 @@ try {
     message.cmd === "state" &&
     message.param?.statelist?.[0]?.uuid === navigateEvent.uuid
   );
-  assert.equal(navigateState?.param?.statelist?.[0]?.path, "assets/icons/task-working.png");
-  assert.equal(navigateState?.param?.statelist?.[0]?.textdata, "Working task");
+  assert.equal(navigateState?.param?.statelist?.[0]?.type, 1);
+  assert.match(navigateState?.param?.statelist?.[0]?.data || "", /^data:image\/svg\+xml;base64,/);
 
   const actions = ["fast", "pin", "new", "fork", "steer", "mic", "submit", "approve", "reject"];
   for (const [index, action] of actions.entries()) {
@@ -295,13 +291,14 @@ try {
   await new Promise(resolve => setTimeout(resolve, 250));
 
   for (const action of actions) {
+    const bridgeAction = action === "reject" ? "stop" : action;
     assert.equal(
-      bridgeRequests.filter(item => item === `POST /action/${action}/down`).length,
+      bridgeRequests.filter(item => item === `POST /action/${bridgeAction}/down`).length,
       1,
       `${action} must execute once on keydown`
     );
     assert.equal(
-      bridgeRequests.filter(item => item === `POST /action/${action}/up`).length,
+      bridgeRequests.filter(item => item === `POST /action/${bridgeAction}/up`).length,
       1,
       `${action} must preserve keyup`
     );

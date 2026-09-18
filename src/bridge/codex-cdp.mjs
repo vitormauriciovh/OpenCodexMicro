@@ -159,14 +159,17 @@ export function rendererActionExpression(action) {
         button.matches?.('[data-testid*="approve"],[data-testid*="allow"],[data-testid*="run"]')
       );
     } else if (action === "reject") {
-      const labels = new Set(${JSON.stringify(REJECT_ACTION_LABELS)});
+      const stopLabels = ["Stop", "Stop generating", "Cancel", "Parar", "Cancelar", "Interromper", "停止", "停止生成", "取消", "中止", "Abbrechen", "Stoppen"];
+      const rejectLabels = new Set(${JSON.stringify(REJECT_ACTION_LABELS)});
       const buttons = [...document.querySelectorAll("button, [role=button]")].filter(visible);
-      target = buttons.find((button) => [
-        button.getAttribute("aria-label"),
-        button.getAttribute("title"),
-        (button.innerText || "").trim()
-      ].some((label) => labels.has(label))) ?? buttons.find((button) =>
-        button.matches?.('[data-testid*="reject"],[data-testid*="deny"],[data-testid*="cancel"]')
+      target = buttons.find((button) => {
+        const aria = button.getAttribute("aria-label") || "";
+        const title = button.getAttribute("title") || "";
+        const text = (button.innerText || "").trim();
+        return stopLabels.some((l) => aria.includes(l) || title.includes(l) || text.includes(l)) ||
+               rejectLabels.has(aria) || rejectLabels.has(title) || rejectLabels.has(text);
+      }) ?? buttons.find((button) =>
+        button.matches?.('[data-testid*="stop"],[data-testid*="cancel"],[data-testid*="reject"],[data-testid*="deny"]')
       );
     } else if (action === "stop") {
       const labels = ["Stop", "Stop generating", "Cancel", "Parar", "Cancelar", "Interromper", "停止", "停止生成", "取消", "中止", "Abbrechen", "Stoppen"];
@@ -179,6 +182,8 @@ export function rendererActionExpression(action) {
       }) ?? buttons.find((button) => button.matches?.('[data-testid*="stop"],[data-testid*="cancel"]'));
     } else if (action === "reasoning") {
       const trigger = document.querySelector('[class*="ModelPickerTriggerEffortText"]')?.closest("button")
+        ?? document.querySelector('[class*="ModelPickerTriggerEffortLabel"]')?.closest("button")
+        ?? document.querySelector('[class*="ModelPickerTriggerContent"]')?.closest("button")
         ?? [...document.querySelectorAll("button")].find((b) => visible(b) && (b.getAttribute("aria-label")?.includes("reasoning") || b.getAttribute("title")?.includes("reasoning")));
       if (trigger) target = trigger;
     }
@@ -492,6 +497,39 @@ const SNAPSHOT_EXPRESSION = `(async () => {
     ?? null;
   const normalizeThreadKey = (value) => String(value ?? "").replace(/^local:/, "");
 
+  const computeCtxPct = (tokenInfo) => {
+    if (!tokenInfo || typeof tokenInfo !== "object") return 0;
+    const directPct = tokenInfo.usedPercent ?? tokenInfo.used_percent ?? tokenInfo.percentage ?? tokenInfo.percent;
+    if (typeof directPct === "number" && Number.isFinite(directPct)) {
+      return Math.min(100, Math.max(0, Math.round(directPct)));
+    }
+    const contextWindow = Number(
+      tokenInfo.modelContextWindow ||
+      tokenInfo.model_context_window ||
+      tokenInfo.contextWindow ||
+      tokenInfo.context_window ||
+      200000
+    ) || 200000;
+    const lastTokens = Number(
+      tokenInfo.last?.totalTokens ??
+      tokenInfo.last?.total_tokens ??
+      (Number(tokenInfo.last?.inputTokens ?? tokenInfo.last?.input_tokens ?? 0) +
+       Number(tokenInfo.last?.outputTokens ?? tokenInfo.last?.output_tokens ?? 0))
+    );
+    const activeTokens = Number(
+      tokenInfo.contextTokens ??
+      tokenInfo.context_tokens ??
+      (lastTokens > 0 ? lastTokens : null) ??
+      tokenInfo.total?.totalTokens ??
+      tokenInfo.total?.total_tokens ??
+      tokenInfo.totalTokens ??
+      tokenInfo.total_tokens ??
+      0
+    );
+    if (activeTokens <= 0) return 0;
+    return Math.min(100, Math.max(1, Math.round((activeTokens / contextWindow) * 100)));
+  };
+
   const enrichedSlots = found.map((slot) => {
     const threadId = normalizeThreadKey(slot.threadKey);
     const meta = threadId ? conversationsMeta.get(threadId) : null;
@@ -501,7 +539,8 @@ const SNAPSHOT_EXPRESSION = `(async () => {
     const running = isSlotRunning || isMetaRunning;
     const taskType = isWorkTask(meta) ? "WORK" : "CODEX";
     const model = formatModel(rawModel);
-    const tokenUsage = meta?.latestTokenUsageInfo || null;
+    const tokenUsage = meta?.latestTokenUsageInfo || meta?.tokenUsageInfo || meta?.tokenUsage || null;
+    const ctxPct = computeCtxPct(tokenUsage);
     return {
       id: slot.id,
       threadKey: slot.threadKey ?? null,
@@ -513,6 +552,7 @@ const SNAPSHOT_EXPRESSION = `(async () => {
       model,
       rawModel,
       tokenUsage,
+      ctxPct,
       selected: Boolean(slot.selected) || Boolean(
         activeThreadKey && threadId === normalizeThreadKey(activeThreadKey)
       )
@@ -532,7 +572,8 @@ const SNAPSHOT_EXPRESSION = `(async () => {
         taskType: slot.taskType,
         model: slot.model,
         rawModel: slot.rawModel,
-        tokenUsage: slot.tokenUsage
+        tokenUsage: slot.tokenUsage,
+        ctxPct: slot.ctxPct
       });
       seenRunningKeys.add(slot.threadId);
     }
@@ -543,6 +584,7 @@ const SNAPSHOT_EXPRESSION = `(async () => {
       const isMetaRunning = ["working", "thinking", "running", "in_progress"].includes(String(meta?.threadRuntimeStatus?.type || "").toLowerCase());
       if (isMetaRunning) {
         const rawModel = meta?.latestModel || meta?.latestThreadSettings?.model || meta?.previousTurnModel || null;
+        const tokenUsage = meta?.latestTokenUsageInfo || meta?.tokenUsageInfo || meta?.tokenUsage || null;
         activeTasks.push({
           threadKey: "local:" + id,
           threadId: id,
@@ -552,7 +594,8 @@ const SNAPSHOT_EXPRESSION = `(async () => {
           taskType: isWorkTask(meta) ? "WORK" : "CODEX",
           model: formatModel(rawModel),
           rawModel,
-          tokenUsage: meta?.latestTokenUsageInfo || null
+          tokenUsage,
+          ctxPct: computeCtxPct(tokenUsage)
         });
         seenRunningKeys.add(id);
       }
@@ -565,6 +608,7 @@ const SNAPSHOT_EXPRESSION = `(async () => {
   } else if (activeThreadKey && conversationsMeta.has(normalizeThreadKey(activeThreadKey))) {
     const meta = conversationsMeta.get(normalizeThreadKey(activeThreadKey));
     const rawModel = meta?.latestModel || meta?.latestThreadSettings?.model || meta?.previousTurnModel || null;
+    const tokenUsage = meta?.latestTokenUsageInfo || meta?.tokenUsageInfo || meta?.tokenUsage || null;
     lastTask = {
       threadKey: "local:" + meta.id,
       threadId: meta.id,
@@ -574,7 +618,8 @@ const SNAPSHOT_EXPRESSION = `(async () => {
       taskType: isWorkTask(meta) ? "WORK" : "CODEX",
       model: formatModel(rawModel),
       rawModel,
-      tokenUsage: meta?.latestTokenUsageInfo || null
+      tokenUsage,
+      ctxPct: computeCtxPct(tokenUsage)
     };
   } else if (enrichedSlots[0]?.threadKey) {
     lastTask = enrichedSlots[0];
@@ -583,8 +628,19 @@ const SNAPSHOT_EXPRESSION = `(async () => {
   const activeMeta = (activeThreadKey && conversationsMeta.get(normalizeThreadKey(activeThreadKey)))
     || (enrichedSlots[0]?.threadId && conversationsMeta.get(enrichedSlots[0].threadId))
     || null;
-  const tokenUsage = activeMeta?.latestTokenUsageInfo || null;
-  const reasoningEffort = activeMeta?.latestReasoningEffort || "medium";
+  const tokenUsage = activeMeta?.latestTokenUsageInfo || activeMeta?.tokenUsageInfo || activeMeta?.tokenUsage || null;
+  
+  const detectLiveReasoningEffort = () => {
+    const srEffort = document.querySelector("[class*='ModelPickerTriggerEffortLabel'] .sr-only")?.textContent?.trim()?.toLowerCase();
+    if (srEffort) return srEffort;
+    const activeEffortEl = document.querySelector("[data-reasoning-effort][style*='opacity: 1']")
+      ?? document.querySelector("[data-reasoning-effort]:not([style*='opacity: 0'])");
+    if (activeEffortEl) {
+      return activeEffortEl.getAttribute("data-reasoning-effort") || activeEffortEl.textContent?.trim()?.toLowerCase();
+    }
+    return activeMeta?.latestReasoningEffort || activeMeta?.reasoningEffort || "medium";
+  };
+  const reasoningEffort = detectLiveReasoningEffort();
 
   return {
     activeThreadKey,
