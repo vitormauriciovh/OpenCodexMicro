@@ -21,3 +21,5 @@ test("AntigravityStateReader handles empty and populated conversations gracefull
   assert.equal(snapshot.pendingAttentionCount, 0);
   assert.equal(snapshot.subagentsCount, 0);
 });
+
+

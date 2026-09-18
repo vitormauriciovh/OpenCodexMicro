@@ -3706,10 +3706,6 @@ import { createServer } from "node:http";
 import { execFile as execFile2 } from "node:child_process";
 import { promisify as promisify2 } from "node:util";
 
-// ../../src/bridge/codex-cdp.mjs
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
 // ../../node_modules/ws/wrapper.mjs
 var import_stream = __toESM(require_stream(), 1);
 var import_extension = __toESM(require_extension(), 1);
@@ -3720,6 +3716,10 @@ var import_subprotocol = __toESM(require_subprotocol(), 1);
 var import_websocket = __toESM(require_websocket(), 1);
 var import_websocket_server = __toESM(require_websocket_server(), 1);
 var wrapper_default = import_websocket.default;
+
+// ../../src/bridge/codex-cdp.mjs
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
 // ../../src/bridge/thread-key.mjs
 var UUID_PATTERN = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
@@ -4634,6 +4634,32 @@ var cached = {
 var rememberedLastTask = null;
 var refreshPromise = null;
 var nextReconnectAt = 0;
+var lastBroadcastDigest = "";
+var wss = new import_websocket_server.default({ noServer: true });
+var wsClients = /* @__PURE__ */ new Set();
+function broadcastState() {
+  const digest = `${cached.connected}:${cached.error}:${cached.activeTasks?.length}:${cached.slots?.map((s) => `${s.id}-${s.status}-${s.selected}`).join(",")}:${cached.usage?.windows?.[0]?.remainingPercent}:${cached.reasoningEffort}`;
+  if (digest === lastBroadcastDigest && wsClients.size > 0) return;
+  lastBroadcastDigest = digest;
+  const payload = JSON.stringify(cached);
+  for (const ws of wsClients) {
+    if (ws.readyState === 1) {
+      try {
+        ws.send(payload);
+      } catch {
+      }
+    }
+  }
+}
+wss.on("connection", (ws) => {
+  wsClients.add(ws);
+  try {
+    ws.send(JSON.stringify(cached));
+  } catch {
+  }
+  ws.on("close", () => wsClients.delete(ws));
+  ws.on("error", () => wsClients.delete(ws));
+});
 async function focusCodex() {
   await execFileAsync2("/usr/bin/open", ["-b", "com.openai.codex"], {
     timeout: 3e3
@@ -4658,8 +4684,12 @@ async function refresh(force = false) {
         updatedAt: Date.now()
       };
       nextReconnectAt = 0;
+      broadcastState();
     } catch (error) {
-      cached = { ...cached, connected: false, error: error.message, updatedAt: Date.now() };
+      if (cached.connected !== false || cached.error !== error.message) {
+        cached = { ...cached, connected: false, error: error.message, updatedAt: Date.now() };
+        broadcastState();
+      }
       nextReconnectAt = Date.now() + 2e3;
     }
   })();
@@ -4773,6 +4803,16 @@ var server = createServer(async (request, response) => {
     }
   }
   return json(response, 404, { ok: false, error: "Not found" });
+});
+server.on("upgrade", (request, socket, head) => {
+  const { pathname } = new URL(request.url || "/", `http://${HOST}:${PORT}`);
+  if (pathname === "/events" || pathname === "/ws") {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit("connection", ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
 });
 server.listen(PORT, HOST, () => {
   console.log(`Codex Keyboard bridge listening on http://${HOST}:${PORT}`);

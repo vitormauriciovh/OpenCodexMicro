@@ -340,6 +340,17 @@ function renderAll() {
   }
 }
 
+function scheduleNextPoll(delayMs = 500) {
+  clearTimeout(pollTimer);
+  pollTimer = setTimeout(async () => {
+    await pollCycle();
+    const isPlaying = currentState?.isRunning && currentState?.playerState === "playing";
+    const nextDelay = isPlaying ? 500 : 4000;
+    scheduleNextPoll(nextDelay);
+  }, delayMs);
+  pollTimer.unref();
+}
+
 async function pollCycle() {
   if (pollInFlight) return;
   pollInFlight = true;
@@ -393,7 +404,7 @@ async function invokeKey(instance) {
       await spotifyLocal.playUri(item.uri);
     }
   }
-  setTimeout(pollCycle, 150);
+  scheduleNextPoll(150);
 }
 
 function handleMessage(raw) {
@@ -620,16 +631,13 @@ function connect() {
 
   socket.on("open", () => {
     send({ code: 0, cmd: "connected", uuid: PLUGIN_UUID });
-    clearInterval(pollTimer);
-    pollTimer = setInterval(pollCycle, 500);
-    pollTimer.unref();
-    void pollCycle();
+    scheduleNextPoll(0);
   });
 
   socket.on("message", handleMessage);
 
   socket.on("close", () => {
-    clearInterval(pollTimer);
+    clearTimeout(pollTimer);
     reconnectTimer = setTimeout(connect, 1000);
     reconnectTimer.unref();
   });
@@ -645,7 +653,7 @@ reloadPlaylists().then(connect);
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {
     clearTimeout(reconnectTimer);
-    clearInterval(pollTimer);
+    clearTimeout(pollTimer);
     socket?.close();
     process.exit(0);
   });

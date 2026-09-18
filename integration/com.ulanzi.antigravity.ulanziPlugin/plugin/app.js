@@ -32,7 +32,8 @@ const ACTION_LABELS = Object.freeze({
   hud: "HUD",
   boost: "BOOST",
   grillme: "GRILL-ME",
-  goal: "GOAL"
+  goal: "GOAL",
+  tokens: "TOKENS"
 });
 
 const TASK_ICON_PATHS = Object.freeze({
@@ -809,6 +810,75 @@ function slashIconData(command) {
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
 
+function formatTokenCount(num) {
+  if (num === null || num === undefined || !Number.isFinite(num)) return "0";
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(2)}M`;
+  }
+  if (num >= 10000) {
+    return `${Math.round(num / 1000)}k`;
+  }
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1)}k`;
+  }
+  return String(num);
+}
+
+function tokensIconData(tokenUsage, connected = true) {
+  if (!connected) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+      <defs>
+        <linearGradient id="bgOffTokensAgy" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#181c20"/>
+          <stop offset="100%" stop-color="#0c0e10"/>
+        </linearGradient>
+      </defs>
+      <rect width="196" height="196" rx="24" fill="url(#bgOffTokensAgy)"/>
+      <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="#2c333a" stroke-width="2"/>
+      <text x="98" y="90" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="800" fill="#8a96a3" letter-spacing="1">TOKENS</text>
+      <text x="98" y="118" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#ef4444" letter-spacing="0.8">OFFLINE</text>
+    </svg>`;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+  }
+
+  const total = tokenUsage?.total?.totalTokens ?? 0;
+  const last = tokenUsage?.last?.totalTokens ?? 0;
+  const contextWindow = tokenUsage?.modelContextWindow || 1000000;
+  const pct = Math.min(100, Math.round((total / contextWindow) * 100));
+
+  const totalStr = formatTokenCount(total);
+  const lastStr = last > 0 ? `+${formatTokenCount(last)}` : "—";
+  const pctColor = pct > 80 ? "#ef4444" : pct > 50 ? "#f59e0b" : "#3b82f6";
+  const barWidth = Math.max(4, Math.round((pct / 100) * 128));
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
+    <defs>
+      <linearGradient id="bgTokensAgy" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#161b22"/>
+        <stop offset="100%" stop-color="#0a0d10"/>
+      </linearGradient>
+    </defs>
+    <rect width="196" height="196" rx="24" fill="url(#bgTokensAgy)"/>
+    <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="#21262d" stroke-width="2"/>
+
+    <g transform="translate(98, 36)">
+      <rect x="-44" y="-13" width="88" height="26" rx="13" fill="#1e293b" stroke="#334155" stroke-width="1.2"/>
+      <text x="0" y="5" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="11" font-weight="900" fill="#94a3b8" letter-spacing="1">AGY TOKENS</text>
+    </g>
+
+    <text x="98" y="96" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="30" font-weight="900" fill="#f8fafc" letter-spacing="0.5">${totalStr}</text>
+    <text x="98" y="122" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#64748b" letter-spacing="0.8">LAST: <tspan fill="#38bdf8" font-weight="800">${lastStr}</tspan></text>
+
+    <!-- Context Window Bar -->
+    <g transform="translate(34, 142)">
+      <rect x="0" y="0" width="128" height="8" rx="4" fill="#21262d"/>
+      <rect x="0" y="0" width="${barWidth}" height="8" rx="4" fill="${pctColor}"/>
+    </g>
+    <text x="98" y="168" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="11" font-weight="800" fill="${pctColor}" letter-spacing="0.6">${pct}% CONTEXT</text>
+  </svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+
 function send(message) {
   if (socket?.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(message));
@@ -922,11 +992,16 @@ function renderInstance(instance) {
   const name = actionName(instance.uuid);
   if (!name) return;
 
-  if (name === "proceed") {
+  if (name === "tokens") {
+    const connected = Boolean(latestState?.connected);
+    const tokenUsage = latestState?.tokenUsage || activeTasks[0]?.tokenUsage || slots[0]?.tokenUsage || null;
+    sendSvgState(instance, tokensIconData(tokenUsage, connected));
+  } else if (name === "proceed") {
     const connected = Boolean(latestState?.connected);
     const hasAction = connected && Boolean(
       (latestState?.pendingAttentionCount > 0) ||
-      latestState?.activeTasks?.some((t) => t?.pendingFeedback || t?.status === "attention" || t?.status === "waiting_for_input")
+      latestState?.activeTasks?.some((t) => t?.pendingFeedback || t?.status === "attention" || t?.status === "waiting_for_input" || t?.agentStatus === "WAITING") ||
+      latestState?.slots?.some((s) => s?.pendingFeedback || s?.status === "attention")
     );
     sendSvgState(instance, proceedIconData({ connected, hasAction }));
   } else if (name === "cancel") {
@@ -1030,6 +1105,48 @@ function renderAll() {
   }
 }
 
+let bridgeSocket = null;
+let bridgeWsReconnectTimer = null;
+let bridgeFallbackTimer = null;
+
+function connectBridgeWs() {
+  clearTimeout(bridgeWsReconnectTimer);
+  try {
+    const wsUrl = BRIDGE_URL.replace(/^http/, "ws") + "/events";
+    bridgeSocket = new WebSocket(wsUrl);
+
+    bridgeSocket.on("open", () => {
+      clearInterval(bridgeFallbackTimer);
+      bridgeFallbackTimer = setInterval(() => void pollBridgeState(), 5000);
+      bridgeFallbackTimer.unref();
+    });
+
+    bridgeSocket.on("message", (raw) => {
+      try {
+        const data = JSON.parse(String(raw));
+        latestState = data;
+        renderAll();
+      } catch {}
+    });
+
+    bridgeSocket.on("close", () => {
+      bridgeSocket = null;
+      clearInterval(bridgeFallbackTimer);
+      bridgeFallbackTimer = setInterval(() => void pollBridgeState(), 3000);
+      bridgeFallbackTimer.unref();
+      bridgeWsReconnectTimer = setTimeout(connectBridgeWs, 2000);
+      bridgeWsReconnectTimer.unref();
+    });
+
+    bridgeSocket.on("error", () => {
+      bridgeSocket?.close();
+    });
+  } catch {
+    bridgeWsReconnectTimer = setTimeout(connectBridgeWs, 2000);
+    bridgeWsReconnectTimer.unref();
+  }
+}
+
 async function pollBridgeState() {
   if (pollInFlight) return;
   pollInFlight = true;
@@ -1067,7 +1184,7 @@ async function invoke(instance, pressed) {
   const name = actionName(instance.uuid);
   if (!name) return;
 
-  if (name === "usage" || name === "usage5h" || name === "usageweekly" || name === "new" || name === "hud") {
+  if (name === "usage" || name === "usage5h" || name === "usageweekly" || name === "tokens" || name === "new" || name === "hud") {
     await fetch(`${BRIDGE_URL}/focus`, { method: "POST", signal: AbortSignal.timeout(1500) }).catch(() => {});
     return;
   }
@@ -1156,16 +1273,15 @@ function connect() {
 
   socket.on("open", () => {
     send({ code: 0, cmd: "connected", uuid: PLUGIN_UUID });
-    clearInterval(pollTimer);
-    pollTimer = setInterval(() => void pollBridgeState(), 500);
-    pollTimer.unref();
+    connectBridgeWs();
     void pollBridgeState();
   });
 
   socket.on("message", handleMessage);
 
   socket.on("close", () => {
-    clearInterval(pollTimer);
+    clearInterval(bridgeFallbackTimer);
+    bridgeSocket?.close();
     reconnectTimer = setTimeout(connect, 1000);
     reconnectTimer.unref();
   });
@@ -1181,7 +1297,9 @@ connect();
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {
     clearTimeout(reconnectTimer);
-    clearInterval(pollTimer);
+    clearTimeout(bridgeWsReconnectTimer);
+    clearInterval(bridgeFallbackTimer);
+    bridgeSocket?.close();
     socket?.close();
     process.exit(0);
   });

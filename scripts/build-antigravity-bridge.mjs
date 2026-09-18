@@ -18,7 +18,11 @@ async function main() {
     format: "esm",
     outfile: outFile,
     platform: "node",
-    target: "node20"
+    target: "node20",
+    minify: false,
+    banner: {
+      js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);"
+    }
   });
   console.log(`Built Antigravity bridge: ${outFile}`);
 }

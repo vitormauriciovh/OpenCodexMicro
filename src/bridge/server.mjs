@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { WebSocketServer } from "ws";
 import { CodexCdpClient } from "./codex-cdp.mjs";
 import { decodeThreadPathSegment } from "./thread-key.mjs";
 
@@ -25,6 +26,29 @@ let cached = {
 let rememberedLastTask = null;
 let refreshPromise = null;
 let nextReconnectAt = 0;
+let lastBroadcastDigest = "";
+
+const wss = new WebSocketServer({ noServer: true });
+const wsClients = new Set();
+
+function broadcastState() {
+  const digest = `${cached.connected}:${cached.error}:${cached.activeTasks?.length}:${cached.slots?.map((s) => `${s.id}-${s.status}-${s.selected}`).join(",")}:${cached.usage?.windows?.[0]?.remainingPercent}:${cached.reasoningEffort}`;
+  if (digest === lastBroadcastDigest && wsClients.size > 0) return;
+  lastBroadcastDigest = digest;
+  const payload = JSON.stringify(cached);
+  for (const ws of wsClients) {
+    if (ws.readyState === 1) { // WebSocket.OPEN
+      try { ws.send(payload); } catch {}
+    }
+  }
+}
+
+wss.on("connection", (ws) => {
+  wsClients.add(ws);
+  try { ws.send(JSON.stringify(cached)); } catch {}
+  ws.on("close", () => wsClients.delete(ws));
+  ws.on("error", () => wsClients.delete(ws));
+});
 
 async function focusCodex() {
   await execFileAsync("/usr/bin/open", ["-b", "com.openai.codex"], {
@@ -51,8 +75,12 @@ async function refresh(force = false) {
         updatedAt: Date.now()
       };
       nextReconnectAt = 0;
+      broadcastState();
     } catch (error) {
-      cached = { ...cached, connected: false, error: error.message, updatedAt: Date.now() };
+      if (cached.connected !== false || cached.error !== error.message) {
+        cached = { ...cached, connected: false, error: error.message, updatedAt: Date.now() };
+        broadcastState();
+      }
       nextReconnectAt = Date.now() + 2000;
     }
   })();
@@ -167,6 +195,17 @@ const server = createServer(async (request, response) => {
     }
   }
   return json(response, 404, { ok: false, error: "Not found" });
+});
+
+server.on("upgrade", (request, socket, head) => {
+  const { pathname } = new URL(request.url || "/", `http://${HOST}:${PORT}`);
+  if (pathname === "/events" || pathname === "/ws") {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit("connection", ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
 });
 
 server.listen(PORT, HOST, () => {

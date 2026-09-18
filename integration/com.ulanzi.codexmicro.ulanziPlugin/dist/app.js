@@ -4094,7 +4094,6 @@ var TASK_ICON_PATHS = Object.freeze({
 });
 var socket;
 var reconnectTimer;
-var pollTimer;
 var pollInFlight = false;
 var latestState = null;
 var setupOperation = null;
@@ -5555,6 +5554,44 @@ async function openTaskSlot(slot) {
   if (!task?.threadKey) throw new Error(`Codex task slot ${slot + 1} is empty`);
   await bridgeRequest(`/thread/${encodeURIComponent(task.threadKey)}/click?slot=${slot}`, "POST");
 }
+var bridgeSocket = null;
+var bridgeWsReconnectTimer = null;
+var bridgeFallbackTimer = null;
+function connectBridgeWs() {
+  clearTimeout(bridgeWsReconnectTimer);
+  try {
+    const wsUrl = BRIDGE_URL.replace(/^http/, "ws") + "/events";
+    bridgeSocket = new wrapper_default(wsUrl);
+    bridgeSocket.on("open", () => {
+      clearInterval(bridgeFallbackTimer);
+      bridgeFallbackTimer = setInterval(() => void pollBridge(), 5e3);
+      bridgeFallbackTimer.unref();
+    });
+    bridgeSocket.on("message", (raw) => {
+      try {
+        const data = JSON.parse(String(raw));
+        latestState = data;
+        updateTaskRunningTimes(latestState?.slots, latestState?.activeTasks);
+        renderAll();
+      } catch {
+      }
+    });
+    bridgeSocket.on("close", () => {
+      bridgeSocket = null;
+      clearInterval(bridgeFallbackTimer);
+      bridgeFallbackTimer = setInterval(() => void pollBridge(), 3e3);
+      bridgeFallbackTimer.unref();
+      bridgeWsReconnectTimer = setTimeout(connectBridgeWs, 2e3);
+      bridgeWsReconnectTimer.unref();
+    });
+    bridgeSocket.on("error", () => {
+      bridgeSocket?.close();
+    });
+  } catch {
+    bridgeWsReconnectTimer = setTimeout(connectBridgeWs, 2e3);
+    bridgeWsReconnectTimer.unref();
+  }
+}
 async function pollBridge() {
   if (pollInFlight) return;
   pollInFlight = true;
@@ -5754,14 +5791,13 @@ function connect() {
   socket = new wrapper_default(HOST_URL);
   socket.on("open", () => {
     send({ code: 0, cmd: "connected", uuid: PLUGIN_UUID });
-    clearInterval(pollTimer);
-    pollTimer = setInterval(() => void pollBridge(), 500);
-    pollTimer.unref();
+    connectBridgeWs();
     void pollBridge();
   });
   socket.on("message", handleMessage);
   socket.on("close", () => {
-    clearInterval(pollTimer);
+    clearInterval(bridgeFallbackTimer);
+    bridgeSocket?.close();
     reconnectTimer = setTimeout(connect, 1e3);
     reconnectTimer.unref();
   });
@@ -5774,7 +5810,9 @@ connect();
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {
     clearTimeout(reconnectTimer);
-    clearInterval(pollTimer);
+    clearTimeout(bridgeWsReconnectTimer);
+    clearInterval(bridgeFallbackTimer);
+    bridgeSocket?.close();
     socket?.close();
     process.exit(0);
   });

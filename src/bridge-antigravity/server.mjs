@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import path from "node:path";
+import { WebSocketServer } from "ws";
 import { AntigravityStateReader } from "./state-reader.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -24,6 +25,29 @@ let cached = {
 };
 
 let refreshPromise = null;
+let lastBroadcastDigest = "";
+
+const wss = new WebSocketServer({ noServer: true });
+const wsClients = new Set();
+
+function broadcastState() {
+  const digest = `${cached.connected}:${cached.error}:${cached.pendingAttentionCount}:${cached.tokenUsage?.total?.totalTokens}:${cached.subagentsCount}:${cached.activeTasks?.length}:${cached.slots?.map((s) => `${s.id}-${s.status}-${s.selected}`).join(",")}`;
+  if (digest === lastBroadcastDigest && wsClients.size > 0) return;
+  lastBroadcastDigest = digest;
+  const payload = JSON.stringify(cached);
+  for (const ws of wsClients) {
+    if (ws.readyState === 1) { // WebSocket.OPEN
+      try { ws.send(payload); } catch {}
+    }
+  }
+}
+
+wss.on("connection", (ws) => {
+  wsClients.add(ws);
+  try { ws.send(JSON.stringify(cached)); } catch {}
+  ws.on("close", () => wsClients.delete(ws));
+  ws.on("error", () => wsClients.delete(ws));
+});
 
 async function focusVSCode() {
   try {
@@ -79,8 +103,12 @@ async function refresh() {
         error: null,
         updatedAt: Date.now()
       };
+      broadcastState();
     } catch (error) {
-      cached = { ...cached, connected: false, error: error.message, updatedAt: Date.now() };
+      if (cached.connected !== false || cached.error !== error.message) {
+        cached = { ...cached, connected: false, error: error.message, updatedAt: Date.now() };
+        broadcastState();
+      }
     }
   })();
   try {
@@ -159,6 +187,15 @@ export const server = createServer(async (request, response) => {
     }
   }
 
+  if (request.method === "POST" && url.pathname === "/action/tokens") {
+    try {
+      await focusVSCode();
+      return json(response, 200, { ok: true, action: "tokens" });
+    } catch (error) {
+      return json(response, 500, { ok: false, error: error.message });
+    }
+  }
+
   if (request.method === "POST" && (url.pathname === "/action/cancel" || url.pathname === "/action/stop" || url.pathname === "/action/reject")) {
     try {
       await focusVSCode();
@@ -207,6 +244,17 @@ export const server = createServer(async (request, response) => {
   }
 
   return json(response, 404, { ok: false, error: "Not found" });
+});
+
+server.on("upgrade", (request, socket, head) => {
+  const { pathname } = new URL(request.url || "/", `http://${HOST}:${PORT}`);
+  if (pathname === "/events" || pathname === "/ws") {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit("connection", ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
 });
 
 if (process.argv[1] && (process.argv[1].endsWith("server.mjs") || process.argv[1].endsWith("bridge-antigravity.mjs"))) {

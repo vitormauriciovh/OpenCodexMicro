@@ -1650,6 +1650,49 @@ async function openTaskSlot(slot) {
   await bridgeRequest(`/thread/${encodeURIComponent(task.threadKey)}/click?slot=${slot}`, "POST");
 }
 
+let bridgeSocket = null;
+let bridgeWsReconnectTimer = null;
+let bridgeFallbackTimer = null;
+
+function connectBridgeWs() {
+  clearTimeout(bridgeWsReconnectTimer);
+  try {
+    const wsUrl = BRIDGE_URL.replace(/^http/, "ws") + "/events";
+    bridgeSocket = new WebSocket(wsUrl);
+
+    bridgeSocket.on("open", () => {
+      clearInterval(bridgeFallbackTimer);
+      bridgeFallbackTimer = setInterval(() => void pollBridge(), 5000);
+      bridgeFallbackTimer.unref();
+    });
+
+    bridgeSocket.on("message", (raw) => {
+      try {
+        const data = JSON.parse(String(raw));
+        latestState = data;
+        updateTaskRunningTimes(latestState?.slots, latestState?.activeTasks);
+        renderAll();
+      } catch {}
+    });
+
+    bridgeSocket.on("close", () => {
+      bridgeSocket = null;
+      clearInterval(bridgeFallbackTimer);
+      bridgeFallbackTimer = setInterval(() => void pollBridge(), 3000);
+      bridgeFallbackTimer.unref();
+      bridgeWsReconnectTimer = setTimeout(connectBridgeWs, 2000);
+      bridgeWsReconnectTimer.unref();
+    });
+
+    bridgeSocket.on("error", () => {
+      bridgeSocket?.close();
+    });
+  } catch {
+    bridgeWsReconnectTimer = setTimeout(connectBridgeWs, 2000);
+    bridgeWsReconnectTimer.unref();
+  }
+}
+
 async function pollBridge() {
   if (pollInFlight) return;
   pollInFlight = true;
@@ -1851,14 +1894,13 @@ function connect() {
   socket = new WebSocket(HOST_URL);
   socket.on("open", () => {
     send({ code: 0, cmd: "connected", uuid: PLUGIN_UUID });
-    clearInterval(pollTimer);
-    pollTimer = setInterval(() => void pollBridge(), 500);
-    pollTimer.unref();
+    connectBridgeWs();
     void pollBridge();
   });
   socket.on("message", handleMessage);
   socket.on("close", () => {
-    clearInterval(pollTimer);
+    clearInterval(bridgeFallbackTimer);
+    bridgeSocket?.close();
     reconnectTimer = setTimeout(connect, 1000);
     reconnectTimer.unref();
   });
@@ -1870,7 +1912,9 @@ connect();
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {
     clearTimeout(reconnectTimer);
-    clearInterval(pollTimer);
+    clearTimeout(bridgeWsReconnectTimer);
+    clearInterval(bridgeFallbackTimer);
+    bridgeSocket?.close();
     socket?.close();
     process.exit(0);
   });

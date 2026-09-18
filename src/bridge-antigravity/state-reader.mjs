@@ -51,14 +51,17 @@ export class AntigravityStateReader {
     let hasPlan = false;
     let hasWalkthrough = false;
     let transcriptMtimeMs = convDir.mtimeMs;
+    let planMtimeMs = 0;
 
     // 1. Check implementation_plan.md & metadata
     try {
       const planMetaPath = path.join(convPath, "implementation_plan.md.metadata.json");
+      const stat = await fs.stat(planMetaPath);
+      planMtimeMs = stat.mtimeMs;
       const metaRaw = await fs.readFile(planMetaPath, "utf-8");
       const meta = JSON.parse(metaRaw);
       hasPlan = true;
-      if (meta.RequestFeedback === true) {
+      if (meta.requestFeedback === true || meta.RequestFeedback === true) {
         pendingFeedback = true;
       }
     } catch {
@@ -84,17 +87,26 @@ export class AntigravityStateReader {
       let initialTitle = convId.slice(0, 8);
       let latestPrompt = "";
       let detectedModel = null;
+      let lastUserInputIndex = -1;
+      let lastUserInputTime = 0;
+
       for (let i = 0; i < lines.length; i++) {
         try {
           const entry = JSON.parse(lines[i]);
-          if (entry.type === "USER_INPUT" && entry.content) {
-            const rawText = typeof entry.content === "string" ? entry.content : "";
-            const cleanText = rawText.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-            if (cleanText) {
-              if (!initialTitle || initialTitle === convId.slice(0, 8)) {
-                initialTitle = cleanText.slice(0, 32);
+          if (entry.type === "USER_INPUT") {
+            lastUserInputIndex = i;
+            if (entry.created_at) {
+              lastUserInputTime = new Date(entry.created_at).getTime();
+            }
+            if (entry.content) {
+              const rawText = typeof entry.content === "string" ? entry.content : "";
+              const cleanText = rawText.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+              if (cleanText) {
+                if (!initialTitle || initialTitle === convId.slice(0, 8)) {
+                  initialTitle = cleanText.slice(0, 32);
+                }
+                latestPrompt = cleanText.slice(0, 32);
               }
-              latestPrompt = cleanText.slice(0, 32);
             }
           }
           const contentStr = typeof entry.content === "string" ? entry.content : "";
@@ -121,22 +133,32 @@ export class AntigravityStateReader {
       };
 
       const model = formatAgyModel(detectedModel);
-      const ctxPct = Math.min(99, Math.max(5, Math.round((content.length / 600000) * 100)));
+      const isLargeModel = model.includes("pro") || model.includes("gemini") || model.includes("claude");
+      const modelContextWindow = isLargeModel ? 1000000 : 200000;
+
+      // Token usage calculation
+      let lastTurnChars = 0;
+      if (lastUserInputIndex >= 0) {
+        for (let j = lastUserInputIndex; j < lines.length; j++) {
+          lastTurnChars += lines[j].length;
+        }
+      } else if (lines.length > 0) {
+        lastTurnChars = lines[lines.length - 1].length;
+      }
+      const lastTurnTokens = Math.max(1, Math.round(lastTurnChars / 4));
+      const totalTokens = Math.max(lastTurnTokens, Math.round(content.length / 4));
+      const ctxPct = Math.min(99, Math.max(1, Math.round((totalTokens / modelContextWindow) * 100)));
+
+      const tokenUsage = {
+        total: { totalTokens },
+        last: { totalTokens: lastTurnTokens },
+        modelContextWindow
+      };
 
       agentStatus = "IDLE";
       // Check the latest entries for current activity
       if (lines.length > 0) {
         let lastEntry = null;
-        let lastUserInputIndex = -1;
-        for (let i = lines.length - 1; i >= 0; i--) {
-          try {
-            const entry = JSON.parse(lines[i]);
-            if (entry.type === "USER_INPUT" && lastUserInputIndex === -1) {
-              lastUserInputIndex = i;
-            }
-          } catch {}
-        }
-
         try {
           lastEntry = JSON.parse(lines[lines.length - 1]);
         } catch {}
@@ -149,7 +171,13 @@ export class AntigravityStateReader {
         const isRecentlyActive = ageMs < 15000;
         const isRecentlyCompleted = ageMs < 8000;
 
-        if (pendingFeedback && ageMs < 60000) {
+        // If plan requested feedback and user hasn't sent a newer message since plan was generated
+        const isPlanPendingUserResponse = pendingFeedback && (planMtimeMs > lastUserInputTime);
+        if (!isPlanPendingUserResponse) {
+          pendingFeedback = false;
+        }
+
+        if (isPlanPendingUserResponse) {
           status = "attention";
           agentStatus = "WAITING";
         } else if (isRecentlyActive) {
@@ -190,6 +218,7 @@ export class AntigravityStateReader {
         startedAt,
         model,
         ctxPct,
+        tokenUsage,
         pendingFeedback,
         subagentsCount,
         hasPlan,
@@ -208,6 +237,11 @@ export class AntigravityStateReader {
         startedAt,
         model: "gemini-2.5",
         ctxPct: 0,
+        tokenUsage: {
+          total: { totalTokens: 0 },
+          last: { totalTokens: 0 },
+          modelContextWindow: 200000
+        },
         pendingFeedback,
         subagentsCount,
         hasPlan,
@@ -260,6 +294,7 @@ export class AntigravityStateReader {
         startedAt: task.startedAt,
         model: task.model,
         ctxPct: task.ctxPct,
+        tokenUsage: task.tokenUsage,
         selected: id === 0
       };
     });
@@ -274,6 +309,7 @@ export class AntigravityStateReader {
       startedAt: t.startedAt,
       model: t.model,
       ctxPct: t.ctxPct,
+      tokenUsage: t.tokenUsage,
       pendingFeedback: t.pendingFeedback,
       hasPlan: t.hasPlan,
       hasWalkthrough: t.hasWalkthrough,
@@ -288,6 +324,7 @@ export class AntigravityStateReader {
       slots,
       activeTasks,
       lastTask: activeTasks[0] || null,
+      tokenUsage: tasks[0]?.tokenUsage || null,
       pendingAttentionCount,
       subagentsCount: totalSubagentsCount,
       usage,
@@ -300,7 +337,7 @@ export class AntigravityStateReader {
       const { execSync } = await import("node:child_process");
       const ps = execSync("ps aux | grep -E \"agy.*--hub-port=\" | grep -v grep", { timeout: 1000 }).toString();
       const match = ps.match(/--hub-port=(\d+)/);
-      const port = match ? Number(match[1]) : 65350;
+      const port = match ? Number(match[1]) : 51548;
 
       const htmlRes = await fetch(`http://127.0.0.1:${port}/`, { signal: AbortSignal.timeout(1000) });
       const html = await htmlRes.text();
@@ -308,6 +345,45 @@ export class AntigravityStateReader {
       const csrfToken = csrfMatch ? csrfMatch[1] : null;
       if (!csrfToken) return null;
 
+      // 1. Query official RetrieveUserQuotaSummary for exact live weekly & 5h limits
+      try {
+        const summaryRes = await fetch(`http://127.0.0.1:${port}/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-codeium-csrf-token": csrfToken
+          },
+          body: "{}",
+          signal: AbortSignal.timeout(1200)
+        });
+        const summaryData = await summaryRes.json();
+        const groups = summaryData?.response?.groups || [];
+        const geminiGroup = groups.find(g => g.displayName?.includes("Gemini")) || groups[0];
+        const buckets = geminiGroup?.buckets || [];
+        const weeklyBucket = buckets.find(b => b.window === "weekly" || b.bucketId?.includes("weekly"));
+        const fiveHourBucket = buckets.find(b => b.window === "5h" || b.bucketId?.includes("5h"));
+
+        if (weeklyBucket || fiveHourBucket) {
+          const fiveHourRemaining = fiveHourBucket?.remainingFraction !== undefined
+            ? Math.max(0, Math.min(100, Math.round(Number(fiveHourBucket.remainingFraction) * 100)))
+            : null;
+          const fiveHourReset = fiveHourBucket?.resetTime ? new Date(fiveHourBucket.resetTime).getTime() : null;
+
+          const weeklyRemaining = weeklyBucket?.remainingFraction !== undefined
+            ? Math.max(0, Math.min(100, Math.round(Number(weeklyBucket.remainingFraction) * 100)))
+            : null;
+          const weeklyReset = weeklyBucket?.resetTime ? new Date(weeklyBucket.resetTime).getTime() : null;
+
+          return {
+            fiveHourRemaining,
+            fiveHourReset,
+            weeklyRemaining,
+            weeklyReset
+          };
+        }
+      } catch {}
+
+      // 2. Fallback to GetUserStatus
       const statusRes = await fetch(`http://127.0.0.1:${port}/exa.language_server_pb.LanguageServerService/GetUserStatus`, {
         method: "POST",
         headers: {
@@ -326,7 +402,9 @@ export class AntigravityStateReader {
         const resetMs = new Date(geminiConfig.quotaInfo.resetTime).getTime();
         return {
           fiveHourRemaining: Math.max(0, Math.min(100, remaining)),
-          fiveHourReset: resetMs
+          fiveHourReset: resetMs,
+          weeklyRemaining: null,
+          weeklyReset: null
         };
       }
     } catch {
@@ -377,14 +455,22 @@ export class AntigravityStateReader {
           ? oldestIn5h + 5 * 3600 * 1000
           : now + 5 * 3600 * 1000);
 
-    // Weekly limit: calculated from weekly rolling activity (calibrated to quota scale)
-    const weeklyUsed = Math.min(99, Math.max(1, Math.round((turnsLast7d / 200) * 100)));
-    const weeklyRemaining = Math.max(1, 100 - weeklyUsed);
+    const fiveHourRemaining = liveQuota?.fiveHourRemaining !== null && liveQuota?.fiveHourRemaining !== undefined
+      ? liveQuota.fiveHourRemaining
+      : Math.max(1, 100 - Math.min(99, Math.round((turnsLast5h / 50) * 100)));
+
+    const weeklyRemaining = liveQuota?.weeklyRemaining !== null && liveQuota?.weeklyRemaining !== undefined
+      ? liveQuota.weeklyRemaining
+      : Math.max(1, 100 - Math.min(99, Math.max(1, Math.round((turnsLast7d / 200) * 100))));
 
     const d = new Date(now);
     const day = d.getUTCDay();
     const daysUntilMon = (8 - day) % 7 || 7;
-    const weeklyReset = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + daysUntilMon, 0, 0, 0)).getTime();
+    const fallbackWeeklyReset = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + daysUntilMon, 0, 0, 0)).getTime();
+
+    const weeklyReset = (liveQuota?.weeklyReset && liveQuota.weeklyReset > now)
+      ? liveQuota.weeklyReset
+      : fallbackWeeklyReset;
 
     return {
       windows: [

@@ -222,6 +222,16 @@
       "States": [{ "Name": "Grill-Me", "Image": "assets/icons/steer.png" }]
     },
     {
+      "Name": "Antigravity Tokens",
+      "Icon": "assets/icons/usage.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.tokens",
+      "Tooltip": "Display cumulative session tokens, last turn token usage, and context window gauge.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Tokens", "Image": "assets/icons/usage.png" }]
+    },
+    {
       "Name": "Antigravity /goal",
       "Icon": "assets/icons/plugin.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
