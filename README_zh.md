@@ -1,141 +1,171 @@
 # OpenCodexMicro
-
-**通过 Ulanzi Studio，用 Ulanzi D200 Series 操控 Codex Desktop。**
-
+ 
+**通过 Ulanzi Studio，用 Ulanzi D200 Series 操控 Codex Desktop、Antigravity AI Agent 及 Spotify 音乐控制。**
+ 
 [English](README.md)
+ 
+OpenCodexMicro 通过原生 Ulanzi Studio 插件与本机回环 Bridge，将现代开发者工具与媒体控制器连接到 Ulanzi D200 系列键盘。仓库提供面向 **Codex Desktop**、**Antigravity AI Agent** 和 **Spotify Music Picker** 的独立插件套件。
 
-![Ulanzi D200 Series 上的 OpenCodexMicro](docs/images/codex-keyboard-hero.png)
+![Ulanzi D200 Series 上的 OpenCodexMicro](docs/images/ulanzi-deck-showcase.jpg)
+ 
+## 功能特性一览
 
-OpenCodexMicro 通过本机回环 Bridge 暴露 Codex 的实时 Micro 状态，再由原生
-Ulanzi Studio 插件显示最近任务、精确切换任务，并提供 Fast、Usage、Pin、New、
-Fork、Steer、Mic、Submit 和 Latest Task & Scroll 旋钮操作。
-
-## 实现的功能
-
+<p align="center">
+  <img src="docs/images/ulanzi-agent-keys.jpg" alt="Ulanzi Deck Agent Keys" width="85%" />
+</p>
+ 
+### Codex Desktop 深度集成
 | 功能 | 行为 |
 | --- | --- |
-| 五个实时任务 Action | 展示 Codex Most Recent 任务及空闲、运行（带运行耗时）、完成、等待处理或错误状态 |
-| 精确任务切换 | 通过 Codex 自己的 Micro event bus 打开按键显示的任务 |
-| Codex 常用控制 | Fast、Usage（带重置倒计时）、Approve、Deny、Attention Alert、Pin、New、Fork、Steer、Mic 和 Submit |
-| 旋钮导航 | 按下打开 task1；左/右旋转通过 Ulanzi Studio hotkey 协议向上/向下滚动 |
-| Usage 显示 | 在按键上动态绘制剩余额度及重置倒计时，点击后回到 Codex 应用 |
-| Attention Alert | 动态显示待审批/待处理的任务数量，一键直达需要注意的任务 |
-| Ulanzi Studio 集成 | 由 Ulanzi Studio 独占设备并管理实体键位 |
-| 仅本机通信 | CDP 与 Bridge API 都只绑定回环地址 |
+| **五个实时任务卡片** | 展示 Codex 最近任务，附带模型标签（`5.6 TERRA`、`Claude 3.7`）、实时耗时计时器、状态角标（`WORKING`、`COMPLETED`、`ATTENTION`、`IDLE`）及对话标题。 |
+| **5小时与每周额度仪表盘** | 大环形进度条显示 5 小时与每周剩余额度，带重置倒计时（如 `RESET 2H 15M`、`RESET 5H`、`RESET 7D`）。 |
+| **任务与 Token 监控** | 监控当前活跃任务类型、模型思考强度（Reasoning Effort: Low/Med/High）及上下文窗口消耗。 |
+| **Agent 审批与控制** | 一键 `APPROVE` / `PROCEED` 确认、`CANCEL` / `DENY` 拒绝，以及待处理任务数量角标。 |
+| **快捷指令 Prompt** | 一键触发 Test & Fix 单元测试修复、Code Review 代码审查和 Conventional Commit 提交信息生成。 |
+| **旋钮导航与滚动** | 按下打开最新任务；左/右旋转通过 Ulanzi Studio hotkey 协议向上/向下滚动。 |
 
-这是由 Ulanzi 维护、通过 CDP 与 Bridge API 对接 Codex Desktop 的插件项目；
-它不是 OpenAI 官方集成，也不代表 OpenAI 的背书或支持。
+### Antigravity AI Agent 集成
+| 功能 | 行为 |
+| --- | --- |
+| **五个实时 Session 卡片** | 展示 Antigravity 活跃会话、执行状态、模型指示器与耗时计时器。 |
+| **Agent 状态 HUD** | 实时显示 Agent 运行状态（`PLANNING`、`EXECUTING`、`WAITING`、`IDLE`）、会话标题与计时器。 |
+| **一键计划审批** | 单击 `PROCEED` 批准实施计划或工具调用，单击 `CANCEL` 立即停止执行。 |
+| **Subagents 与 Token 监控** | 实时子 Agent 数量计数、累积会话 Token 跟踪与上下文用量环形图。 |
+| **AI 斜杠指令** | 专属按键触发 `/boost`（深度思考与验证）、`/grill-me`（架构访谈）和 `/goal`（长期自主任务）。 |
+| **产物一键查看** | 单击按键直接在 VS Code 中聚焦并打开实施计划（Plan）与总结（Walkthrough）文件。 |
 
-Ulanzi 的实现与维护范围仅限
-`integration/com.ulanzi.codexmicro.ulanziPlugin/` 插件目录。插件只消费现有
-本机 Bridge 暴露的状态与操作接口；Ulanzi 没有参与 CDP 或 Codex CDP 实现的
-设计、规范制定、开发或维护。完整责任边界见[改动与责任声明](NOTICE.md)。
+### Spotify Music Picker 音乐控制器
+| 功能 | 行为 |
+| --- | --- |
+| **宽屏 Now Playing HUD** | 宽屏显示正在播放曲目、艺术家、高清专辑封面与播放进度条。 |
+| **音乐插槽 1–10** | 快捷访问精选歌单、Daily Mix 和常用专辑，带实时播放状态指示。 |
+| **播放与音量控制** | 播放/暂停、下一首、上一首、收藏喜欢、随机播放、单曲循环以及旋钮音量 / 歌单翻页调节。 |
+
+### 安全与通信模型
+| 通信机制 | 安全边界 |
+| --- | --- |
+| **仅限本机回环** | Codex Bridge（`127.0.0.1:17373` & CDP `127.0.0.1:9222`）和 Antigravity Bridge（`127.0.0.1:17374` & WS `127.0.0.1:17375`）严格仅绑定 localhost。 |
+
+---
 
 ## 安装说明
-
-### 安装环境
-
-- macOS 13 或更高版本；
-- Codex Desktop；
+ 
+### 环境要求
+ 
+- macOS 13（Ventura）或更高版本；
+- Codex Desktop 和/或 Antigravity（VS Code）；
 - Ulanzi Studio 3.0.1 或更高版本；
-- 已在 Ulanzi Studio 中连接 Ulanzi D200 Series；
-- 仅使用仓库手动安装时需要 Node.js 20 或更高版本。
+- 已在 Ulanzi Studio 中连接 Ulanzi D200 系列设备；
+- Node.js 20 或更高版本（用于仓库安装与 Bridge 服务）。
 
-### 1. LLM / Agent 安装
+---
 
-LLM 或代码 Agent 必须按以下步骤执行：
+### 1. 一键完整安装（所有插件与 Bridge）
 
-1. 阅读 [AGENTS.md](AGENTS.md)，检查
-   `~/Library/Application Support/Ulanzi/UlanziDeck/Plugins/` 下已经安装的插件
-   manifest。
-2. 仅当 manifest UUID 为 `com.ulanzi.ulanzistudio.codexmicro`，且其 `CodePath`
-   确实存在时，才判断 Codex Micro 已安装。
-3. 如果插件缺失或无效，加载
-   [`$install-ulanzi-studio-plugin`](skills/install-ulanzi-studio-plugin/SKILL.md)，
-   安装插件并验证 manifest 和入口文件。
-4. 插件验证通过后，加载
-   [`$setup-codex-bridge`](skills/setup-codex-bridge/SKILL.md)，安装或修复
-   `Codex Bridge.app` 与 sidecar，并验证本机 health 接口。
-5. 分别报告插件安装状态和 Bridge 连接状态。除非用户要求更新或修复，否则不要重复
-   安装有效插件。
-
-### 2. 在 Ulanzi Studio 中安装 Bridge
-
-安装 Codex Micro 插件后，把任意 Codex Micro Action 拖到按键并选中。所有 Action
-共用的 **Codex Bridge 设置**页可以：
-
-- 显示 `Codex Bridge.app`、Bridge 后台服务和 CDP 的状态；
-- 使用插件内置资源安装或修复 Bridge，不需要仓库目录或 npm 项目目录；
-- 启动 `~/Applications/Codex Bridge.app`；
-- 重新检测连接或打开完整安装说明。
-
-安装器只写入当前用户的 Applications、Application Support 和 LaunchAgents 目录，
-不需要 `sudo`。
-
-### 3. 手动安装
+如需一次性安装全部 3 款插件并启动两个 Bridge 服务：
 
 ```bash
 git clone https://github.com/UlanziTechnology/OpenCodexMicro.git
 cd OpenCodexMicro
 npm install
+npm run install:all
+npm run setup:all
+```
+
+> **注意：** 在执行 `npm run install:all` 之前请先退出 Ulanzi Studio。
+
+---
+
+### 2. 按需选择性安装
+
+#### Codex Micro 插件与 Bridge
+```bash
+# 安装 Codex Micro 插件至 Ulanzi Studio
 npm run install:plugin
+
+# 构建并注册 Codex Bridge LaunchAgent 服务（~/Applications/Codex Bridge.app）
 npm run setup
 ```
 
-运行 `npm run install:plugin` 前请退出 Ulanzi Studio。该命令会校验并原子安装仓库
-中的预构建插件；`npm run setup` 会构建本机 Bridge sidecar、注册用户级
-LaunchAgent，并把 `Codex Bridge.app` 安装到 `~/Applications`。
+#### Antigravity 插件与 Bridge
+```bash
+# 安装 Antigravity 插件至 Ulanzi Studio
+npm run install:plugin:antigravity
 
-重新打开 Ulanzi Studio。完全退出 Codex Desktop，再打开
-`~/Applications/Codex Bridge.app`。可用以下命令确认连接：
+# 构建并注册 Antigravity Bridge LaunchAgent 服务
+npm run setup:antigravity
+```
 
+#### Spotify Music Picker 插件
+```bash
+# 安装 Spotify 插件至 Ulanzi Studio
+npm run install:plugin:spotify
+```
+
+---
+
+### 3. 启动与验证
+
+#### Codex Desktop
+请始终通过 `Codex Bridge.app` 启动 Codex Desktop 以启用 CDP 调试端点：
+
+```bash
+open ~/Applications/Codex\ Bridge.app
+```
+
+验证 Codex Bridge 连接：
 ```bash
 curl http://127.0.0.1:17373/health
 curl http://127.0.0.1:17373/state
 ```
 
-最后在 Ulanzi Studio 中把 Codex Micro actions 拖到需要的按键。安装路径、诊断、
-更新与卸载方法见 [安装与运行](docs/setup-and-operations.md)。
+#### Antigravity Bridge
+Antigravity Bridge 安装后由 LaunchAgent（`io.openantigravitymicro.bridge`）在后台自动运行。验证命令：
+```bash
+curl http://127.0.0.1:17374/health
+curl http://127.0.0.1:17374/state
+```
 
-> **注意事项：** 使用 Codex Micro 时，必须通过
-> `~/Applications/Codex Bridge.app` 启动 Codex，请勿直接打开 Codex Desktop。
->
-> 启动命令：
->
-> ```bash
-> open ~/Applications/Codex\ Bridge.app
-> ```
+#### 在 Ulanzi Studio 中配置
+1. 启动 Ulanzi Studio。
+2. 在左侧动作列表中，可找到 **AI** 分类（包含 **Codex Micro** 与 **Antigravity**）和 **Music** 分类（包含 **Spotify Music Picker**）。
+3. 将所需 Action 拖拽至 Ulanzi D200 虚拟键盘对应的按键或旋钮槽位。
 
-## 配置
+---
 
-实体布局完全由 Ulanzi Studio 管理。插件提供 Codex Task 1–5、Fast、Usage、Pin、
-New、Fork、Steer、Mic、Submit 和 Latest Task & Scroll 旋钮 Action，不需要额外的
-设备 daemon 或快捷键映射。
+### 4. LLM / Agent 自动化安装规范
+ 
+LLM 或代码 Agent 必须遵循以下流程：
+ 
+1. 阅读 [AGENTS.md](AGENTS.md)，检查 `~/Library/Application Support/Ulanzi/UlanziDeck/Plugins/` 下已安装插件的 manifest。
+2. 校验插件 UUID：
+   - Codex Micro：`com.ulanzi.ulanzistudio.codexmicro`
+   - Antigravity：`com.ulanzi.ulanzistudio.antigravity`
+   - Spotify：`com.ulanzi.ulanzistudio.spotify`
+3. 若需安装或修复，参考 [`skills/install-ulanzi-studio-plugin/SKILL.md`](skills/install-ulanzi-studio-plugin/SKILL.md) 与 [`skills/setup-codex-bridge/SKILL.md`](skills/setup-codex-bridge/SKILL.md)。
+4. 分别清晰汇报插件安装与 Bridge 后台服务的运行状态。
 
-选中任意已配置的 Action，即可打开共用的 **Codex Bridge 设置**页。该页面显示
-Bridge 安装、后台服务和 CDP 状态，并提供“安装 / 修复”和“启动”操作。
+---
 
-在 macOS 中，请在“系统设置 > 隐私与安全性 > 辅助功能”中允许 Ulanzi Studio，
-否则旋钮无法发送鼠标滚轮事件。
+## 配置与布局
+ 
+实体布局完全由 Ulanzi Studio 管理。
+ 
+- **系统辅助功能权限**：请在 macOS“系统设置 > 隐私与安全性 > 辅助功能”中允许 Ulanzi Studio，以支持旋钮模拟滚轮滚动。
+- 动作详解与推荐键位布局参见[配置详解](docs/configuration.md)。
+- 后台服务运维、日志查看与排错参见[安装与运行](docs/setup-and-operations.md)。
 
-Action 行为和布局建议见[配置详解](docs/configuration.md)。
+---
 
-仓库包含两个可复用的 Codex skill：
-
-| Skill | 用途 |
-| --- | --- |
-| [`setup-codex-bridge`](skills/setup-codex-bridge/SKILL.md) | 安装、更新、验证或修复 `Codex Bridge.app` 与 sidecar |
-| [`install-ulanzi-studio-plugin`](skills/install-ulanzi-studio-plugin/SKILL.md) | 把仓库中的预构建插件目录安装到 Ulanzi Studio |
-
-## 文档
-
+## 项目文档
+ 
 - [配置详解](docs/configuration.md)
 - [安装与运行](docs/setup-and-operations.md)
-- [架构说明](docs/architecture.md)
-- [工程约束](docs/errors.md)
+- [架构设计](docs/architecture.md)
+- [工程约束与要点](docs/errors.md)
 
-## License
+---
 
-项目自有代码采用 [MIT License](LICENSE)。上游署名、实质改动、Ulanzi 维护关系、
-与 OpenAI 的独立关系及责任边界见[改动与责任声明](NOTICE.md)，运行时和构建依赖
-的许可见[第三方许可声明](THIRD_PARTY_NOTICES.md)。
+## 许可与声明
+ 
+项目自有代码采用 [MIT License](LICENSE)。上游署名、实质改动、Ulanzi 维护关系、与 OpenAI 的独立关系及责任边界见[改动与责任声明](NOTICE.md)，运行时和构建依赖的许可见[第三方许可声明](THIRD_PARTY_NOTICES.md)。

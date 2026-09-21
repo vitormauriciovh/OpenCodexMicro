@@ -191,26 +191,70 @@ export class AntigravityStateReader {
       };
 
       const model = formatAgyModel(detectedModel);
-      const isLargeModel = model.includes("pro") || model.includes("gemini") || model.includes("claude");
-      const modelContextWindow = isLargeModel ? 1000000 : 200000;
+      const getModelContextWindow = (modelName) => {
+        const m = String(modelName).toLowerCase();
+        if (m.includes("pro")) return 2000000;
+        if (m.includes("claude") || m.includes("sonnet") || m.includes("opus")) return 200000;
+        if (m.includes("gpt-4o")) return 128000;
+        if (m.includes("o1") || m.includes("o3")) return 200000;
+        return 1000000;
+      };
+      const modelContextWindow = getModelContextWindow(model);
 
-      // Token usage calculation
-      let lastTurnChars = 0;
-      if (lastUserInputIndex >= 0) {
-        for (let j = lastUserInputIndex; j < lines.length; j++) {
-          lastTurnChars += lines[j].length;
+      // Token usage calculation aligned with Codex schema
+      let totalInputChars = 0;
+      let totalOutputChars = 0;
+      let lastTurnInputChars = 0;
+      let lastTurnOutputChars = 0;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const isLastTurn = lastUserInputIndex >= 0 && i >= lastUserInputIndex;
+        try {
+          const entry = JSON.parse(line);
+          const type = entry.type || "";
+          if (type === "PLANNER_RESPONSE") {
+            const outLen = (entry.content?.length || 0) + (entry.thinking?.length || 0) + (entry.tool_calls ? JSON.stringify(entry.tool_calls).length : 0);
+            totalOutputChars += outLen;
+            if (isLastTurn) lastTurnOutputChars += outLen;
+          } else {
+            const inLen = entry.content ? (typeof entry.content === "string" ? entry.content.length : JSON.stringify(entry.content).length) : line.length;
+            totalInputChars += inLen;
+            if (isLastTurn) lastTurnInputChars += inLen;
+          }
+        } catch {
+          totalInputChars += line.length;
+          if (isLastTurn) lastTurnInputChars += line.length;
         }
-      } else if (lines.length > 0) {
-        lastTurnChars = lines[lines.length - 1].length;
       }
-      const lastTurnTokens = Math.max(1, Math.round(lastTurnChars / 4));
-      const totalTokens = Math.max(lastTurnTokens, Math.round(content.length / 4));
-      const ctxPct = Math.min(99, Math.max(1, Math.round((totalTokens / modelContextWindow) * 100)));
+
+      // Convert characters to tokens using 3.5 chars/token ratio (standard for code + multi-language tokenizers)
+      const inputTokens = Math.max(1, Math.round(totalInputChars / 3.5));
+      const outputTokens = Math.round(totalOutputChars / 3.5);
+      const totalTokens = Math.max(1, inputTokens + outputTokens);
+
+      const lastTurnInputTokens = Math.max(1, Math.round(lastTurnInputChars / 3.5));
+      const lastTurnOutputTokens = Math.round(lastTurnOutputChars / 3.5);
+      const lastTurnTokens = Math.max(1, lastTurnInputTokens + lastTurnOutputTokens);
+
+      const activeContextTokens = totalTokens <= modelContextWindow ? totalTokens : lastTurnTokens;
+      const ctxPct = Math.min(100, Math.max(0, Math.round((activeContextTokens / modelContextWindow) * 100)));
 
       const tokenUsage = {
-        total: { totalTokens },
-        last: { totalTokens: lastTurnTokens },
-        modelContextWindow
+        total: {
+          totalTokens,
+          inputTokens,
+          outputTokens
+        },
+        last: {
+          totalTokens: lastTurnTokens,
+          inputTokens: lastTurnInputTokens,
+          outputTokens: lastTurnOutputTokens
+        },
+        contextTokens: activeContextTokens,
+        modelContextWindow,
+        usedPercent: ctxPct,
+        percentage: ctxPct
       };
 
       agentStatus = "IDLE";
@@ -307,9 +351,12 @@ export class AntigravityStateReader {
         model: "gemini-2.5",
         ctxPct: 0,
         tokenUsage: {
-          total: { totalTokens: 0 },
-          last: { totalTokens: 0 },
-          modelContextWindow: 200000
+          total: { totalTokens: 0, inputTokens: 0, outputTokens: 0 },
+          last: { totalTokens: 0, inputTokens: 0, outputTokens: 0 },
+          contextTokens: 0,
+          modelContextWindow: 1000000,
+          usedPercent: 0,
+          percentage: 0
         },
         pendingFeedback,
         subagentsCount,

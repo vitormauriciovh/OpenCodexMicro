@@ -841,10 +841,13 @@ function tokensIconData(tokenUsage, connected = true) {
     return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
   }
 
-  const total = tokenUsage?.total?.totalTokens ?? 0;
-  const last = tokenUsage?.last?.totalTokens ?? 0;
-  const contextWindow = tokenUsage?.modelContextWindow || 1000000;
-  const pct = Math.min(100, Math.round((total / contextWindow) * 100));
+  const total = tokenUsage?.total?.totalTokens ?? tokenUsage?.totalTokens ?? 0;
+  const last = tokenUsage?.last?.totalTokens ?? tokenUsage?.last?.inputTokens ?? 0;
+  const contextWindow = Number(tokenUsage?.modelContextWindow || tokenUsage?.contextWindow || 1000000) || 1000000;
+  const currentTurnTokens = (tokenUsage?.last?.totalTokens ?? 0) > 0
+    ? tokenUsage.last.totalTokens
+    : (tokenUsage?.contextTokens ?? (total > 0 && total <= contextWindow ? total : 0));
+  const pct = tokenUsage?.usedPercent ?? tokenUsage?.percentage ?? Math.min(100, Math.max(0, Math.round((currentTurnTokens / contextWindow) * 100)));
 
   const totalStr = formatTokenCount(total);
   const lastStr = last > 0 ? `+${formatTokenCount(last)}` : "—";

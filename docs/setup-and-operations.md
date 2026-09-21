@@ -1,157 +1,195 @@
 # Setup and Operations
 
-OpenCodexMicro has two installed components:
+OpenCodexMicro supports three Ulanzi Studio plugins and two local loopback bridges:
 
 ```text
-Codex Desktop <-> Codex Bridge sidecar <-> Ulanzi Studio plugin <-> D200
+Codex Desktop     <-> Codex Bridge sidecar (127.0.0.1:17373)       <-> Codex Micro Plugin     <-> Ulanzi D200
+Antigravity Agent <-> Antigravity Bridge sidecar (127.0.0.1:17374) <-> Antigravity Plugin    <-> Ulanzi D200
+Spotify Desktop   <-> Local Player / Spotify Web API               <-> Spotify Picker Plugin  <-> Ulanzi D200
 ```
 
-## Dependencies
+---
 
-- macOS;
-- Codex Desktop;
-- Ulanzi Studio with a supported keypad device;
-- Node.js 20 or newer only for repository-based manual installation.
+## System Requirements
 
-## 1. Set up Codex Bridge.app in Ulanzi Studio
+- macOS 13 (Ventura) or later;
+- Codex Desktop and/or Antigravity (VS Code);
+- Ulanzi Studio 3.0.1 or later with an Ulanzi D200 Series keypad;
+- Node.js 20 or newer.
 
-Drag any Codex Micro action onto a key and select it. In the shared
-**Codex Bridge Setup** page, choose **Install / Repair**. The plugin installs
-its bundled Bridge runtime, wrapper app, and user LaunchAgent without requiring
-a repository path, npm, or administrator access. Then choose
-**Launch Codex Bridge** and wait for the CDP status to become connected.
+---
 
-## 2. Set up Codex Bridge.app from the repository
+## 1. Quick Installation (All Components)
 
 From the repository root:
 
 ```bash
 npm install
+npm run install:all
+npm run setup:all
+```
+
+> **Important:** Quit Ulanzi Studio before running `npm run install:all`.
+
+---
+
+## 2. Selective Plugin & Bridge Setup
+
+### A. Codex Micro
+```bash
+# Atomically install the Codex Micro plugin
+npm run install:plugin
+
+# Build and register the Codex Bridge sidecar and ~/Applications/Codex Bridge.app
 npm run setup
 ```
 
-The installer builds the sidecar, writes and starts
-`io.opencodexmicro.bridge`, and ad-hoc signs:
+### B. Antigravity Agent
+```bash
+# Atomically install the Antigravity plugin
+npm run install:plugin:antigravity
 
-```text
-~/Applications/Codex Bridge.app
+# Build and register the Antigravity Bridge LaunchAgent
+npm run setup:antigravity
 ```
 
-To install without starting the sidecar LaunchAgent:
+### C. Spotify Music Picker
+```bash
+# Atomically install the Spotify plugin
+npm run install:plugin:spotify
+```
+
+---
+
+## 3. Starting the Applications
+
+### Codex Desktop
+Always open Codex through its bridge wrapper so the remote debugging port is enabled:
 
 ```bash
-npm run setup -- --no-start
+open ~/Applications/Codex\ Bridge.app
 ```
 
-## 3. Install the Ulanzi Studio plugin
-
-Quit Ulanzi Studio before replacing a plugin that is currently loaded, then
-run:
-
-```bash
-npm run install:plugin
-```
-
-The repository ships the prebuilt `dist/app.js`. The command validates that
-the manifest entry point exists and atomically replaces:
-
-```text
-~/Library/Application Support/Ulanzi/UlanziDeck/Plugins/com.ulanzi.codexmicro.ulanziPlugin
-```
-
-Restart Ulanzi Studio and confirm the **Codex Micro** category and actions are
-visible.
-
-Plugin development still uses `npm run build:plugin` and `npm run check`; commit
-the updated `dist/app.js` and `dist/package.json` with source changes.
-
-## Starting Codex
-
-Quit a normally launched Codex instance, then open:
-
-```text
-~/Applications/Codex Bridge.app
-```
-
-The wrapper launches `/Applications/ChatGPT.app/Contents/MacOS/ChatGPT` with:
-
+The wrapper launches the desktop application with:
 ```text
 --remote-debugging-address=127.0.0.1
 --remote-debugging-port=9222
 --remote-allow-origins=http://127.0.0.1:9222
 ```
 
-CDP binds to `127.0.0.1:9222` and the sidecar API to `127.0.0.1:17373`.
-Neither endpoint is reachable from the LAN.
+### Antigravity Bridge
+The Antigravity Bridge runs automatically in the background via LaunchAgent `io.openantigravitymicro.bridge` and serves HTTP on port `17374` and WebSocket updates on port `17375`.
 
-## Installed files and service
+---
+
+## 4. Installed Files & LaunchAgents
 
 ```text
+# Applications
 ~/Applications/Codex Bridge.app
+
+# Bridges and logs
 ~/Library/Application Support/OpenCodexMicro/bridge.mjs
 ~/Library/Application Support/OpenCodexMicro/bridge.log
 ~/Library/Application Support/OpenCodexMicro/bridge-error.log
+~/Library/Application Support/OpenCodexMicro/bridge-antigravity.mjs
+~/Library/Application Support/OpenCodexMicro/bridge-antigravity.log
+~/Library/Application Support/OpenCodexMicro/bridge-antigravity-error.log
+
+# LaunchAgents
 ~/Library/LaunchAgents/io.opencodexmicro.bridge.plist
+~/Library/LaunchAgents/io.openantigravitymicro.bridge.plist
+
+# Ulanzi Studio Plugins
 ~/Library/Application Support/Ulanzi/UlanziDeck/Plugins/com.ulanzi.codexmicro.ulanziPlugin
+~/Library/Application Support/Ulanzi/UlanziDeck/Plugins/com.ulanzi.antigravity.ulanziPlugin
+~/Library/Application Support/Ulanzi/UlanziDeck/Plugins/com.ulanzi.spotify.ulanziPlugin
 ```
 
-Inspect or restart the Bridge sidecar:
+---
 
+## 5. Service Management & Health Checks
+
+### Check Bridge Services
 ```bash
+# Codex Bridge Service
 launchctl print "gui/$(id -u)/io.opencodexmicro.bridge"
 launchctl kickstart -k "gui/$(id -u)/io.opencodexmicro.bridge"
+
+# Antigravity Bridge Service
+launchctl print "gui/$(id -u)/io.openantigravitymicro.bridge"
+launchctl kickstart -k "gui/$(id -u)/io.openantigravitymicro.bridge"
 ```
 
-## Diagnostics
-
+### Check Diagnostic Endpoints
 ```bash
+# Codex Bridge
 curl http://127.0.0.1:17373/health
 curl http://127.0.0.1:17373/state
-tail -f "$HOME/Library/Application Support/OpenCodexMicro/bridge.log"
-tail -f "$HOME/Library/Application Support/OpenCodexMicro/bridge-error.log"
+
+# Antigravity Bridge
+curl http://127.0.0.1:17374/health
+curl http://127.0.0.1:17374/state
 ```
 
-| Symptom | Check |
-| --- | --- |
-| Plugin category is missing | Confirm the installed plugin directory contains `manifest.json` and `dist/app.js`, then restart Ulanzi Studio |
-| Plugin keys show offline | Start Codex with `Codex Bridge.app` and check `/health` and `/state` |
-| A task key does not switch | Check `bridge-error.log` and confirm `/state` contains the displayed thread |
-| Steer does nothing | Confirm a running task exposes the visible composer Steer action |
-| An action has no effect | Confirm the plugin can reach `127.0.0.1:17373` and inspect the Bridge log |
+### Inspect Logs
+```bash
+# Codex Bridge logs
+tail -f "$HOME/Library/Application Support/OpenCodexMicro/bridge.log"
+tail -f "$HOME/Library/Application Support/OpenCodexMicro/bridge-error.log"
 
-## Update
+# Antigravity Bridge logs
+tail -f "$HOME/Library/Application Support/OpenCodexMicro/bridge-antigravity.log"
+tail -f "$HOME/Library/Application Support/OpenCodexMicro/bridge-antigravity-error.log"
+```
 
+---
+
+## 6. Troubleshooting
+
+| Symptom | Cause / Check | Solution |
+| --- | --- | --- |
+| **Plugin category is missing in Ulanzi Studio** | Manifest or entry point was missing during startup. | Verify `manifest.json` and `dist/app.js` in the plugin directory, then restart Ulanzi Studio. |
+| **Codex keys show offline** | Codex Desktop was not opened via the bridge wrapper or CDP is unavailable. | Launch `~/Applications/Codex Bridge.app` and test `curl http://127.0.0.1:17373/health`. |
+| **Antigravity keys show offline** | Antigravity Bridge background service is stopped. | Run `launchctl kickstart -k gui/$(id -u)/io.openantigravitymicro.bridge` and test port `17374`. |
+| **Encoder rotation does not scroll** | Accessibility permission is missing on macOS. | Allow Ulanzi Studio under **System Settings > Privacy & Security > Accessibility**. |
+| **Spotify actions show no metadata** | Spotify is not running or track is paused/unsupported. | Launch the Spotify desktop app and play a track. |
+
+---
+
+## 7. Updates & Development
+
+### Update Installed Components
 ```bash
 git pull
 npm install
 npm run check
-npm run setup
-npm run install:plugin
+npm run setup:all
+npm run install:all
+```
+Restart Ulanzi Studio after updating plugins.
+
+### Build and Smoke Tests
+```bash
+# Run all linters, unit tests, and smoke tests
+npm run check
+
+# Build specific components
+npm run build:all
+npm run build:bridge
+npm run build:antigravity:bridge
+npm run build:plugin
+npm run build:antigravity:plugin
+npm run build:spotify:plugin
 ```
 
-Restart Ulanzi Studio after updating the plugin.
+---
 
-## Uninstall
+## 8. Uninstallation
 
 ```bash
 npm run uninstall
 ```
 
-This stops and removes the Bridge LaunchAgent, Bridge runtime, wrapper app, and
-installed Codex Micro plugin directory.
+Stops and unloads all LaunchAgents, and removes Bridge binaries, logs, and installed plugins.
 
-## Development
-
-```bash
-npm install
-npm run check
-```
-
-Main entry points:
-
-- `src/bridge/`: Codex renderer bridge;
-- `scripts/build-bridge.mjs`: bundle the loopback sidecar;
-- `scripts/install.mjs`: install the sidecar and wrapper app;
-- `scripts/install-plugin.mjs`: validate and install the prebuilt Ulanzi plugin;
-- `integration/com.ulanzi.codexmicro.ulanziPlugin/`: Ulanzi Studio plugin;
-- `scripts/uninstall.mjs`: remove both installed components.
