@@ -1,3 +1,5 @@
+import { secureHandler, allowedRequest, readJson } from "../shared/local-api.mjs";
+import { stateDigest } from "../shared/plugin-runtime.mjs";
 import { createServer } from "node:http";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -32,7 +34,7 @@ const wss = new WebSocketServer({ noServer: true });
 const wsClients = new Set();
 
 function broadcastState() {
-  const digest = `${cached.connected}:${cached.error}:${cached.activeTasks?.length}:${cached.slots?.map((s) => `${s.id}-${s.status}-${s.selected}`).join(",")}:${cached.usage?.windows?.[0]?.remainingPercent}:${cached.reasoningEffort}`;
+  const digest = stateDigest(cached);
   if (digest === lastBroadcastDigest && wsClients.size > 0) return;
   lastBroadcastDigest = digest;
   const payload = JSON.stringify(cached);
@@ -94,14 +96,14 @@ async function refresh(force = false) {
 function json(response, status, body) {
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "no-store",
-    "Access-Control-Allow-Origin": "http://127.0.0.1"
+    "Cache-Control": "no-store"
   });
   response.end(`${JSON.stringify(body)}\n`);
 }
 
-const server = createServer(async (request, response) => {
+const server = createServer(secureHandler("codex", PORT, async (request, response) => {
   const url = new URL(request.url || "/", `http://${HOST}:${PORT}`);
+  const body = request.method === "POST" ? await readJson(request) : {};
   if (request.method === "GET" && url.pathname === "/health") {
     await refresh(true);
     return json(response, 200, { ok: true, codexConnected: cached.connected, updatedAt: cached.updatedAt });
@@ -153,18 +155,18 @@ const server = createServer(async (request, response) => {
     }
   }
   const action = request.method === "POST" && url.pathname.match(
-    /^\/action\/(fast|approve|reject|pin|new|fork|mic|steer|submit|stop|reasoning)\/(down|up)$/
+    /^\/action\/(fast|approve|reject|pin|new|fork|mic|steer|submit|stop|model|reasoning|goal|subagents|plan)\/(down|up)$/
   );
   if (action) {
     try {
       if (action[1] === "steer") {
         if (action[2] === "down") {
           await focusCodex();
-          await client.dispatchComposerSteer();
+          await client.dispatchComposerSteer(body.threadId ?? null);
         }
         return json(response, 200, { ok: true });
       }
-      await client.dispatchNamedAction(action[1], action[2] === "down");
+      await client.dispatchNamedAction(action[1], action[2] === "down", body.threadId ?? null);
       return json(response, 200, { ok: true, bridge: true });
     } catch (error) {
       return json(response, 503, { ok: false, error: error.message });
@@ -172,12 +174,10 @@ const server = createServer(async (request, response) => {
   }
   if (request.method === "POST" && url.pathname === "/prompt") {
     try {
-      let body = "";
-      for await (const chunk of request) body += chunk;
-      const { text } = JSON.parse(body || "{}");
-      if (!text) throw new Error("Prompt text is required");
+      const { text } = body;
+      if (typeof text !== "string" || !text.trim() || text.length > 16000) throw new Error("Prompt must contain 1–16000 characters");
       await focusCodex();
-      await client.submitPrompt(text);
+      await client.submitPrompt(text, body.threadId ?? null);
       return json(response, 200, { ok: true });
     } catch (error) {
       return json(response, 500, { ok: false, error: error.message });
@@ -188,16 +188,17 @@ const server = createServer(async (request, response) => {
   );
   if (joystick) {
     try {
-      await client.dispatchJoystick(joystick[1], joystick[2] === "down" ? 1 : 0);
+      await client.dispatchJoystick(joystick[1], joystick[2] === "down" ? 1 : 0, body.threadId ?? null);
       return json(response, 200, { ok: true });
     } catch (error) {
       return json(response, 503, { ok: false, error: error.message });
     }
   }
   return json(response, 404, { ok: false, error: "Not found" });
-});
+}));
 
 server.on("upgrade", (request, socket, head) => {
+  if (!allowedRequest(request, "codex", PORT)) { socket.destroy(); return; }
   const { pathname } = new URL(request.url || "/", `http://${HOST}:${PORT}`);
   if (pathname === "/events" || pathname === "/ws") {
     wss.handleUpgrade(request, socket, head, (ws) => {

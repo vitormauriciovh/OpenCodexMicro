@@ -2,341 +2,201 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { createHash, randomBytes } from "node:crypto";
-
-function base64url(buf) {
-  return buf.toString("base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-}
+import { spotifyUri, spotifyUrl } from "../../../src/shared/spotify-uri.mjs";
+import { atomicJson } from "../../../src/shared/storage.mjs";
 
 export class SpotifyApiClient {
-  constructor() {
-    this.cacheDir = path.join(os.homedir(), ".local", "share", "ulanzi-spotify");
-    this.playlistsFile = path.join(this.cacheDir, "playlists.json");
-    this.configFile = path.join(this.cacheDir, "config.json");
-    this.tokensFile = path.join(this.cacheDir, "tokens.json");
+  constructor({ cacheDir = path.join(os.homedir(), ".local/share/ulanzi-spotify"), fetchImpl = fetch, now = Date.now } = {}) {
+    this.cacheDir = cacheDir;
+    this.legacyPlaylistsFile = path.join(cacheDir, "playlists.json");
+    this.playlistsFile = path.join(cacheDir, "imported-playlists.json");
+    this.manualFile = path.join(cacheDir, "manual-playlists.json");
+    this.tokensFile = path.join(cacheDir, "tokens.json");
+    this.fetch = fetchImpl;
+    this.now = now;
     this.coverCache = new Map();
+    this.coverRequests = new Map();
     this.pendingAuth = null;
-    this._initDirs();
   }
-
-  async _initDirs() {
-    try {
-      await fs.mkdir(this.cacheDir, { recursive: true });
-    } catch {}
-  }
-
-  urlToUri(urlStr) {
-    if (!urlStr) return null;
-    const clean = urlStr.split("?")[0].trim();
-    if (clean.startsWith("spotify:")) return clean;
-    const match = clean.match(/open\.spotify\.com\/(playlist|album|track|artist)\/([a-zA-Z0-9]+)/);
-    if (match) {
-      return `spotify:${match[1]}:${match[2]}`;
+  urlToUri(value) { return spotifyUri(value); }
+  async request(url, options = {}) {
+    const response = await this.fetch(url, { ...options, redirect: "error", signal: options.signal || AbortSignal.timeout(8000) });
+    if (!response.ok) {
+      const delay = response.headers?.get("retry-after");
+      throw new Error(`Spotify HTTP ${response.status}${delay ? `; retry after ${delay}s` : ""}`);
     }
-    return null;
+    return response;
   }
-
   async getCoverBase64(url) {
     if (!url) return null;
-    if (this.coverCache.has(url)) return this.coverCache.get(url);
-
-    try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
-      if (!res.ok) return null;
-      const buffer = Buffer.from(await res.arrayBuffer());
-      const base64 = buffer.toString("base64");
-      this.coverCache.set(url, base64);
-      return base64;
-    } catch {
-      return null;
+    let parsed;
+    try { parsed = new URL(url); } catch { return null; }
+    if (parsed.protocol !== "https:" || !["i.scdn.co", "mosaic.scdn.co", "image-cdn-ak.spotifycdn.com", "image-cdn-fa.spotifycdn.com"].includes(parsed.hostname)) return null;
+    if (this.coverCache.has(url)) {
+      const value = this.coverCache.get(url); this.coverCache.delete(url); this.coverCache.set(url, value); return value;
     }
+    if (this.coverRequests.has(url)) return this.coverRequests.get(url);
+    const pending = (async () => {
+      try {
+        const response = await this.request(url, { signal: AbortSignal.timeout(4000) });
+        const chunks = []; let size = 0;
+        for await (const chunk of response.body) {
+          size += chunk.length;
+          if (size > 2 * 1024 * 1024) throw new Error("Artwork too large");
+          chunks.push(Buffer.from(chunk));
+        }
+        const value = Buffer.concat(chunks).toString("base64");
+        this.coverCache.set(url, value);
+        while (this.coverCache.size > 32) this.coverCache.delete(this.coverCache.keys().next().value);
+        return value;
+      } catch { return null; }
+      finally { this.coverRequests.delete(url); }
+    })();
+    this.coverRequests.set(url, pending);
+    return pending;
   }
-
-  async fetchOEmbed(spotifyUrl) {
+  async fetchOEmbed(value) {
+    const url = spotifyUrl(value);
     try {
-      const oembedUrl = `https://open.spotify.com/oembed?url=${encodeURIComponent(spotifyUrl)}`;
-      const res = await fetch(oembedUrl, { signal: AbortSignal.timeout(3000) });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return {
-        title: data.title || "Spotify",
-        thumbnailUrl: data.thumbnail_url || null,
-        type: data.type
-      };
-    } catch {
-      return null;
-    }
+      const response = await this.request(`https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`);
+      const data = await response.json();
+      return { title: data.title, thumbnailUrl: data.thumbnail_url };
+    } catch { return null; }
   }
-
-  // --- OAuth PKCE Flow ---
-
   createPkceAuthUrl(clientId, redirectUri = "http://127.0.0.1:17375/callback") {
-    const verifier = base64url(randomBytes(32));
-    const challenge = base64url(createHash("sha256").update(verifier).digest());
-    const state = base64url(randomBytes(16));
-
-    this.pendingAuth = {
-      clientId,
-      verifier,
-      state,
-      redirectUri
-    };
-
-    const scopes = [
-      "user-read-playback-state",
-      "user-modify-playback-state",
-      "user-read-currently-playing",
-      "playlist-read-private",
-      "playlist-read-collaborative",
-      "user-library-read",
-      "user-library-modify",
-      "user-top-read",
-      "user-read-recently-played"
-    ].join(" ");
-
-    const params = new URLSearchParams({
-      client_id: clientId,
-      response_type: "code",
-      redirect_uri: redirectUri,
-      scope: scopes,
-      code_challenge_method: "S256",
-      code_challenge: challenge,
-      state
-    });
-
-    return `https://accounts.spotify.com/authorize?${params.toString()}`;
+    if (typeof clientId !== "string" || !/^[a-fA-F0-9]{32}$/.test(clientId)) throw new Error("Invalid Spotify Client ID");
+    const verifier = randomBytes(32).toString("base64url");
+    const state = randomBytes(24).toString("base64url");
+    this.pendingAuth = { clientId, verifier, state, redirectUri, expiresAt: this.now() + 10 * 60000 };
+    const query = new URLSearchParams({ client_id: clientId, response_type: "code", redirect_uri: redirectUri,
+      scope: "playlist-read-private playlist-read-collaborative user-library-read user-library-modify user-top-read",
+      code_challenge_method: "S256", code_challenge: createHash("sha256").update(verifier).digest("base64url"), state });
+    return `https://accounts.spotify.com/authorize?${query}`;
   }
-
   async handleAuthCallback(code, state) {
-    if (!this.pendingAuth) {
-      throw new Error("Nenhuma sessão de autorização pendente.");
-    }
-    if (state !== this.pendingAuth.state) {
-      throw new Error("Validação de estado OAuth inválida.");
-    }
-
-    const { clientId, verifier, redirectUri } = this.pendingAuth;
-    const bodyParams = new URLSearchParams({
-      client_id: clientId,
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: redirectUri,
-      code_verifier: verifier
-    });
-
-    const res = await fetch("https://accounts.spotify.com/api/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: bodyParams.toString()
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Falha ao obter token do Spotify: ${errText}`);
-    }
-
-    const tokenData = await res.json();
-    const tokenRecord = {
-      clientId,
-      accessToken: tokenData.access_token,
-      refreshToken: tokenData.refresh_token,
-      expiresAt: Date.now() + ((tokenData.expires_in || 3600) * 1000)
-    };
-
-    await fs.writeFile(this.tokensFile, JSON.stringify(tokenRecord, null, 2), "utf-8");
+    const auth = this.pendingAuth;
+    if (!auth || state !== auth.state || this.now() >= auth.expiresAt || typeof code !== "string" || !code || code.length > 4096) throw new Error("Invalid or expired Spotify authorization");
     this.pendingAuth = null;
-    return tokenRecord;
+    const response = await this.request("https://accounts.spotify.com/api/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ client_id: auth.clientId, grant_type: "authorization_code", code, redirect_uri: auth.redirectUri, code_verifier: auth.verifier }).toString() });
+    const data = await response.json();
+    if (!data.access_token || !data.refresh_token) throw new Error("Invalid Spotify token response");
+    const record = { clientId: auth.clientId, accessToken: data.access_token, refreshToken: data.refresh_token, expiresAt: this.now() + (data.expires_in || 3600) * 1000 };
+    await atomicJson(this.tokensFile, record);
+    return record;
   }
-
   async getValidAccessToken() {
-    try {
-      const raw = await fs.readFile(this.tokensFile, "utf-8");
-      const record = JSON.parse(raw);
-      if (!record.accessToken || !record.refreshToken) return null;
-
-      if (Date.now() < record.expiresAt - 60000) {
-        return record.accessToken;
-      }
-
-      // Refresh token
-      const bodyParams = new URLSearchParams({
-        client_id: record.clientId,
-        grant_type: "refresh_token",
-        refresh_token: record.refreshToken
-      });
-
-      const res = await fetch("https://accounts.spotify.com/api/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: bodyParams.toString()
-      });
-
-      if (!res.ok) return null;
-      const data = await res.json();
-      record.accessToken = data.access_token;
-      if (data.refresh_token) record.refreshToken = data.refresh_token;
-      record.expiresAt = Date.now() + ((data.expires_in || 3600) * 1000);
-      await fs.writeFile(this.tokensFile, JSON.stringify(record, null, 2), "utf-8");
-      return record.accessToken;
-    } catch {
-      return null;
-    }
+    if (this.refreshPromise) return this.refreshPromise;
+    this.refreshPromise = this.readOrRefreshToken();
+    try { return await this.refreshPromise; } finally { this.refreshPromise = null; }
   }
-
-  async fetchUserPlaylistsFromApi() {
+  async readOrRefreshToken() {
+    let record;
+    try { record = JSON.parse(await fs.readFile(this.tokensFile, "utf8")); }
+    catch (error) { if (error.code === "ENOENT") return null; throw error; }
+    await fs.chmod(this.cacheDir, 0o700); await fs.chmod(this.tokensFile, 0o600);
+    if (!record.accessToken || !record.refreshToken) throw new Error("Invalid Spotify credentials; reconnect your account");
+    if (this.now() < record.expiresAt - 60000) return record.accessToken;
+    const response = await this.request("https://accounts.spotify.com/api/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ client_id: record.clientId, grant_type: "refresh_token", refresh_token: record.refreshToken }).toString() });
+    const data = await response.json();
+    if (!data.access_token) throw new Error("Invalid Spotify refresh response");
+    record.accessToken = data.access_token;
+    record.refreshToken = data.refresh_token || record.refreshToken;
+    record.expiresAt = this.now() + (data.expires_in || 3600) * 1000;
+    await atomicJson(this.tokensFile, record);
+    return record.accessToken;
+  }
+  async apiRequest(url, options = {}) {
+    const parsed = new URL(url, "https://api.spotify.com/v1/");
+    if (parsed.origin !== "https://api.spotify.com" || !parsed.pathname.startsWith("/v1/")) throw new Error("Invalid Spotify API URL");
     const token = await this.getValidAccessToken();
-    if (!token) return null;
-
-    try {
-      const [playlistsRes, topRes, albumsRes] = await Promise.all([
-        fetch("https://api.spotify.com/v1/me/playlists?limit=20", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
-        fetch("https://api.spotify.com/v1/me/top/tracks?limit=20", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({})),
-        fetch("https://api.spotify.com/v1/me/albums?limit=20", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({}))
-      ]);
-
-      const items = [];
-
-      // 1. Playlists
-      for (const p of playlistsRes.items || []) {
-        if (!p) continue;
-        items.push({
-          id: p.id,
-          title: p.name,
-          uri: p.uri,
-          url: p.external_urls?.spotify || `https://open.spotify.com/playlist/${p.id}`,
-          thumbnailUrl: p.images?.[0]?.url || null
-        });
-      }
-
-      // 2. Top Tracks / Albums
-      for (const t of topRes.items || []) {
-        if (!t) continue;
-        const exists = items.some(i => i.title === t.name || i.uri === t.uri);
-        if (!exists) {
-          items.push({
-            id: t.id,
-            title: t.name,
-            artist: t.artists?.[0]?.name,
-            uri: t.uri,
-            url: t.external_urls?.spotify || `https://open.spotify.com/track/${t.id}`,
-            thumbnailUrl: t.album?.images?.[0]?.url || null
-          });
-        }
-      }
-
-      // 3. Saved Albums
-      for (const a of albumsRes.items || []) {
-        const album = a.album;
-        if (!album) continue;
-        const exists = items.some(i => i.title === album.name || i.uri === album.uri);
-        if (!exists) {
-          items.push({
-            id: album.id,
-            title: album.name,
-            artist: album.artists?.[0]?.name,
-            uri: album.uri,
-            url: album.external_urls?.spotify || `https://open.spotify.com/album/${album.id}`,
-            thumbnailUrl: album.images?.[0]?.url || null
-          });
-        }
-      }
-
-      // Cache and save
-      const processed = [];
-      for (const item of items) {
-        let coverBase64 = null;
-        if (item.thumbnailUrl) {
-          coverBase64 = await this.getCoverBase64(item.thumbnailUrl);
-        }
-        processed.push({
-          ...item,
-          coverBase64
-        });
-      }
-
-      await fs.writeFile(this.playlistsFile, JSON.stringify(processed, null, 2), "utf-8");
-      return processed;
-    } catch {
-      return null;
-    }
+    if (!token) throw new Error("Connect your Spotify account first");
+    return this.request(parsed.href, { ...options, headers: { ...options.headers, Authorization: `Bearer ${token}` } });
   }
-
-  async getSavedPlaylists() {
-    try {
-      const raw = await fs.readFile(this.playlistsFile, "utf-8");
-      const list = JSON.parse(raw);
-      if (Array.isArray(list) && list.length > 0) return list;
-    } catch {}
-
-    return [
-      { title: "Daily Mix 1", url: "https://open.spotify.com/playlist/37i9dQZF1E37yE2Mh0i123" },
-      { title: "Discover Weekly", url: "https://open.spotify.com/playlist/37i9dQZEVXcQ9JaJVt2wt" },
-      { title: "Release Radar", url: "https://open.spotify.com/playlist/37i9dQZEVXbo6nvG9zXw7b" },
-      { title: "On Repeat", url: "https://open.spotify.com/playlist/37i9dQZF1Epz1Xy0Mh0abc" },
-      { title: "Chill Mix", url: "https://open.spotify.com/playlist/37i9dQZF1EIe0g4p7s9xyz" }
-    ];
+  async saveTrack(value) {
+    const uri = spotifyUri(value);
+    if (!uri.startsWith("spotify:track:")) throw new Error("No current Spotify track");
+    // Current library endpoint; PUT is idempotent (Like, rather than toggle).
+    await this.apiRequest(`https://api.spotify.com/v1/me/library?${new URLSearchParams({ uris: uri })}`, { method: "PUT" });
+    return { ok: true };
   }
-
-  async savePlaylists(linksOrItems) {
-    await this._initDirs();
-    const items = [];
-    for (const entry of linksOrItems) {
-      if (!entry) continue;
-      const url = typeof entry === "string" ? entry.trim() : (entry.url || entry.link || "").trim();
-      const customTitle = typeof entry === "object" ? entry.title : null;
-      if (!url) continue;
-
-      const uri = this.urlToUri(url);
-      const embed = await this.fetchOEmbed(url);
-      let coverBase64 = null;
-      if (embed?.thumbnailUrl) {
-        coverBase64 = await this.getCoverBase64(embed.thumbnailUrl);
-      }
-      items.push({
-        title: customTitle || embed?.title || "Playlist",
-        url,
-        uri: uri || url,
-        thumbnailUrl: embed?.thumbnailUrl || null,
-        coverBase64
-      });
+  async pages(endpoint) {
+    let next = `https://api.spotify.com/v1/${endpoint}`;
+    const items = [], seen = new Set();
+    while (next) {
+      if (seen.has(next) || seen.size >= 25) throw new Error("Spotify catalog exceeds sync limit; saved selection was kept");
+      seen.add(next);
+      const response = await this.apiRequest(next);
+      const data = await response.json();
+      if (!Array.isArray(data.items)) throw new Error("Invalid Spotify catalog response");
+      items.push(...data.items.filter(Boolean)); next = data.next || null;
     }
-
-    await fs.writeFile(this.playlistsFile, JSON.stringify(items, null, 2), "utf-8");
     return items;
   }
-
-  async loadResolvedPlaylists() {
-    const saved = await this.getSavedPlaylists();
-    const resolved = [];
-
-    for (let i = 0; i < saved.length; i++) {
-      const item = saved[i];
-      let coverBase64 = item.coverBase64 || null;
-      let title = item.title;
-      const uri = item.uri || this.urlToUri(item.url) || item.url;
-
-      if (!coverBase64 && item.url) {
-        const embed = await this.fetchOEmbed(item.url);
-        if (embed?.thumbnailUrl) {
-          coverBase64 = await this.getCoverBase64(embed.thumbnailUrl);
-        }
-        if (!title && embed?.title) {
-          title = embed.title;
-        }
+  async fetchUserPlaylistsFromApi() {
+    if (this.syncPromise) return this.syncPromise;
+    this.syncPromise = (async () => {
+      await this.migratePlaylists();
+      const [playlists, tracks, albums] = await Promise.all([this.pages("me/playlists?limit=50"), this.pages("me/top/tracks?limit=50"), this.pages("me/albums?limit=50")]);
+      const catalog = new Map();
+      for (const item of [...playlists, ...tracks, ...albums.map(a => a.album).filter(Boolean)]) {
+        const uri = spotifyUri(item.uri);
+        catalog.set(uri, { uri, url: spotifyUrl(uri), title: item.name || "Spotify", thumbnailUrl: item.images?.[0]?.url || item.album?.images?.[0]?.url || null });
       }
-
-      resolved.push({
-        id: `slot_${i + 1}`,
-        title: title || `Playlist ${i + 1}`,
-        url: item.url,
-        uri,
-        coverBase64,
-        thumbnailUrl: item.thumbnailUrl
-      });
-    }
-
-    return resolved;
+      const processed = [...catalog.values()];
+      // Every page must succeed before replacing the previous catalog.
+      await atomicJson(this.playlistsFile, processed);
+      return processed;
+    })();
+    try { return await this.syncPromise; } finally { this.syncPromise = null; }
+  }
+  async readList(file) {
+    try {
+      const list = JSON.parse(await fs.readFile(file, "utf8"));
+      if (!Array.isArray(list)) throw new Error("Invalid playlist file");
+      return list.map(item => ({ ...item, uri: spotifyUri(item.uri || item.url), url: spotifyUrl(item.uri || item.url) }));
+    } catch (error) { if (error.code === "ENOENT") return []; throw error; }
+  }
+  async migratePlaylists() {
+    if (this.migrationPromise) return this.migrationPromise;
+    this.migrationPromise = (async () => {
+      try { await fs.access(this.manualFile); return; }
+      catch (error) { if (error.code !== "ENOENT") throw error; }
+      // The old catalog did not distinguish manual selections from imports.
+      // Preserve all validated legacy entries as editable selections and leave
+      // the original file intact as a backup. New imports have a separate file.
+      const legacy = await this.readList(this.legacyPlaylistsFile);
+      await atomicJson(this.manualFile, legacy);
+    })();
+    try { await this.migrationPromise; }
+    catch (error) { this.migrationPromise = null; throw error; }
+  }
+  async getManualPlaylists() {
+    await this.migratePlaylists();
+    return this.readList(this.manualFile);
+  }
+  async getSavedPlaylists() {
+    await this.migratePlaylists();
+    const [manual, imported] = await Promise.all([this.readList(this.manualFile), this.readList(this.playlistsFile)]);
+    return [...new Map([...manual, ...imported].map(item => [item.uri, item])).values()];
+  }
+  async savePlaylists(entries) {
+    if (!Array.isArray(entries) || entries.length > 200) throw new Error("Provide at most 200 Spotify links");
+    // Validate the entire collection before network requests or persistence.
+    const normalized = entries.map(entry => {
+      const uri = spotifyUri(typeof entry === "string" ? entry : entry?.url || entry?.link);
+      return { uri, url: spotifyUrl(uri), title: typeof entry?.title === "string" ? entry.title.slice(0, 200) : null };
+    });
+    await this.migratePlaylists();
+    const items = await Promise.all(normalized.map(async item => {
+      const embed = await this.fetchOEmbed(item.uri);
+      return { ...item, title: item.title || embed?.title || "Spotify", thumbnailUrl: embed?.thumbnailUrl || null };
+    }));
+    await atomicJson(this.manualFile, items);
+    return items;
+  }
+  async loadResolvedPlaylists() {
+    return (await this.getSavedPlaylists()).map((item, i) => ({ ...item, id: `slot_${i + 1}`, coverBase64: null }));
   }
 }

@@ -1,3 +1,5 @@
+import { encoderTicks, invalidateDisplays, reportActionError, bridgeFeed, inspectorReply } from "../../../src/shared/plugin-runtime.mjs";
+import { secureHandler, readJson, json, localClient } from "../../../src/shared/local-api.mjs";
 import { createServer } from "node:http";
 import { execFile } from "node:child_process";
 import WebSocket from "ws";
@@ -25,6 +27,7 @@ for (let i = 0; i < rawArgs.length; i++) {
 
 const PLUGIN_UUID = pluginUUID;
 const HTTP_PORT = Number(process.env.SPOTIFY_PLUGIN_HTTP_PORT || 17375);
+const requestLocal = localClient("spotify", `http://127.0.0.1:${HTTP_PORT}`);
 const HOST_URL = `ws://${address}:${port}`;
 
 const spotifyLocal = new SpotifyLocalController();
@@ -60,8 +63,8 @@ function escapeXml(str) {
 function renderNowPlayingSvg(state, coverBase64) {
   const isRunning = state?.isRunning && state?.playerState === "playing";
   const track = state?.track || {};
-  const title = escapeXml(track.name || "Spotify Paused");
-  const artist = escapeXml(track.artist || (state?.isRunning ? "No active track" : "Spotify not running"));
+  const title = String(track.name || "Spotify Paused");
+  const artist = String(track.artist || (state?.isRunning ? "No active track" : "Spotify not running"));
 
   const posSec = Math.round(state?.playerPosition || 0);
   const durSec = Math.round((track.duration || 0) / 1000) || 1;
@@ -105,10 +108,10 @@ function renderNowPlayingSvg(state, coverBase64) {
       ${isRunning ? "▶ PLAYING" : "❚❚ PAUSED"}
     </text>
     <text x="86" y="52" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="#ffffff">
-      ${title.length > 14 ? title.slice(0, 13) + "…" : title}
+      ${escapeXml(title.length > 14 ? title.slice(0, 13) + "…" : title)}
     </text>
     <text x="86" y="68" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="500" fill="#b3b3b3">
-      ${artist.length > 16 ? artist.slice(0, 15) + "…" : artist}
+      ${escapeXml(artist.length > 16 ? artist.slice(0, 15) + "…" : artist)}
     </text>
 
     <!-- Progress Track -->
@@ -128,7 +131,7 @@ function renderNowPlayingSvg(state, coverBase64) {
 }
 
 function renderPlaylistItemSvg(item, isCurrent, slotNum = 1) {
-  const title = escapeXml(item?.title || `Slot ${slotNum}`);
+  const title = String(item?.title || `Slot ${slotNum}`);
   const coverBase64 = item?.coverBase64;
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="200" height="200" viewBox="0 0 200 200">
@@ -178,7 +181,7 @@ function renderPlaylistItemSvg(item, isCurrent, slotNum = 1) {
 
     <!-- Title text -->
     <text x="100" y="168" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="800" fill="#ffffff" letter-spacing="0.2">
-      ${title.length > 16 ? title.slice(0, 15) + "…" : title}
+      ${escapeXml(title.length > 16 ? title.slice(0, 15) + "…" : title)}
     </text>
   </svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
@@ -269,6 +272,7 @@ function ack(message) {
 }
 
 function sendSvgState(instance, dataUrl) {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
   if (!instance.active || instance.lastDisplay === dataUrl) return;
   instance.lastDisplay = dataUrl;
   send({
@@ -299,6 +303,8 @@ function sendSvgState(instance, dataUrl) {
 }
 
 async function renderInstance(instance) {
+  const revision = instance.renderRevision = (instance.renderRevision || 0) + 1;
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
   if (!instance.active) return;
   const name = actionName(instance.uuid);
   const state = currentState || (await spotifyLocal.getState());
@@ -308,7 +314,14 @@ async function renderInstance(instance) {
     if (state?.track?.artworkUrl) {
       coverBase64 = await spotifyApi.getCoverBase64(state.track.artworkUrl);
     }
+    if (instance.renderRevision !== revision) return;
     sendSvgState(instance, renderNowPlayingSvg(state, coverBase64));
+    return;
+  }
+
+  if (name === "scroll") {
+    const label = playlists.length ? `Library ${playlistOffset + 1}/${playlists.length}` : "Library empty";
+    sendSvgState(instance, renderPlaylistItemSvg({ title: label }, false));
     return;
   }
 
@@ -325,7 +338,9 @@ async function renderInstance(instance) {
   if (name.startsWith("item")) {
     const slotIndex = Number(name.replace("item", "")) - 1;
     const actualIndex = slotIndex + playlistOffset;
-    const item = playlists[actualIndex] || null;
+    let item = playlists[actualIndex] || null;
+    if (item?.thumbnailUrl) item = { ...item, coverBase64: await spotifyApi.getCoverBase64(item.thumbnailUrl) };
+    if (instance.renderRevision !== revision) return;
     const isCurrent = Boolean(item && state?.track && (
       (item.uri && state.track.spotifyUrl && state.track.spotifyUrl.includes(item.uri)) ||
       (item.title && state.track.album && state.track.album.includes(item.title))
@@ -336,7 +351,7 @@ async function renderInstance(instance) {
 
 function renderAll() {
   for (const instance of instances.values()) {
-    renderInstance(instance);
+    void renderInstance(instance).catch(error => reportActionError(send, instance, error));
   }
 }
 
@@ -357,7 +372,10 @@ async function pollCycle() {
   try {
     currentState = await spotifyLocal.getState();
     renderAll();
-  } catch {} finally {
+  } catch (error) {
+    currentState = { isRunning: false, error: error.message };
+    renderAll();
+  } finally {
     pollInFlight = false;
   }
 }
@@ -365,8 +383,12 @@ async function pollCycle() {
 async function reloadPlaylists() {
   try {
     playlists = await spotifyApi.loadResolvedPlaylists();
+    playlistOffset = Math.min(playlistOffset, Math.max(0, playlists.length - 1));
     renderAll();
-  } catch {}
+  } catch (error) {
+    console.error("Playlist load failed:", error.message);
+    throw error;
+  }
 }
 
 function addInstance(message) {
@@ -381,7 +403,7 @@ function addInstance(message) {
   };
   instance.active = true;
   instances.set(context, instance);
-  renderInstance(instance);
+  void renderInstance(instance).catch(error => reportActionError(send, instance, error));
   return instance;
 }
 
@@ -393,6 +415,9 @@ async function invokeKey(instance) {
     await spotifyLocal.next();
   } else if (name === "prev") {
     await spotifyLocal.previous();
+  } else if (name === "like") {
+    const state = await spotifyLocal.getState();
+    await spotifyApi.saveTrack(state.track?.spotifyUrl || state.track?.id);
   } else if (name === "shuffle") {
     await spotifyLocal.toggleShuffle();
   } else if (name === "repeat") {
@@ -407,12 +432,28 @@ async function invokeKey(instance) {
   scheduleNextPoll(150);
 }
 
+async function handleInspector(message) {
+  try {
+    const { path, method = "GET", body } = message.payload;
+    if (typeof path !== "string" || !path.startsWith("/") || path.startsWith("//") || typeof body === "string" && body.length > 65536) throw new Error("Invalid inspector request");
+    const target = new URL(path, "http://localhost");
+    const allowed = ["GET /status", "POST /playlists", "GET /auth/status", "GET /auth/start", "POST /sync"];
+    if (!allowed.includes(`${method} ${target.pathname}`)) throw new Error("Unsupported inspector operation");
+    const data = await requestLocal(target.pathname + target.search, { method, body, signal: AbortSignal.timeout(110000) });
+    inspectorReply(send, message, { data });
+  } catch (error) { inspectorReply(send, message, { error: error.message }); }
+}
+
 function handleMessage(raw) {
   let message;
   try {
     message = JSON.parse(String(raw));
   } catch {
     return;
+  }
+
+  if (message.cmd === "sendToPlugin" && message.payload?.type === "localApi") {
+    ack(message); void handleInspector(message); return;
   }
 
   if (message.cmd === "add" || message.cmd === "paramfromapp") {
@@ -426,7 +467,7 @@ function handleMessage(raw) {
     instance.active = Boolean(message.active);
     if (instance.active) {
       instance.lastDisplay = null;
-      renderInstance(instance);
+      void renderInstance(instance).catch(error => reportActionError(send, instance, error));
     }
     ack(message);
     return;
@@ -449,16 +490,17 @@ function handleMessage(raw) {
     const instance = instances.get(contextOf(message)) || addInstance(message);
     const name = actionName(instance.uuid);
     if (message.cmd === "dialrotate") {
-      const ticks = Number(message.param?.rotate || message.rotate || 1);
+      const ticks = encoderTicks(message);
+      if (!ticks) { ack(message); return; }
       if (name === "volume") {
-        void spotifyLocal.changeVolume(ticks * 4);
+        void spotifyLocal.changeVolume(ticks * 4).then(() => scheduleNextPoll(100)).catch(error => reportActionError(send, instance, error));
       } else if (name === "scroll") {
-        playlistOffset = Math.max(0, playlistOffset + (ticks > 0 ? 1 : -1));
+        playlistOffset = Math.min(Math.max(0, playlists.length - 1), Math.max(0, playlistOffset + ticks));
         renderAll();
       }
     } else if (message.cmd === "dialdown") {
       if (name === "volume") {
-        void spotifyLocal.playPause();
+        void spotifyLocal.playPause().then(() => scheduleNextPoll(100)).catch(error => reportActionError(send, instance, error));
       }
     }
     ack(message);
@@ -468,193 +510,96 @@ function handleMessage(raw) {
   if (["keydown", "keyup"].includes(message.cmd)) {
     const instance = instances.get(contextOf(message)) || addInstance(message);
     if (message.cmd === "keydown") {
-      void invokeKey(instance);
+      void invokeKey(instance).catch(error => reportActionError(send, instance, error));
     }
     ack(message);
   }
 }
 
 function startHttpServer() {
-  const server = createServer(async (req, res) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-    if (req.method === "OPTIONS") {
-      res.writeHead(204);
-      res.end();
-      return;
-    }
-
-    const url = new URL(req.url, `http://${req.headers.host || "127.0.0.1"}`);
-
+  const server = createServer(secureHandler("spotify", HTTP_PORT, async (req, res) => {
+    const url = new URL(req.url, `http://127.0.0.1:${HTTP_PORT}`);
     if (url.pathname === "/status" && req.method === "GET") {
-      const state = currentState || (await spotifyLocal.getState());
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({
-        state,
-        playlists,
-        playlistsFile: spotifyApi.playlistsFile
-      }));
-      return;
+      return json(res, 200, { state: currentState || await spotifyLocal.getState(), playlists,
+        manualPlaylists: await spotifyApi.getManualPlaylists() });
     }
-
     if (url.pathname === "/playlists" && req.method === "POST") {
-      let body = "";
-      req.on("data", chunk => { body += chunk; });
-      req.on("end", async () => {
-        try {
-          const payload = JSON.parse(body);
-          const links = Array.isArray(payload.links) ? payload.links : [];
-          await spotifyApi.savePlaylists(links);
-          await reloadPlaylists();
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: true, count: playlists.length }));
-        } catch (e) {
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: false, error: e.message }));
-        }
-      });
-      return;
+      const payload = await readJson(req);
+      if (!Array.isArray(payload.links)) throw new Error("Expected a links array");
+      await spotifyApi.savePlaylists(payload.links);
+      await reloadPlaylists();
+      return json(res, 200, { ok: true, count: playlists.length });
     }
-
     if (url.pathname === "/play" && req.method === "POST") {
-      let body = "";
-      req.on("data", chunk => { body += chunk; });
-      req.on("end", async () => {
-        try {
-          const payload = JSON.parse(body);
-          if (payload.uri) {
-            await spotifyLocal.playUri(payload.uri);
-          }
-          setTimeout(pollCycle, 150);
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: true }));
-        } catch (e) {
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: false, error: e.message }));
-        }
-      });
-      return;
+      const payload = await readJson(req);
+      await spotifyLocal.playUri(payload.uri);
+      scheduleNextPoll(150);
+      return json(res, 200, { ok: true });
     }
-
     if (url.pathname === "/auth/start" && req.method === "GET") {
-      const clientId = url.searchParams.get("clientId") || "";
-      if (!clientId) {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ ok: false, error: "Missing clientId" }));
-        return;
-      }
-      const authUrl = spotifyApi.createPkceAuthUrl(clientId, `http://127.0.0.1:${HTTP_PORT}/callback`);
-      execFile("/usr/bin/open", [authUrl], () => {});
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ ok: true, url: authUrl }));
-      return;
+      const authUrl = spotifyApi.createPkceAuthUrl(url.searchParams.get("clientId"), `http://127.0.0.1:${HTTP_PORT}/callback`);
+      await new Promise((resolve, reject) => execFile("/usr/bin/open", [authUrl], error => error ? reject(error) : resolve()));
+      return json(res, 200, { ok: true, url: authUrl });
     }
-
     if (url.pathname === "/callback" && req.method === "GET") {
-      const code = url.searchParams.get("code");
-      const state = url.searchParams.get("state");
-      const error = url.searchParams.get("error");
-
-      if (error || !code) {
-        res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
-        res.end(`<html><body style="font-family:sans-serif;background:#121212;color:#ef8585;text-align:center;padding:50px;">
-          <h2>Erro na Autorização do Spotify</h2>
-          <p>${escapeXml(error || "Código de autorização não recebido")}</p>
-        </body></html>`);
-        return;
-      }
-
-      try {
-        await spotifyApi.handleAuthCallback(code, state);
-        const fetched = await spotifyApi.fetchUserPlaylistsFromApi();
-        await reloadPlaylists();
-
-        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-        res.end(`<html><body style="font-family:sans-serif;background:#121212;color:#1DB954;text-align:center;padding:50px;">
-          <h1 style="color:#1DB954;">✓ Conectado ao Spotify com Sucesso!</h1>
-          <p style="color:#ffffff;font-size:16px;">${fetched?.length || 0} playlists foram sincronizadas com o seu Ulanzi D200.</p>
-          <p style="color:#888888;font-size:14px;">Você já pode fechar esta aba e voltar ao Ulanzi Studio.</p>
-        </body></html>`);
-      } catch (e) {
-        res.writeHead(500, { "Content-Type": "text/html; charset=utf-8" });
-        res.end(`<html><body style="font-family:sans-serif;background:#121212;color:#ef8585;text-align:center;padding:50px;">
-          <h2>Erro ao processar autorização</h2>
-          <p>${escapeXml(e.message)}</p>
-        </body></html>`);
-      }
+      await spotifyApi.handleAuthCallback(url.searchParams.get("code"), url.searchParams.get("state"));
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Content-Security-Policy": "default-src 'none'" });
+      res.end("<!doctype html><title>Spotify connected</title><h1>Spotify connected</h1><p>Return to Ulanzi Studio and sync your library.</p>");
       return;
     }
-
-    if (url.pathname === "/auth/status" && req.method === "GET") {
-      const token = await spotifyApi.getValidAccessToken();
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ ok: true, isAuthenticated: Boolean(token) }));
-      return;
-    }
-
+    if (url.pathname === "/auth/status" && req.method === "GET") return json(res, 200, { ok: true, isAuthenticated: Boolean(await spotifyApi.getValidAccessToken()) });
     if (url.pathname === "/sync" && req.method === "POST") {
-      try {
-        const fetched = await spotifyApi.fetchUserPlaylistsFromApi();
-        if (fetched) {
-          await reloadPlaylists();
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: true, count: fetched.length }));
-        } else {
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: false, error: "Não autenticado via Spotify Web API." }));
-        }
-      } catch (e) {
-        res.writeHead(500, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ ok: false, error: e.message }));
-      }
-      return;
+      await spotifyApi.fetchUserPlaylistsFromApi();
+      await reloadPlaylists();
+      return json(res, 200, { ok: true, count: playlists.length });
     }
-
-    res.writeHead(404, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: "Not found" }));
+    return json(res, 404, { ok: false, error: "Not found" });
+  }, { oauthCallback: true }));
+  server.on("error", error => {
+    console.error("Spotify local API failed:", error.message);
+    for (const instance of instances.values()) reportActionError(send, instance, error);
   });
-
-  server.listen(HTTP_PORT, "127.0.0.1", () => {
-    // HTTP bridge running on 127.0.0.1:17375
-  });
-
-  server.on("error", () => {
-    // Port might be in use, ignore
-  });
+  server.listen(HTTP_PORT, "127.0.0.1");
+  return server;
 }
 
 function connect() {
   clearTimeout(reconnectTimer);
-  socket = new WebSocket(HOST_URL);
+  const hostSocket = new WebSocket(HOST_URL);
+  socket = hostSocket;
 
-  socket.on("open", () => {
+  hostSocket.on("open", () => {
+    if (socket !== hostSocket) return;
     send({ code: 0, cmd: "connected", uuid: PLUGIN_UUID });
+    invalidateDisplays(instances);
+    renderAll();
     scheduleNextPoll(0);
   });
 
-  socket.on("message", handleMessage);
+  hostSocket.on("message", raw => { if (socket === hostSocket) handleMessage(raw); });
 
-  socket.on("close", () => {
+  hostSocket.on("close", () => {
+    if (socket !== hostSocket) return;
     clearTimeout(pollTimer);
     reconnectTimer = setTimeout(connect, 1000);
     reconnectTimer.unref();
   });
 
-  socket.on("error", () => {
-    socket?.close();
+  hostSocket.on("error", () => {
+    hostSocket.close();
   });
 }
 
-startHttpServer();
-reloadPlaylists().then(connect);
+const httpServer = startHttpServer();
+connect();
+void reloadPlaylists().catch(() => {});
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {
     clearTimeout(reconnectTimer);
     clearTimeout(pollTimer);
     socket?.close();
+    httpServer.close();
     process.exit(0);
   });
 }

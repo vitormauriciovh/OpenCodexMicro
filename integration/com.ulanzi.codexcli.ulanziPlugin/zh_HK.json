@@ -1,48 +1,132 @@
 {
-  "Description": "Turn Ulanzi D200 Series into a dedicated Codex CLI control surface through Ulanzi Studio.",
+  "Description": "透過本機 app-server 控制 Codex CLI 的工作、審批、輸入、目標及用量。不會向終端機輸入內容或切換終端機焦點。",
   "Name": "Codex CLI",
   "com.ulanzi.ulanzistudio.codexcli.task1": {
-    "Name": "Codex CLI Session 1",
-    "Tooltip": "Open recent Codex CLI session slot 1 and show its live status."
+    "Name": "Codex CLI 工作階段 1",
+    "Tooltip": "選取此工作階段作為後續控制台操作的目標。"
   },
   "com.ulanzi.ulanzistudio.codexcli.task2": {
-    "Name": "Codex CLI Session 2",
-    "Tooltip": "Open recent Codex CLI session slot 2 and show its live status."
+    "Name": "Codex CLI 工作階段 2",
+    "Tooltip": "選取此工作階段作為後續控制台操作的目標。"
   },
   "com.ulanzi.ulanzistudio.codexcli.task3": {
-    "Name": "Codex CLI Session 3",
-    "Tooltip": "Open recent Codex CLI session slot 3 and show its live status."
+    "Name": "Codex CLI 工作階段 3",
+    "Tooltip": "選取此工作階段作為後續控制台操作的目標。"
   },
   "com.ulanzi.ulanzistudio.codexcli.task4": {
-    "Name": "Codex CLI Session 4",
-    "Tooltip": "Open recent Codex CLI session slot 4 and show its live status."
+    "Name": "Codex CLI 工作階段 4",
+    "Tooltip": "選取此工作階段作為後續控制台操作的目標。"
   },
   "com.ulanzi.ulanzistudio.codexcli.task5": {
-    "Name": "Codex CLI Session 5",
-    "Tooltip": "Open recent Codex CLI session slot 5 and show its live status."
+    "Name": "Codex CLI 工作階段 5",
+    "Tooltip": "選取此工作階段作為後續控制台操作的目標。"
   },
   "com.ulanzi.ulanzistudio.codexcli.approve": {
-    "Name": "Codex CLI Approve",
-    "Tooltip": "Approve the pending command or patch execution in Codex CLI."
+    "Name": "Codex CLI 批准",
+    "Tooltip": "批准所選工作的待處理請求。"
   },
   "com.ulanzi.ulanzistudio.codexcli.reject": {
-    "Name": "Codex CLI Cancel",
-    "Tooltip": "Reject approval or stop execution in Codex CLI."
+    "Name": "Codex CLI 拒絕",
+    "Tooltip": "拒絕所選工作的待處理審批。如果請求已解決，不會停止工作。"
   },
   "com.ulanzi.ulanzistudio.codexcli.status": {
-    "Name": "Codex CLI Status",
-    "Tooltip": "Real-time Codex CLI agent status HUD (WORKING, ATTENTION, IDLE)."
+    "Name": "Codex CLI 狀態",
+    "Tooltip": "顯示所選工作回報的狀態。"
   },
   "com.ulanzi.ulanzistudio.codexcli.tokens": {
-    "Name": "Codex CLI Tokens",
-    "Tooltip": "Monitor token consumption across Codex CLI turns."
+    "Name": "Codex CLI Token 用量",
+    "Tooltip": "顯示所選工作回報的 Token 數量及上下文用量。"
   },
   "com.ulanzi.ulanzistudio.codexcli.queue": {
-    "Name": "Codex CLI Queue Prompt",
-    "Tooltip": "Queue a prompt to continue or review the current session."
+    "Name": "Codex CLI 繼續",
+    "Tooltip": "透過 app-server 向所選工作傳送「continue」。"
   },
   "com.ulanzi.ulanzistudio.codexcli.resume": {
-    "Name": "Codex CLI Resume Last",
-    "Tooltip": "Resume the latest Codex CLI session in terminal."
+    "Name": "Codex CLI 恢復所選工作階段",
+    "Tooltip": "透過 app-server 恢復所選工作階段並接收更新。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.new": {
+    "Name": "Codex CLI 新增工作",
+    "Tooltip": "在所選工作的專案中建立並選取新工作。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.fork": {
+    "Name": "Codex CLI 分支工作",
+    "Tooltip": "從所選工作建立分支並選取該分支。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.stop": {
+    "Name": "Codex CLI 停止",
+    "Tooltip": "停止所選工作正在執行的回合，不回應審批請求。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.attention": {
+    "Name": "Codex CLI 待處理",
+    "Tooltip": "依次選取有待審批請求的工作。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.submit": {
+    "Name": "Codex CLI 傳送輸入",
+    "Tooltip": "傳送在外掛程式屬性檢查器中為此工作儲存的輸入。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.steer": {
+    "Name": "Codex CLI 追加指示",
+    "Tooltip": "將儲存的輸入傳送至所選工作正在執行的回合。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.prompt_test": {
+    "Name": "Codex CLI 測試並修正",
+    "Tooltip": "請所選工作執行測試並修正失敗項目。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.prompt_review": {
+    "Name": "Codex CLI 審查變更",
+    "Tooltip": "請所選工作審查待提交的變更。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.prompt_commit": {
+    "Name": "Codex CLI 提交訊息",
+    "Tooltip": "請求產生 Conventional Commit 訊息；不執行提交或推送。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.usage": {
+    "Name": "Codex CLI 用量",
+    "Tooltip": "顯示 app-server 回報的帳戶額度。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.usage5h": {
+    "Name": "Codex CLI 5 小時用量",
+    "Tooltip": "顯示五小時剩餘額度及重設時間。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.usageweekly": {
+    "Name": "Codex CLI 每週用量",
+    "Tooltip": "顯示每週剩餘額度及重設時間。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.taskmonitor": {
+    "Name": "Codex CLI 工作監察器",
+    "Tooltip": "顯示所選工作的狀態、已用時間及回報的模型。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.model": {
+    "Name": "Codex CLI 模型",
+    "Tooltip": "切換控制台下次傳送輸入時使用的可用模型。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.reasoning": {
+    "Name": "Codex CLI 推理程度",
+    "Tooltip": "切換控制台下次傳送輸入時使用的受支援推理程度。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.fast": {
+    "Name": "Codex CLI 快速模式",
+    "Tooltip": "在模型支援時切換控制台下次傳送輸入的快速模式。快速模式會消耗更多額度。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.task6": {
+    "Name": "Codex CLI 工作階段 6",
+    "Tooltip": "選取此工作階段作為後續控制台操作的目標。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.navigate": {
+    "Name": "Codex CLI 瀏覽工作",
+    "Tooltip": "旋轉以選取最近工作，按下以選取下一項工作。按需要載入較早的工作。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.goal": {
+    "Name": "Codex CLI 目標",
+    "Tooltip": "暫停或恢復現有的執行中或已暫停目標。新目標須在屬性檢查器中明確建立。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.subagents": {
+    "Name": "Codex CLI 子代理",
+    "Tooltip": "讀取所選工作未封存的直屬子工作。按下可重新整理；結果不完整時數量顯示為未知。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.plan": {
+    "Name": "Codex CLI 計劃",
+    "Tooltip": "載入所選工作最新儲存的計劃。在外掛程式屬性檢查器中查看計劃及即時步驟清單；不會修改工作。"
   }
 }

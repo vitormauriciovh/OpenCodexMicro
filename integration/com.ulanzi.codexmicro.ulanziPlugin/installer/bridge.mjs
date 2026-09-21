@@ -2270,7 +2270,7 @@ var require_websocket = __commonJS({
     var http = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes, createHash } = __require("crypto");
+    var { randomBytes: randomBytes2, createHash } = __require("crypto");
     var { Duplex, Readable } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -2808,7 +2808,7 @@ var require_websocket = __commonJS({
         }
       }
       const defaultPort = isSecure ? 443 : 80;
-      const key = randomBytes(16).toString("base64");
+      const key = randomBytes2(16).toString("base64");
       const request = isSecure ? https.request : http.request;
       const protocolSet = /* @__PURE__ */ new Set();
       let perMessageDeflate;
@@ -3701,10 +3701,66 @@ var require_websocket_server = __commonJS({
   }
 });
 
-// ../../src/bridge/server.mjs
-import { createServer } from "node:http";
-import { execFile as execFile2 } from "node:child_process";
-import { promisify as promisify2 } from "node:util";
+// ../../src/shared/local-api.mjs
+import { mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { randomBytes, timingSafeEqual } from "node:crypto";
+function localHeaders(component) {
+  if (!/^[a-z-]+$/.test(component)) throw new Error("Invalid component");
+  const root = process.env.ULANZI_AUTH_DIR || join(homedir(), ".local/share/ulanzi-bridges");
+  mkdirSync(root, { recursive: true, mode: 448 });
+  chmodSync(root, 448);
+  const file = join(root, `${component}.token`);
+  try {
+    writeFileSync(file, randomBytes(32).toString("hex"), { flag: "wx", mode: 384 });
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+  }
+  chmodSync(file, 384);
+  const token = readFileSync(file, "utf8").trim();
+  if (!/^[a-f0-9]{64}$/.test(token)) throw new Error("Invalid local bridge credential; remove the component token file to regenerate it");
+  return { Authorization: `Bearer ${token}` };
+}
+function allowedRequest(request, component, port, { oauthCallback = false } = {}) {
+  if (![`127.0.0.1:${port}`, `localhost:${port}`, `[::1]:${port}`].includes(request.headers.host)) return false;
+  if (oauthCallback && request.method === "GET" && new URL(request.url, "http://localhost").pathname === "/callback") return true;
+  if (request.headers.origin || request.headers["sec-fetch-site"] && request.headers["sec-fetch-site"] !== "none") return false;
+  const actual = Buffer.from(request.headers.authorization || "");
+  const expected = Buffer.from(localHeaders(component).Authorization);
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+function json(response, status, payload) {
+  response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+  response.end(JSON.stringify(payload));
+}
+function secureHandler(component, port, handler, options = {}) {
+  return async (request, response) => {
+    try {
+      if (!allowedRequest(request, component, port, options)) return json(response, 403, { ok: false, error: "Unauthorized local client" });
+      await handler(request, response);
+    } catch (error) {
+      if (!response.headersSent) json(response, error.status || 500, { ok: false, error: error.message });
+      else response.end();
+    }
+  };
+}
+async function readJson(request, limit = 65536) {
+  let size = 0;
+  const chunks = [];
+  for await (const chunk of request) {
+    size += Buffer.byteLength(chunk);
+    if (size > limit) throw Object.assign(new Error("Request body too large"), { status: 413 });
+    chunks.push(Buffer.from(chunk));
+  }
+  try {
+    const value = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error();
+    return value;
+  } catch {
+    throw Object.assign(new Error("Expected a JSON object"), { status: 400 });
+  }
+}
 
 // ../../node_modules/ws/wrapper.mjs
 var import_stream = __toESM(require_stream(), 1);
@@ -3716,6 +3772,98 @@ var import_subprotocol = __toESM(require_subprotocol(), 1);
 var import_websocket = __toESM(require_websocket(), 1);
 var import_websocket_server = __toESM(require_websocket_server(), 1);
 var wrapper_default = import_websocket.default;
+
+// ../../src/shared/plugin-runtime.mjs
+function stateDigest(state) {
+  const { updatedAt, bridgeSnapshot, ...publicState } = state;
+  return JSON.stringify(publicState, (key, value) => key === "observedAt" ? void 0 : value);
+}
+
+// ../../src/bridge/server.mjs
+import { createServer } from "node:http";
+import { execFile as execFile2 } from "node:child_process";
+import { promisify as promisify2 } from "node:util";
+
+// ../../src/shared/token-metrics.mjs
+function contextPercent(usage) {
+  if (!usage || typeof usage !== "object") return null;
+  const direct = usage.usedPercent ?? usage.used_percent ?? usage.percentage ?? usage.percent;
+  if (Number.isFinite(direct)) return Math.min(100, Math.max(0, Math.round(direct)));
+  const window = usage.modelContextWindow ?? usage.model_context_window ?? usage.contextWindow ?? usage.context_window;
+  let tokens = usage.contextTokens ?? usage.context_tokens ?? usage.last?.totalTokens ?? usage.last?.total_tokens;
+  if (tokens == null) {
+    const input = usage.last?.inputTokens ?? usage.last?.input_tokens;
+    const output = usage.last?.outputTokens ?? usage.last?.output_tokens;
+    if (Number.isFinite(input) && Number.isFinite(output)) tokens = input + output;
+  }
+  if (!Number.isFinite(window) || window <= 0 || !Number.isFinite(tokens) || tokens < 0) return null;
+  return Math.min(100, Math.max(0, Math.round(tokens / window * 100)));
+}
+
+// ../../src/bridge/model-picker.mjs
+function readNativeModelPicker(document) {
+  const triggers = [...document.querySelectorAll("button[data-codex-intelligence-trigger]")].filter((button) => button.offsetParent !== null && !button.closest('[inert], [hidden], [aria-hidden="true"], [role="dialog"], [aria-modal="true"]'));
+  if (triggers.length !== 1) throw new Error("No unique model selector is available for this task");
+  const trigger = triggers[0];
+  const key = Object.getOwnPropertyNames(trigger).find((key2) => key2.startsWith("__reactFiber$"));
+  let root = key && trigger[key];
+  while (root?.return) root = root.return;
+  const queue = [root?.stateNode?.current];
+  const seen = /* @__PURE__ */ new Set();
+  let mounted = null;
+  while (queue.length) {
+    const node = queue.pop();
+    if (!node || seen.has(node)) continue;
+    seen.add(node);
+    if (node.stateNode === trigger) {
+      mounted = node;
+      break;
+    }
+    queue.push(node.child, node.sibling);
+  }
+  for (let node = mounted; node; node = node.return) {
+    const props = node.memoizedProps;
+    if (Array.isArray(props?.models) && Array.isArray(props?.modelOptions) && typeof props.onSelectModel === "function" && typeof props.onSelectReasoningEffort === "function") {
+      return { trigger, props };
+    }
+  }
+  throw new Error("Native model picker is unavailable in this Codex version");
+}
+function cycleNativeModelPicker(picker, action) {
+  const { trigger, props } = picker;
+  if (trigger.disabled || trigger.getAttribute("aria-disabled") === "true" || props.disabled || props.daybreak?.disabled || props.daybreak?.isSaving) {
+    throw new Error("Model settings are currently disabled");
+  }
+  const effortIds = /* @__PURE__ */ new Set(["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]);
+  const effortsFor = (model) => [...new Set((model?.supportedReasoningEfforts || []).map((option) => option.reasoningEffort).filter((effort2) => effortIds.has(effort2)))];
+  if (action === "model") {
+    if (props.modelOptionsDisabled || props.modelLabelOnly) throw new Error("Model selection is locked");
+    const models = props.modelOptions.filter((option) => option.disabledReason == null && option.model?.model !== props.lockedModelSlug && typeof option.model?.model === "string");
+    const index2 = models.findIndex((option) => option.model.model === props.model);
+    if (index2 < 0) throw new Error("The current model is not in the available model list");
+    if (models.length < 2) throw new Error("No other model is available");
+    const next = models[(index2 + 1) % models.length].model;
+    const efforts2 = effortsFor(next);
+    const effort2 = efforts2.includes(props.reasoningEffort) ? props.reasoningEffort : next.defaultReasoningEffort;
+    if (!efforts2.includes(effort2)) throw new Error("The next model has no supported reasoning effort");
+    if (props.onBeforeSelectModel?.(next.model) === false) throw new Error("Codex did not allow this model selection");
+    props.onSelectModel(next.model, effort2);
+    props.onSelectModelOption?.();
+    return { model: next.model, reasoningEffort: effort2 };
+  }
+  if (action !== "reasoning") throw new Error("Unsupported model picker action");
+  if (props.reasoningEffortDisabled || props.showReasoningEffortControls === false) {
+    throw new Error("Reasoning effort selection is disabled");
+  }
+  const current = props.models.find((model) => model.model === props.model);
+  const efforts = effortsFor(current);
+  const index = efforts.indexOf(props.reasoningEffort);
+  if (index < 0) throw new Error("The current reasoning effort is unavailable");
+  if (efforts.length < 2) throw new Error("No other reasoning effort is available");
+  const effort = efforts[(index + 1) % efforts.length];
+  props.onSelectReasoningEffort(effort);
+  return { model: props.model, reasoningEffort: effort };
+}
 
 // ../../src/bridge/codex-cdp.mjs
 import { execFile } from "node:child_process";
@@ -3765,7 +3913,7 @@ var MICRO_ACTION_KEYS = Object.freeze({
   mic: "ACT10",
   submit: "ACT12"
 });
-var RENDERER_ACTIONS = /* @__PURE__ */ new Set(["pin", "new", "approve", "reject", "stop", "reasoning"]);
+var RENDERER_ACTIONS = /* @__PURE__ */ new Set(["pin", "new", "approve", "reject", "stop", "model", "reasoning", "goal", "subagents", "plan"]);
 var PIN_ACTION_LABELS = Object.freeze([
   "Pin chat",
   "Unpin chat",
@@ -3856,8 +4004,38 @@ var REJECT_ACTION_LABELS = Object.freeze([
   "Verweigern",
   "Abbrechen"
 ]);
-function rendererActionExpression(action) {
+function threadGuardExpression(threadId) {
+  return `const expectedThread = ${JSON.stringify(threadId)};
+    if (expectedThread !== undefined) {
+      const actualThread = document.querySelector('[data-above-composer-conversation-id]')?.getAttribute('data-above-composer-conversation-id')
+        ?? document.querySelector('[data-app-action-sidebar-thread-id][data-app-action-sidebar-thread-active=true]')?.getAttribute('data-app-action-sidebar-thread-id') ?? null;
+      const normalizeThread = value => value == null ? null : String(value).replace(/^local:/, '');
+      if (normalizeThread(actualThread) !== normalizeThread(expectedThread)) throw new Error('Codex task changed; refresh the deck and try again');
+    }`;
+}
+function findNativePlanControl(document) {
+  const labels = /* @__PURE__ */ new Set(["Open plan in side panel", "Abrir plano no painel lateral", "Plan im Seitenbereich \xF6ffnen", "Abrir plan en el panel lateral", "\u30B5\u30A4\u30C9\u30D1\u30CD\u30EB\u3067\u30D7\u30E9\u30F3\u3092\u958B\u304F", "\uC0AC\uC774\uB4DC \uD328\uB110\uC5D0\uC11C \uACC4\uD68D \uC5F4\uAE30", "\u5728\u4FA7\u8FB9\u9762\u677F\u4E2D\u6253\u5F00\u5957\u9910", "\u5728\u5074\u908A\u9762\u677F\u4E2D\u958B\u555F\u8A08\u5283", "\u5728\u5074\u908A\u9762\u677F\u958B\u555F\u65B9\u6848"]);
+  const matches = [...document.querySelectorAll("button[aria-label]")].filter((button) => button.offsetParent !== null && !button.disabled && button.getAttribute("aria-disabled") !== "true" && !button.closest?.('[role="dialog"], [aria-modal="true"], [inert], [aria-hidden="true"]') && labels.has(button.getAttribute("aria-label")));
+  return matches.length === 1 ? matches[0] : null;
+}
+function rendererActionExpression(action, threadId) {
+  if (action === "model" || action === "reasoning") {
+    return `(async () => {
+      const guard = () => { ${threadGuardExpression(threadId)} };
+      const readPicker = () => (${readNativeModelPicker.toString()})(document);
+      guard();
+      const expected = (${cycleNativeModelPicker.toString()})(readPicker(), ${JSON.stringify(action)});
+      for (let attempt = 0; attempt < 40; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        guard();
+        const { props } = readPicker();
+        if (props.model === expected.model && props.reasoningEffort === expected.reasoningEffort) return true;
+      }
+      throw new Error('Codex did not confirm the model settings change');
+    })()`;
+  }
   return `(() => {
+    ${threadGuardExpression(threadId)}
     const action = ${JSON.stringify(action)};
     const visible = (element) => element && element.offsetParent !== null;
     let target = null;
@@ -3916,28 +4094,31 @@ function rendererActionExpression(action) {
         button.matches?.('[data-testid*="stop"],[data-testid*="cancel"],[data-testid*="reject"],[data-testid*="deny"]')
       );
     } else if (action === "stop") {
-      const labels = ["Stop", "Stop generating", "Cancel", "Parar", "Cancelar", "Interromper", "\u505C\u6B62", "\u505C\u6B62\u751F\u6210", "\u53D6\u6D88", "\u4E2D\u6B62", "Abbrechen", "Stoppen"];
-      const buttons = [...document.querySelectorAll("button, [role=button]")].filter(visible);
-      target = buttons.find((button) => {
-        const aria = button.getAttribute("aria-label") || "";
-        const title = button.getAttribute("title") || "";
-        const text = (button.innerText || "").trim();
-        return labels.some((l) => aria.includes(l) || title.includes(l) || text.includes(l));
-      }) ?? buttons.find((button) => button.matches?.('[data-testid*="stop"],[data-testid*="cancel"]'));
-    } else if (action === "reasoning") {
-      const trigger = document.querySelector('[class*="ModelPickerTriggerEffortText"]')?.closest("button")
-        ?? document.querySelector('[class*="ModelPickerTriggerEffortLabel"]')?.closest("button")
-        ?? document.querySelector('[class*="ModelPickerTriggerContent"]')?.closest("button")
-        ?? [...document.querySelectorAll("button")].find((b) => visible(b) && (b.getAttribute("aria-label")?.includes("reasoning") || b.getAttribute("title")?.includes("reasoning")));
-      if (trigger) target = trigger;
+      const labels = new Set(["Stop", "Stop generating", "Parar", "Interromper", "\u505C\u6B62", "\u505C\u6B62\u751F\u6210", "\u4E2D\u6B62", "Stoppen"]);
+      const matches = [...document.querySelectorAll("button, [role=button]")].filter(button =>
+        visible(button) && !button.disabled && button.getAttribute("aria-disabled") !== "true" &&
+        !button.closest?.('[role="dialog"], [aria-modal="true"]') &&
+        [button.getAttribute("aria-label"), button.getAttribute("title"), (button.innerText || "").trim()].some(label => labels.has(label))
+      );
+      if (matches.length !== 1) throw new Error("No unique stop control is available for this task");
+      target = matches[0];
+    } else if (action === "plan") {
+      target = (${findNativePlanControl.toString()})(document);
+      if (!target) throw new Error("No unique plan control is available for this task");
+    } else if (action === "goal" || action === "subagents") {
+      const labels = action === "goal" ? ["Pause goal", "Resume goal", "Pausar objetivo", "Retomar objetivo"] : ["Open subagents", "Abrir subagentes"];
+      const matches = [...document.querySelectorAll("button")].filter(button => visible(button) && !button.disabled && labels.includes(button.getAttribute("aria-label")));
+      if (matches.length !== 1) throw new Error("No unique " + action + " control is available for this task");
+      target = matches[0];
     }
     if (!target) return false;
     target.click();
     return true;
   })()`;
 }
-function composerSteerExpression() {
+function composerSteerExpression(threadId) {
   return `(() => {
+    ${threadGuardExpression(threadId)}
     const editor = [...document.querySelectorAll('[contenteditable="true"][role="textbox"]')]
       .find((element) => element.offsetParent !== null);
     if (!editor) throw new Error("Codex composer is not available");
@@ -3956,14 +4137,15 @@ function composerSteerExpression() {
     return true;
   })()`;
 }
-function composerPromptExpression(text) {
+function composerPromptExpression(text, threadId) {
   return `(() => {
+    ${threadGuardExpression(threadId)}
     const editor = [...document.querySelectorAll('[contenteditable="true"][role="textbox"]')]
       .find((element) => element.offsetParent !== null);
     if (!editor) throw new Error("Codex composer is not available");
+    if (editor.textContent?.trim()) throw new Error("Composer already contains a draft; send or clear it in Codex first");
     editor.focus();
-    document.execCommand("selectAll", false, null);
-    document.execCommand("insertText", false, ${JSON.stringify(text)});
+    if (!document.execCommand("insertText", false, ${JSON.stringify(text)})) throw new Error("Could not insert prompt");
     return true;
   })()`;
 }
@@ -4237,38 +4419,7 @@ var SNAPSHOT_EXPRESSION = `(async () => {
     ?? null;
   const normalizeThreadKey = (value) => String(value ?? "").replace(/^local:/, "");
 
-  const computeCtxPct = (tokenInfo) => {
-    if (!tokenInfo || typeof tokenInfo !== "object") return 0;
-    const directPct = tokenInfo.usedPercent ?? tokenInfo.used_percent ?? tokenInfo.percentage ?? tokenInfo.percent;
-    if (typeof directPct === "number" && Number.isFinite(directPct)) {
-      return Math.min(100, Math.max(0, Math.round(directPct)));
-    }
-    const contextWindow = Number(
-      tokenInfo.modelContextWindow ||
-      tokenInfo.model_context_window ||
-      tokenInfo.contextWindow ||
-      tokenInfo.context_window ||
-      200000
-    ) || 200000;
-    const lastTokens = Number(
-      tokenInfo.last?.totalTokens ??
-      tokenInfo.last?.total_tokens ??
-      (Number(tokenInfo.last?.inputTokens ?? tokenInfo.last?.input_tokens ?? 0) +
-       Number(tokenInfo.last?.outputTokens ?? tokenInfo.last?.output_tokens ?? 0))
-    );
-    const activeTokens = Number(
-      tokenInfo.contextTokens ??
-      tokenInfo.context_tokens ??
-      (lastTokens > 0 ? lastTokens : null) ??
-      tokenInfo.total?.totalTokens ??
-      tokenInfo.total?.total_tokens ??
-      tokenInfo.totalTokens ??
-      tokenInfo.total_tokens ??
-      0
-    );
-    if (activeTokens <= 0) return 0;
-    return Math.min(100, Math.max(1, Math.round((activeTokens / contextWindow) * 100)));
-  };
+  const computeCtxPct = ${contextPercent.toString()};
 
   const enrichedSlots = found.map((slot) => {
     const threadId = normalizeThreadKey(slot.threadKey);
@@ -4365,12 +4516,13 @@ var SNAPSHOT_EXPRESSION = `(async () => {
     lastTask = enrichedSlots[0];
   }
 
-  const activeMeta = (activeThreadKey && conversationsMeta.get(normalizeThreadKey(activeThreadKey)))
-    || (enrichedSlots[0]?.threadId && conversationsMeta.get(enrichedSlots[0].threadId))
-    || null;
+  const activeMeta = (activeThreadKey && conversationsMeta.get(normalizeThreadKey(activeThreadKey))) || null;
   const tokenUsage = activeMeta?.latestTokenUsageInfo || activeMeta?.tokenUsageInfo || activeMeta?.tokenUsage || null;
+  let modelPicker = null;
+  try { modelPicker = (${readNativeModelPicker.toString()})(document).props; } catch {}
   
   const detectLiveReasoningEffort = () => {
+    if (modelPicker?.reasoningEffort) return modelPicker.reasoningEffort;
     const srEffort = document.querySelector("[class*='ModelPickerTriggerEffortLabel'] .sr-only")?.textContent?.trim()?.toLowerCase();
     if (srEffort) return srEffort;
     const activeEffortEl = document.querySelector("[data-reasoning-effort][style*='opacity: 1']")
@@ -4378,12 +4530,17 @@ var SNAPSHOT_EXPRESSION = `(async () => {
     if (activeEffortEl) {
       return activeEffortEl.getAttribute("data-reasoning-effort") || activeEffortEl.textContent?.trim()?.toLowerCase();
     }
-    return activeMeta?.latestReasoningEffort || activeMeta?.reasoningEffort || "medium";
+    return activeMeta?.latestReasoningEffort || activeMeta?.reasoningEffort || null;
   };
   const reasoningEffort = detectLiveReasoningEffort();
 
   return {
     activeThreadKey,
+    planAvailable: Boolean((${findNativePlanControl.toString()})(document)),
+    model: modelPicker?.model || activeMeta?.latestModel || activeMeta?.latestThreadSettings?.model || activeMeta?.previousTurnModel || null,
+    goalState: [...document.querySelectorAll('button')].some(b => b.offsetParent !== null && ['Pause goal', 'Pausar objetivo'].includes(b.getAttribute('aria-label'))) ? 'active'
+      : [...document.querySelectorAll('button')].some(b => b.offsetParent !== null && ['Resume goal', 'Retomar objetivo'].includes(b.getAttribute('aria-label'))) ? 'paused' : null,
+    subagentsSummary: [...document.querySelectorAll('button')].find(b => b.offsetParent !== null && ['Open subagents', 'Abrir subagentes'].includes(b.getAttribute('aria-label')))?.innerText?.trim() || null,
     slots: enrichedSlots,
     activeTasks,
     lastTask,
@@ -4432,6 +4589,7 @@ var CodexCdpClient = class {
   nextId = 0;
   pending = /* @__PURE__ */ new Map();
   lastSnapshot = null;
+  modelActionQueue = Promise.resolve();
   async connect() {
     if (this.socket?.readyState === wrapper_default.OPEN) return;
     const port = await discoverDebugPort();
@@ -4492,57 +4650,58 @@ var CodexCdpClient = class {
       event: { key: `AG0${slot}`, act, slot, threadKey }
     }, "codex-micro-hid-event");
   }
-  async dispatchAction(key, act) {
+  async dispatchAction(key, act, threadId) {
     return this.dispatchMicroMessage({
       type: "codex-micro-hid-event",
       event: { key, act, slot: null, threadKey: null }
-    }, "codex-micro-hid-event");
+    }, "codex-micro-hid-event", act === 1 ? threadId : void 0);
   }
-  async dispatchNamedAction(action, pressed) {
+  async dispatchNamedAction(action, pressed, threadId) {
     const key = MICRO_ACTION_KEYS[action];
     if (key) {
-      const result = await this.dispatchAction(key, pressed ? 1 : 0);
-      if (pressed && (action === "approve" || action === "reject")) {
-        void this.dispatchRendererAction(action).catch(() => {
-        });
-      }
-      return result;
+      return this.dispatchAction(key, pressed ? 1 : 0, threadId);
     }
     if (!RENDERER_ACTIONS.has(action)) {
       throw new Error(`Unsupported Codex bridge action: ${action}`);
     }
     if (!pressed) return true;
-    return this.dispatchRendererAction(action);
+    if (action === "model" || action === "reasoning") {
+      const pending = this.modelActionQueue.catch(() => {
+      }).then(() => this.dispatchRendererAction(action, threadId));
+      this.modelActionQueue = pending;
+      return pending;
+    }
+    return this.dispatchRendererAction(action, threadId);
   }
-  async dispatchRendererAction(action) {
+  async dispatchRendererAction(action, threadId) {
     await this.connect();
-    const invoked = await this.evaluate(rendererActionExpression(action));
+    const invoked = await this.evaluate(rendererActionExpression(action, threadId));
     if (!invoked) throw new Error(`Codex ${action} action is not available`);
     return true;
   }
-  async dispatchComposerSteer() {
+  async dispatchComposerSteer(threadId) {
     await this.connect();
-    const clicked = await this.evaluate(composerSteerExpression());
+    const clicked = await this.evaluate(composerSteerExpression(threadId));
     if (!clicked) throw new Error("Codex Steer action is not available");
   }
-  async submitPrompt(text) {
+  async submitPrompt(text, threadId) {
     await this.connect();
-    await this.evaluate(composerPromptExpression(text));
+    await this.evaluate(composerPromptExpression(text, threadId));
     await new Promise((resolve) => setTimeout(resolve, 60));
-    await this.dispatchAction(MICRO_ACTION_KEYS.submit, 1);
+    await this.dispatchAction(MICRO_ACTION_KEYS.submit, 1, threadId);
     await new Promise((resolve) => setTimeout(resolve, 35));
     await this.dispatchAction(MICRO_ACTION_KEYS.submit, 0);
     return true;
   }
-  async dispatchJoystick(direction, distance) {
+  async dispatchJoystick(direction, distance, threadId) {
     const angle = { up: 0.75, right: 0, down: 0.25, left: 0.5 }[direction];
     if (angle === void 0) throw new Error(`Unknown joystick direction: ${direction}`);
     return this.dispatchMicroMessage({
       type: "codex-micro-joystick-event",
       event: { angle, distance }
-    }, "codex-micro-joystick-event");
+    }, "codex-micro-joystick-event", distance ? threadId : void 0);
   }
-  async dispatchMicroMessage(message, requiredHandler) {
+  async dispatchMicroMessage(message, requiredHandler, threadId) {
     return this.evaluate(`(async () => {
       const cacheKey = Symbol.for("codex-keyboard-micro-bus");
       const isMicroBus = (candidate) =>
@@ -4578,11 +4737,12 @@ var CodexCdpClient = class {
       const dispatch = bus.dispatchHostMessage ?? bus.dispatchMessage;
       if ((bus.handlers.get(${JSON.stringify(requiredHandler)})?.size ?? 0) === 0) {
         dispatch.call(bus, ${JSON.stringify(DEVICE_STATE)});
+        for (let attempt = 0; attempt < 3 && !(bus.handlers.get(${JSON.stringify(requiredHandler)})?.size > 0); attempt++) {
+          await new Promise(resolve => setTimeout(resolve, 35));
+        }
       }
-      // Never put Micro handler discovery on the physical key hot path. The
-      // native event is dispatched immediately; clickAgent keeps a DOM
-      // activation fallback in the background in case Codex has not installed
-      // its handler yet.
+      if (!(bus.handlers.get(${JSON.stringify(requiredHandler)})?.size > 0)) throw new Error("Codex has no handler for this control");
+      ${threadGuardExpression(threadId)}
       dispatch.call(bus, ${JSON.stringify(message)});
       return true;
     })()`);
@@ -4694,7 +4854,7 @@ var lastBroadcastDigest = "";
 var wss = new import_websocket_server.default({ noServer: true });
 var wsClients = /* @__PURE__ */ new Set();
 function broadcastState() {
-  const digest = `${cached.connected}:${cached.error}:${cached.activeTasks?.length}:${cached.slots?.map((s) => `${s.id}-${s.status}-${s.selected}`).join(",")}:${cached.usage?.windows?.[0]?.remainingPercent}:${cached.reasoningEffort}`;
+  const digest = stateDigest(cached);
   if (digest === lastBroadcastDigest && wsClients.size > 0) return;
   lastBroadcastDigest = digest;
   const payload = JSON.stringify(cached);
@@ -4755,30 +4915,30 @@ async function refresh(force = false) {
     refreshPromise = null;
   }
 }
-function json(response, status, body) {
+function json2(response, status, body) {
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "no-store",
-    "Access-Control-Allow-Origin": "http://127.0.0.1"
+    "Cache-Control": "no-store"
   });
   response.end(`${JSON.stringify(body)}
 `);
 }
-var server = createServer(async (request, response) => {
+var server = createServer(secureHandler("codex", PORT, async (request, response) => {
   const url = new URL(request.url || "/", `http://${HOST}:${PORT}`);
+  const body = request.method === "POST" ? await readJson(request) : {};
   if (request.method === "GET" && url.pathname === "/health") {
     await refresh(true);
-    return json(response, 200, { ok: true, codexConnected: cached.connected, updatedAt: cached.updatedAt });
+    return json2(response, 200, { ok: true, codexConnected: cached.connected, updatedAt: cached.updatedAt });
   }
   if (request.method === "GET" && url.pathname === "/state") {
-    return json(response, 200, cached);
+    return json2(response, 200, cached);
   }
   if (request.method === "POST" && url.pathname === "/focus") {
     try {
       await focusCodex();
-      return json(response, 200, { ok: true });
+      return json2(response, 200, { ok: true });
     } catch (error) {
-      return json(response, 503, { ok: false, error: error.message });
+      return json2(response, 503, { ok: false, error: error.message });
     }
   }
   const match = request.method === "POST" && url.pathname.match(/^\/agent\/([0-5])\/click$/);
@@ -4788,9 +4948,9 @@ var server = createServer(async (request, response) => {
         client.clickAgent(Number(match[1])),
         focusCodex()
       ]);
-      return json(response, 200, { ok: true });
+      return json2(response, 200, { ok: true });
     } catch (error) {
-      return json(response, 503, { ok: false, error: error.message });
+      return json2(response, 503, { ok: false, error: error.message });
     }
   }
   const threadMatch = request.method === "POST" && url.pathname.match(
@@ -4807,9 +4967,9 @@ var server = createServer(async (request, response) => {
         client.clickThread(threadId, slot),
         focusCodex()
       ]);
-      return json(response, 200, { ok: true, bridge: true });
+      return json2(response, 200, { ok: true, bridge: true });
     } catch (error) {
-      return json(response, 503, {
+      return json2(response, 503, {
         ok: false,
         bridge: false,
         error: error.message
@@ -4817,34 +4977,32 @@ var server = createServer(async (request, response) => {
     }
   }
   const action = request.method === "POST" && url.pathname.match(
-    /^\/action\/(fast|approve|reject|pin|new|fork|mic|steer|submit|stop|reasoning)\/(down|up)$/
+    /^\/action\/(fast|approve|reject|pin|new|fork|mic|steer|submit|stop|model|reasoning|goal|subagents|plan)\/(down|up)$/
   );
   if (action) {
     try {
       if (action[1] === "steer") {
         if (action[2] === "down") {
           await focusCodex();
-          await client.dispatchComposerSteer();
+          await client.dispatchComposerSteer(body.threadId ?? null);
         }
-        return json(response, 200, { ok: true });
+        return json2(response, 200, { ok: true });
       }
-      await client.dispatchNamedAction(action[1], action[2] === "down");
-      return json(response, 200, { ok: true, bridge: true });
+      await client.dispatchNamedAction(action[1], action[2] === "down", body.threadId ?? null);
+      return json2(response, 200, { ok: true, bridge: true });
     } catch (error) {
-      return json(response, 503, { ok: false, error: error.message });
+      return json2(response, 503, { ok: false, error: error.message });
     }
   }
   if (request.method === "POST" && url.pathname === "/prompt") {
     try {
-      let body = "";
-      for await (const chunk of request) body += chunk;
-      const { text } = JSON.parse(body || "{}");
-      if (!text) throw new Error("Prompt text is required");
+      const { text } = body;
+      if (typeof text !== "string" || !text.trim() || text.length > 16e3) throw new Error("Prompt must contain 1\u201316000 characters");
       await focusCodex();
-      await client.submitPrompt(text);
-      return json(response, 200, { ok: true });
+      await client.submitPrompt(text, body.threadId ?? null);
+      return json2(response, 200, { ok: true });
     } catch (error) {
-      return json(response, 500, { ok: false, error: error.message });
+      return json2(response, 500, { ok: false, error: error.message });
     }
   }
   const joystick = request.method === "POST" && url.pathname.match(
@@ -4852,15 +5010,19 @@ var server = createServer(async (request, response) => {
   );
   if (joystick) {
     try {
-      await client.dispatchJoystick(joystick[1], joystick[2] === "down" ? 1 : 0);
-      return json(response, 200, { ok: true });
+      await client.dispatchJoystick(joystick[1], joystick[2] === "down" ? 1 : 0, body.threadId ?? null);
+      return json2(response, 200, { ok: true });
     } catch (error) {
-      return json(response, 503, { ok: false, error: error.message });
+      return json2(response, 503, { ok: false, error: error.message });
     }
   }
-  return json(response, 404, { ok: false, error: "Not found" });
-});
+  return json2(response, 404, { ok: false, error: "Not found" });
+}));
 server.on("upgrade", (request, socket, head) => {
+  if (!allowedRequest(request, "codex", PORT)) {
+    socket.destroy();
+    return;
+  }
   const { pathname } = new URL(request.url || "/", `http://${HOST}:${PORT}`);
   if (pathname === "/events" || pathname === "/ws") {
     wss.handleUpgrade(request, socket, head, (ws) => {

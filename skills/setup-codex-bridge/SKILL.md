@@ -44,4 +44,4 @@ OpenCodexMicro checkout.
 - Keep CDP at `127.0.0.1:9222` and the sidecar at `127.0.0.1:17373`.
 - Do not modify Codex shortcuts or Ulanzi Studio plugins in this skill.
 - Run `npm run uninstall` only when the user explicitly requests removal; it
-  also removes the installed Codex Micro plugin.
+  also removes the installed Codex App plugin.

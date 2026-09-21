@@ -1,3 +1,5 @@
+import { removeBridgeFiles } from "../../../src/shared/bridge-files.mjs";
+import { localHeaders } from "../../../src/shared/local-api.mjs";
 import { constants as fsConstants } from "node:fs";
 import {
   access,
@@ -120,7 +122,7 @@ export function createBridgeInstaller({
   environmentPath = process.env.PATH || "",
   execute = execFileAsync
 }) {
-  const appRoot = join(home, "Library", "Application Support", "OpenCodexMicro");
+  const appRoot = join(home, "Library", "Application Support", "OpenCodexMicro", "codex");
   const userApplications = join(home, "Applications");
   const bridgeApp = join(userApplications, "Codex Bridge.app");
   const bridgeContents = join(bridgeApp, "Contents");
@@ -140,7 +142,8 @@ export function createBridgeInstaller({
   async function probeBridge() {
     try {
       const response = await fetch(`${bridgeUrl}/health`, {
-        signal: AbortSignal.timeout(1200)
+        headers: localHeaders("codex"),
+        signal: AbortSignal.timeout(12000)
       });
       const payload = await response.json();
       if (!response.ok || payload.ok === false) throw new Error(payload.error || `Bridge HTTP ${response.status}`);
@@ -364,7 +367,7 @@ exit 1
       // The service may already be stopped or absent.
     }
     await rm(bridgeAgent, { force: true });
-    await rm(appRoot, { recursive: true, force: true });
+    await removeBridgeFiles(home, "codex");
     await rm(bridgeApp, { recursive: true, force: true });
     return status();
   }

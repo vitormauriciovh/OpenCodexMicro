@@ -1,3 +1,7 @@
+import { contextPercent } from "../../../src/shared/token-metrics.mjs";
+import { textCard } from "../../../src/shared/deck-cards.mjs";
+import { encoderTicks, invalidateDisplays, reportActionError, bridgeFeed, inspectorReply } from "../../../src/shared/plugin-runtime.mjs";
+import { localClient } from "../../../src/shared/local-api.mjs";
 import WebSocket from "ws";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -5,6 +9,7 @@ import { createBridgeInstaller } from "./bridge-installer.js";
 
 const PLUGIN_UUID = "com.ulanzi.ulanzistudio.codexmicro";
 const BRIDGE_URL = process.env.CODEX_BRIDGE_URL || "http://127.0.0.1:17373";
+const requestLocal = localClient("codex", BRIDGE_URL);
 const [address = "127.0.0.1", port = "3906"] = process.argv.slice(2);
 const HOST_URL = `ws://${address}:${port}`;
 const instances = new Map();
@@ -32,11 +37,15 @@ const ACTION_LABELS = Object.freeze({
   submit: "SUBMIT",
   taskmonitor: "MONITOR",
   approve: "APPROVE",
-  reject: "STOP",
+  reject: "REJECT",
+  goal: "GOAL",
+  subagents: "SUBAGENTS",
   attention: "ATTENTION",
   stop: "STOP",
   tokens: "TOKENS",
   reasoning: "THINK",
+  model: "MODEL",
+  plan: "PLAN",
   prompt_test: "TEST",
   prompt_review: "REVIEW",
   prompt_commit: "COMMIT"
@@ -98,7 +107,7 @@ function contextOf(message) {
 }
 
 function taskSlot(uuid) {
-  const match = String(uuid || "").match(/\.task([1-5])$/);
+  const match = String(uuid || "").match(/\.task([1-6])$/);
   return match ? Number(match[1]) - 1 : null;
 }
 
@@ -110,7 +119,7 @@ function actionName(uuid) {
 function extractWindowUsage(usage, kind) {
   const windows = Array.isArray(usage?.windows) ? usage.windows : [];
   const window = windows.find((item) => item?.kind === kind);
-  if (!window) return null;
+  if (!window || window.remainingPercent == null) return null;
   const remaining = Number(window.remainingPercent);
   return Number.isFinite(remaining)
     ? Math.max(0, Math.min(100, Math.round(remaining)))
@@ -363,6 +372,7 @@ function escapeXml(unsafe) {
 }
 
 function sendSvgState(instance, dataUrl) {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
   if (!instance.active || instance.lastDisplay === dataUrl) return;
   instance.lastDisplay = dataUrl;
   send({
@@ -396,40 +406,8 @@ function getTaskContextPercent(task) {
   if (typeof task?.ctxPct === "number" && Number.isFinite(task.ctxPct)) {
     return Math.min(100, Math.max(0, Math.round(task.ctxPct)));
   }
-  const tokenUsage = task?.tokenUsage || (task?.selected ? latestState?.tokenUsage : null) || latestState?.tokenUsage;
-  if (!tokenUsage) return 0;
-  if (typeof tokenUsage === "number" && Number.isFinite(tokenUsage)) {
-    return Math.min(100, Math.max(0, Math.round(tokenUsage)));
-  }
-  const directPct = tokenUsage.usedPercent ?? tokenUsage.used_percent ?? tokenUsage.percentage ?? tokenUsage.percent;
-  if (typeof directPct === "number" && Number.isFinite(directPct)) {
-    return Math.min(100, Math.max(0, Math.round(directPct)));
-  }
-  const contextWindow = Number(
-    tokenUsage.modelContextWindow ||
-    tokenUsage.model_context_window ||
-    tokenUsage.contextWindow ||
-    tokenUsage.context_window ||
-    200000
-  ) || 200000;
-  const lastTokens = Number(
-    tokenUsage.last?.totalTokens ??
-    tokenUsage.last?.total_tokens ??
-    (Number(tokenUsage.last?.inputTokens ?? tokenUsage.last?.input_tokens ?? 0) +
-     Number(tokenUsage.last?.outputTokens ?? tokenUsage.last?.output_tokens ?? 0))
-  );
-  const contextTokens = Number(
-    tokenUsage.contextTokens ??
-    tokenUsage.context_tokens ??
-    (lastTokens > 0 ? lastTokens : null) ??
-    tokenUsage.total?.totalTokens ??
-    tokenUsage.total?.total_tokens ??
-    tokenUsage.totalTokens ??
-    tokenUsage.total_tokens ??
-    0
-  );
-  if (contextTokens <= 0) return 0;
-  return Math.min(100, Math.max(1, Math.round((contextTokens / contextWindow) * 100)));
+  const tokenUsage = task?.tokenUsage || (task?.selected ? latestState?.tokenUsage : null);
+  return contextPercent(tokenUsage);
 }
 
 function taskCardIconData({
@@ -439,7 +417,7 @@ function taskCardIconData({
   status = "idle",
   elapsed = "",
   model = "default",
-  ctxPct = 0,
+  ctxPct = null,
   connected = true,
   empty = false
 }) {
@@ -521,7 +499,7 @@ function taskCardIconData({
   const cleanModel = String(model || "default").trim().toLowerCase();
   const modelDisplay = cleanModel.length > 11 ? cleanModel.slice(0, 10) + "…" : cleanModel;
 
-  const validPct = Math.max(0, Math.min(100, Math.round(Number(ctxPct) || 0)));
+  const validPct = Number.isFinite(ctxPct) ? Math.max(0, Math.min(100, Math.round(ctxPct))) : null;
   const barWidth = Math.max(0, Math.min(172, Math.round((validPct / 100) * 172)));
   const barColor = validPct > 85 ? "#ef4444" : "#f59e0b";
 
@@ -543,7 +521,7 @@ function taskCardIconData({
     <text x="98" y="120" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="${subColor}" letter-spacing="0.3">${escapeXml(subText)}</text>
     
     <text x="12" y="162" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#f59e0b" letter-spacing="0.2">${escapeXml(modelDisplay)}</text>
-    <text x="184" y="162" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#94a3b8" letter-spacing="0.2">ctx ${validPct}%</text>
+    <text x="184" y="162" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#94a3b8" letter-spacing="0.2">ctx ${validPct === null ? "—" : `${validPct}%`}</text>
     
     <rect x="12" y="172" width="172" height="7" rx="3.5" fill="#21262d"/>
     ${barWidth > 0 ? `<rect x="12" y="172" width="${barWidth}" height="7" rx="3.5" fill="${barColor}"/>` : ""}
@@ -1164,16 +1142,15 @@ function setApproveDisplay(instance) {
 
 function setRejectDisplay(instance) {
   const connected = Boolean(latestState?.connected);
-  const isRunning = isAnyTaskRunning();
-  const digest = `reject:${connected}:${isRunning}`;
+  const digest = `reject:${connected}`;
   if (!instance.active || instance.lastDisplay === digest) return;
   instance.lastDisplay = digest;
-  sendSvgState(instance, stopIconData({ connected, isRunning }));
+  sendSvgState(instance, textCard("REJECT", "Approval", "DENY REQUEST", connected));
 }
 
 function setTokensDisplay(instance) {
   const connected = Boolean(latestState?.connected);
-  const tokenUsage = latestState?.tokenUsage || latestState?.activeTasks?.[0]?.tokenUsage || latestState?.slots?.[0]?.tokenUsage || null;
+  const tokenUsage = latestState?.tokenUsage || null;
   const digest = `tokens:${connected}:${JSON.stringify(tokenUsage)}`;
   if (!instance.active || instance.lastDisplay === digest) return;
   instance.lastDisplay = digest;
@@ -1181,7 +1158,7 @@ function setTokensDisplay(instance) {
 }
 
 function formatTokenCount(num) {
-  if (num === null || num === undefined || !Number.isFinite(num)) return "0";
+  if (num === null || num === undefined || !Number.isFinite(num)) return "—";
   if (num >= 1000000) {
     return `${(num / 1000000).toFixed(2)}M`;
   }
@@ -1211,18 +1188,14 @@ function tokensIconData(tokenUsage, connected = true) {
     return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
   }
 
-  const total = tokenUsage?.total?.totalTokens ?? tokenUsage?.totalTokens ?? 0;
-  const last = tokenUsage?.last?.totalTokens ?? tokenUsage?.last?.inputTokens ?? 0;
-  const contextWindow = Number(tokenUsage?.modelContextWindow || tokenUsage?.contextWindow || 200000) || 200000;
-  const currentTurnTokens = (tokenUsage?.last?.totalTokens ?? 0) > 0
-    ? tokenUsage.last.totalTokens
-    : (tokenUsage?.contextTokens ?? (total > 0 && total <= contextWindow ? total : 0));
-  const pct = Math.min(100, Math.max(0, Math.round((currentTurnTokens / contextWindow) * 100)));
+  const total = tokenUsage?.total?.totalTokens ?? tokenUsage?.totalTokens ?? null;
+  const last = tokenUsage?.last?.totalTokens ?? null;
+  const pct = contextPercent(tokenUsage);
 
-  const totalStr = formatTokenCount(total);
-  const lastStr = last > 0 ? `+${formatTokenCount(last)}` : "—";
+  const totalStr = total == null ? "—" : formatTokenCount(total);
+  const lastStr = Number.isFinite(last) && last >= 0 ? `+${formatTokenCount(last)}` : "—";
   const pctColor = pct > 80 ? "#ef4444" : pct > 50 ? "#f59e0b" : "#3b82f6";
-  const barWidth = Math.max(4, Math.round((pct / 100) * 128));
+  const barWidth = pct == null ? 0 : Math.round((pct / 100) * 128);
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
     <defs>
@@ -1247,7 +1220,7 @@ function tokensIconData(tokenUsage, connected = true) {
       <rect x="0" y="0" width="128" height="8" rx="4" fill="#21262d"/>
       <rect x="0" y="0" width="${barWidth}" height="8" rx="4" fill="${pctColor}"/>
     </g>
-    <text x="98" y="168" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="11" font-weight="800" fill="${pctColor}" letter-spacing="0.6">${pct}% CONTEXT</text>
+    <text x="98" y="168" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="11" font-weight="800" fill="${pctColor}" letter-spacing="0.6">${pct == null ? "CONTEXT UNKNOWN" : `${pct}% CONTEXT`}</text>
   </svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
@@ -1311,17 +1284,17 @@ function reasoningIconData(effort, connected = true) {
     return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
   }
 
-  const effortStr = String(effort || "medium").toLowerCase();
+  const effortStr = String(effort || "unknown").toLowerCase();
   const isHigh = effortStr === "high" || effortStr === "xhigh" || effortStr === "max" || effortStr === "ultra";
   const isMed = effortStr === "medium" || effortStr === "med";
   const isLow = effortStr === "low" || effortStr === "light" || effortStr === "minimal" || effortStr === "none";
 
-  let levelText = "MEDIUM";
+  let levelText = isMed ? "MEDIUM" : "UNKNOWN";
   let activeCol = "#8b5cf6";
-  let activeLevel = 2;
+  let activeLevel = isMed ? 2 : 0;
 
   if (effortStr === "ultra" || effortStr === "max") {
-    levelText = "MAX";
+    levelText = effortStr.toUpperCase();
     activeCol = "#ec4899";
     activeLevel = 3;
   } else if (effortStr === "xhigh") {
@@ -1480,9 +1453,23 @@ function setPromptDisplay(instance, type) {
 }
 
 function renderInstance(instance) {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
   const slot = taskSlot(instance.uuid);
   if (slot === null) {
     const action = actionName(instance.uuid);
+    if (action === "plan") {
+      sendSvgState(instance, textCard("PLAN", latestState?.planAvailable ? "Open plan" : "Unavailable", "Selected task side panel", Boolean(latestState?.connected)));
+      return;
+    }
+    if (action === "model") {
+      sendSvgState(instance, textCard("MODEL", latestState?.model || "Unknown", "Press for next model", Boolean(latestState?.connected)));
+      return;
+    }
+    if (action === "goal" || action === "subagents") {
+      const value = action === "goal" ? latestState?.goalState || "Unavailable" : latestState?.subagentsSummary?.replace(/\s+/g, " ") || "Unknown";
+      sendSvgState(instance, textCard(ACTION_LABELS[action], value, action === "goal" ? "Pause / resume existing goal" : "Open task agents", Boolean(latestState?.connected)));
+      return;
+    }
     if (action === "usage") {
       setUsageDisplay(instance, latestState?.connected ? latestState.usage : null);
       return;
@@ -1610,20 +1597,10 @@ function renderAll() {
 }
 
 async function bridgeRequest(path, method = "GET", body = null) {
-  const options = {
-    method,
-    signal: AbortSignal.timeout(1200)
-  };
-  if (body) {
-    options.headers = { "Content-Type": "application/json" };
-    options.body = JSON.stringify(body);
+  if (method === "POST" && (path.startsWith("/action/") || path === "/prompt" || path.startsWith("/joystick/"))) {
+    body = { threadId: latestState?.activeThreadKey ?? null, ...body };
   }
-  const response = await fetch(`${BRIDGE_URL}${path}`, options);
-  const payload = await response.json();
-  if (!response.ok || payload.ok === false) {
-    throw new Error(payload.error || `Bridge HTTP ${response.status}`);
-  }
-  return payload;
+  return requestLocal(path, { method, ...(body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}) });
 }
 
 async function openTaskSlot(slot) {
@@ -1632,48 +1609,8 @@ async function openTaskSlot(slot) {
   await bridgeRequest(`/thread/${encodeURIComponent(task.threadKey)}/click?slot=${slot}`, "POST");
 }
 
-let bridgeSocket = null;
-let bridgeWsReconnectTimer = null;
-let bridgeFallbackTimer = null;
-
-function connectBridgeWs() {
-  clearTimeout(bridgeWsReconnectTimer);
-  try {
-    const wsUrl = BRIDGE_URL.replace(/^http/, "ws") + "/events";
-    bridgeSocket = new WebSocket(wsUrl);
-
-    bridgeSocket.on("open", () => {
-      clearInterval(bridgeFallbackTimer);
-      bridgeFallbackTimer = setInterval(() => void pollBridge(), 5000);
-      bridgeFallbackTimer.unref();
-    });
-
-    bridgeSocket.on("message", (raw) => {
-      try {
-        const data = JSON.parse(String(raw));
-        latestState = data;
-        updateTaskRunningTimes(latestState?.slots, latestState?.activeTasks);
-        renderAll();
-      } catch {}
-    });
-
-    bridgeSocket.on("close", () => {
-      bridgeSocket = null;
-      clearInterval(bridgeFallbackTimer);
-      bridgeFallbackTimer = setInterval(() => void pollBridge(), 3000);
-      bridgeFallbackTimer.unref();
-      bridgeWsReconnectTimer = setTimeout(connectBridgeWs, 2000);
-      bridgeWsReconnectTimer.unref();
-    });
-
-    bridgeSocket.on("error", () => {
-      bridgeSocket?.close();
-    });
-  } catch {
-    bridgeWsReconnectTimer = setTimeout(connectBridgeWs, 2000);
-    bridgeWsReconnectTimer.unref();
-  }
-}
+const feed = bridgeFeed({ component: "codex", url: BRIDGE_URL, poll: pollBridge, onState: state => { latestState = state; updateTaskRunningTimes(latestState?.slots, latestState?.activeTasks); renderAll(); } });
+function connectBridgeWs() { feed.start(); }
 
 async function pollBridge() {
   if (pollInFlight) return;
@@ -1707,14 +1644,21 @@ async function invoke(instance, pressed) {
       if (pressed) await bridgeRequest("/focus", "POST");
       return;
     }
-    if (action === "reasoning") {
+    if (action === "reasoning" || action === "model") {
       if (pressed) {
-        await bridgeRequest("/action/reasoning/down", "POST");
+        await bridgeRequest(`/action/${action}/down`, "POST");
+        await pollBridge();
+      }
+      return;
+    }
+    if (action === "plan") {
+      if (pressed) {
+        await bridgeRequest(`/action/${action}/down`, "POST");
         await bridgeRequest("/focus", "POST").catch(() => {});
       }
       return;
     }
-    if (action === "stop" || action === "reject") {
+    if (action === "stop") {
       if (pressed) {
         await bridgeRequest("/action/stop/down", "POST");
         await bridgeRequest("/focus", "POST").catch(() => {});
@@ -1772,8 +1716,8 @@ async function invoke(instance, pressed) {
       await bridgeRequest("/focus", "POST");
       return;
     }
-    if (action === "approve") {
-      await bridgeRequest(`/action/approve/${pressed ? "down" : "up"}`, "POST");
+    if (action === "approve" || action === "reject") {
+      await bridgeRequest(`/action/${action}/${pressed ? "down" : "up"}`, "POST");
       if (pressed) {
         await bridgeRequest("/focus", "POST").catch(() => {});
       }
@@ -1793,13 +1737,22 @@ async function invokeEncoder(instance, message) {
       return;
     }
     if (message.cmd !== "dialrotate") return;
-    const keylist = {
-      left: "SCROLL UP",
-      "hold-left": "SCROLL UP",
-      right: "SCROLL DOWN",
-      "hold-right": "SCROLL DOWN"
-    }[message.rotateEvent];
-    if (keylist) send({ cmd: "hotkey", keylist });
+    const ticks = encoderTicks(message);
+    if (!ticks) return;
+    const direction = ticks < 0 ? "up" : "down";
+    const body = { threadId: latestState?.activeThreadKey ?? null };
+    // Keep each native scroll press paired with its release, including bursts.
+    instance.scrollQueue = (instance.scrollQueue || Promise.resolve()).catch(() => {}).then(async () => {
+      for (let i = 0; i < Math.abs(ticks); i++) {
+        try {
+          await bridgeRequest(`/joystick/${direction}/down`, "POST", body);
+          await new Promise(resolve => setTimeout(resolve, 45));
+        } finally {
+          await bridgeRequest(`/joystick/${direction}/up`, "POST", body);
+        }
+      }
+    });
+    await instance.scrollQueue;
   } catch (error) {
     send({ cmd: "logMessage", uuid: instance.uuid, actionid: instance.actionid, key: instance.key, level: "error", message: error.message });
     send({ cmd: "showAlert", uuid: instance.uuid, actionid: instance.actionid, key: instance.key });
@@ -1875,30 +1828,36 @@ function handleMessage(raw) {
 
 function connect() {
   clearTimeout(reconnectTimer);
-  socket = new WebSocket(HOST_URL);
-  socket.on("open", () => {
+  const hostSocket = new WebSocket(HOST_URL);
+  socket = hostSocket;
+  hostSocket.on("open", () => {
+    if (socket !== hostSocket) return;
     send({ code: 0, cmd: "connected", uuid: PLUGIN_UUID });
+    invalidateDisplays(instances);
+    renderAll();
     connectBridgeWs();
     void pollBridge();
   });
-  socket.on("message", handleMessage);
-  socket.on("close", () => {
-    clearInterval(bridgeFallbackTimer);
-    bridgeSocket?.close();
+  hostSocket.on("message", raw => { if (socket === hostSocket) handleMessage(raw); });
+  hostSocket.on("close", () => {
+    if (socket !== hostSocket) return;
+    feed.stop();
     reconnectTimer = setTimeout(connect, 1000);
     reconnectTimer.unref();
   });
-  socket.on("error", (err) => { console.error("WS error:", err); socket.close(); });
+  hostSocket.on("error", (err) => { console.error("WS error:", err); hostSocket.close(); });
 }
+
+const renderTimer = setInterval(renderAll, 1000);
+renderTimer.unref();
 
 connect();
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {
     clearTimeout(reconnectTimer);
-    clearTimeout(bridgeWsReconnectTimer);
-    clearInterval(bridgeFallbackTimer);
-    bridgeSocket?.close();
+    clearInterval(renderTimer);
+    feed.stop();
     socket?.close();
     process.exit(0);
   });

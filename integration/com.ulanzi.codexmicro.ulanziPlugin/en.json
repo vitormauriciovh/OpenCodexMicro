@@ -1,34 +1,132 @@
 {
-  "Name": "Codex Micro",
+  "Name": "Codex App",
   "Overview": "Control Codex Desktop tasks and actions from Ulanzi D200 Series in Ulanzi Studio.",
-  "Description": "Turn Ulanzi D200 Series into a dedicated Codex Desktop control surface through Ulanzi Studio.\n\nFEATURES\n- View five recent Codex tasks with live status and open the exact selected task.\n- Use Fast, Usage, Pin, New, Fork, Steer, Mic, and Submit actions.\n- Use the Latest Task & Scroll Encoder action to open task 1 and scroll Codex.\n- Install, repair, launch, and check Codex Bridge from every Action setup page.\n- Keep communication local through Codex Bridge.app and loopback-only endpoints.\n\nINSTALLATION ENVIRONMENT\n- macOS 13 or later\n- Codex Desktop\n- Ulanzi Studio 3.0.1 or later\n- Ulanzi D200 Series connected in Ulanzi Studio\n- Node.js 20 or later only for manual repository setup\n\nLLM / AGENT INSTALLATION\nIn your Agent, enter:\nInstall the Ulanzi Studio plugin for me: https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation\n\nMANUAL INSTALLATION\n1. Clone https://github.com/UlanziTechnology/OpenCodexMicro and open the repository directory.\n2. Quit Ulanzi Studio.\n3. Run: npm install\n4. Run: npm run install:plugin\n5. Run: npm run setup\n6. Reopen Ulanzi Studio, quit Codex Desktop, and launch ~/Applications/Codex Bridge.app.\n7. Add the Codex Micro actions to your keys in Ulanzi Studio.\n8. Select any Action to check Bridge installation, service, and CDP status.\n\nIMPORTANT\nWhen using Codex Micro, always launch Codex through ~/Applications/Codex Bridge.app. Do not open Codex Desktop directly.\nLaunch command: open ~/Applications/Codex\\ Bridge.app",
+  "Description": "Turn Ulanzi D200 Series into a dedicated Codex Desktop control surface through Ulanzi Studio.\n\nFEATURES\n- View six recent Codex tasks with live status and open the exact selected task.\n- Use Fast, Usage, Pin, New, Fork, Steer, Mic, and Submit actions.\n- Use the Latest Task & Scroll Encoder action to open task 1 and scroll Codex.\n- Install, repair, launch, and check Codex Bridge from every Action setup page.\n- Keep communication local through Codex Bridge.app and loopback-only endpoints.\n\nINSTALLATION ENVIRONMENT\n- macOS 13 or later\n- Codex Desktop\n- Ulanzi Studio 3.0.1 or later\n- Ulanzi D200 Series connected in Ulanzi Studio\n- Node.js 20 or later only for manual repository setup\n\nLLM / AGENT INSTALLATION\nIn your Agent, enter:\nInstall the Ulanzi Studio plugin for me: https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation\n\nMANUAL INSTALLATION\n1. Clone https://github.com/UlanziTechnology/OpenCodexMicro and open the repository directory.\n2. Quit Ulanzi Studio.\n3. Run: npm install\n4. Run: npm run install:plugin\n5. Run: npm run setup\n6. Reopen Ulanzi Studio, quit Codex Desktop, and launch ~/Applications/Codex Bridge.app.\n7. Add the Codex App actions to your keys in Ulanzi Studio.\n8. Select any Action to check Bridge installation, service, and CDP status.\n\nIMPORTANT\nWhen using Codex App, always launch Codex through ~/Applications/Codex Bridge.app. Do not open Codex Desktop directly.\nLaunch command: open ~/Applications/Codex\\ Bridge.app",
   "Actions": [
-    { "Name": "Codex Task 1", "Tooltip": "Open recent Codex task slot 1 and show its live status." },
-    { "Name": "Codex Task 2", "Tooltip": "Open recent Codex task slot 2 and show its live status." },
-    { "Name": "Codex Task 3", "Tooltip": "Open recent Codex task slot 3 and show its live status." },
-    { "Name": "Codex Task 4", "Tooltip": "Open recent Codex task slot 4 and show its live status." },
-    { "Name": "Codex Task 5", "Tooltip": "Open recent Codex task slot 5 and show its live status." },
-    { "Name": "Codex Fast", "Tooltip": "Toggle Fast mode for the active Codex task." },
-    { "Name": "Codex Usage", "Tooltip": "Show the remaining Codex usage allowance and focus Codex when pressed." },
-    { "Name": "Codex 5H Usage", "Tooltip": "Display remaining 5-hour Codex usage allowance and reset countdown." },
-    { "Name": "Codex Weekly Usage", "Tooltip": "Display remaining weekly Codex usage allowance and reset countdown." },
-    { "Name": "Pin Codex Task", "Tooltip": "Pin or unpin the active Codex task." },
-    { "Name": "New Codex Task", "Tooltip": "Create a new Codex task." },
-    { "Name": "Latest Task & Scroll", "Tooltip": "Press to open the latest Codex task. Turn left to scroll up and right to scroll down." },
-    { "Name": "Fork Codex Task", "Tooltip": "Fork the active Codex task into a new task." },
-    { "Name": "Steer Codex", "Tooltip": "Send the current composer text as steering input to the running task." },
-    { "Name": "Codex Microphone", "Tooltip": "Toggle the Codex microphone action." },
-    { "Name": "Submit to Codex", "Tooltip": "Submit or queue the current Codex composer text." },
-    { "Name": "Codex Task Monitor", "Tooltip": "Show active task type (WORK/CODEX) and model. Cycles when multiple tasks run, or shows the latest task model." },
-    { "Name": "Codex Approve", "Tooltip": "Approve or execute pending Codex tool confirmations." },
-    { "Name": "Codex Deny", "Tooltip": "Deny or cancel pending Codex tool confirmations." },
-    { "Name": "Codex Attention Alert", "Tooltip": "Show pending attention/error task count and jump to the task." },
-    { "Name": "Codex Stop Generation", "Tooltip": "Instantly cancel or stop the active turn in Codex Desktop." },
-    { "Name": "Codex Token Monitor", "Tooltip": "Display session token usage and context window percentage." },
-    { "Name": "Codex Reasoning Effort", "Tooltip": "Display and cycle model reasoning effort (Low/Med/High)." },
-    { "Name": "Codex Prompt: Test & Fix", "Tooltip": "Prompt Codex to run tests and fix errors." },
-    { "Name": "Codex Prompt: Code Review", "Tooltip": "Prompt Codex to review changes and security risks." },
-    { "Name": "Codex Prompt: Commit Msg", "Tooltip": "Prompt Codex to generate conventional commit messages." }
+    {
+      "Name": "Codex Task 1",
+      "Tooltip": "Open recent Codex task slot 1 and show its live status."
+    },
+    {
+      "Name": "Codex Task 2",
+      "Tooltip": "Open recent Codex task slot 2 and show its live status."
+    },
+    {
+      "Name": "Codex Task 3",
+      "Tooltip": "Open recent Codex task slot 3 and show its live status."
+    },
+    {
+      "Name": "Codex Task 4",
+      "Tooltip": "Open recent Codex task slot 4 and show its live status."
+    },
+    {
+      "Name": "Codex Task 5",
+      "Tooltip": "Open recent Codex task slot 5 and show its live status."
+    },
+    {
+      "Name": "Codex Fast",
+      "Tooltip": "Toggle Fast mode for the active Codex task."
+    },
+    {
+      "Name": "Codex Usage",
+      "Tooltip": "Show the remaining Codex usage allowance and focus Codex when pressed."
+    },
+    {
+      "Name": "Codex 5H Usage",
+      "Tooltip": "Display remaining 5-hour Codex usage allowance and reset countdown."
+    },
+    {
+      "Name": "Codex Weekly Usage",
+      "Tooltip": "Display remaining weekly Codex usage allowance and reset countdown."
+    },
+    {
+      "Name": "Pin Codex Task",
+      "Tooltip": "Pin or unpin the active Codex task."
+    },
+    {
+      "Name": "New Codex Task",
+      "Tooltip": "Create a new Codex task."
+    },
+    {
+      "Name": "Latest Task & Scroll",
+      "Tooltip": "Press to open the latest Codex task. Turn left to scroll up and right to scroll down."
+    },
+    {
+      "Name": "Fork Codex Task",
+      "Tooltip": "Fork the active Codex task into a new task."
+    },
+    {
+      "Name": "Steer Codex",
+      "Tooltip": "Send the current composer text as steering input to the running task."
+    },
+    {
+      "Name": "Codex Microphone",
+      "Tooltip": "Toggle the Codex microphone action."
+    },
+    {
+      "Name": "Submit to Codex",
+      "Tooltip": "Submit or queue the current Codex composer text."
+    },
+    {
+      "Name": "Codex Task Monitor",
+      "Tooltip": "Show active task type (WORK/CODEX) and model. Cycles when multiple tasks run, or shows the latest task model."
+    },
+    {
+      "Name": "Codex Approve",
+      "Tooltip": "Approve or execute pending Codex tool confirmations."
+    },
+    {
+      "Name": "Codex Deny",
+      "Tooltip": "Deny or cancel pending Codex tool confirmations."
+    },
+    {
+      "Name": "Codex Attention Alert",
+      "Tooltip": "Show pending attention/error task count and jump to the task."
+    },
+    {
+      "Name": "Codex Stop Generation",
+      "Tooltip": "Instantly cancel or stop the active turn in Codex Desktop."
+    },
+    {
+      "Name": "Codex Token Monitor",
+      "Tooltip": "Display session token usage and context window percentage."
+    },
+    {
+      "Name": "Codex Reasoning Effort",
+      "Tooltip": "Cycle through the reasoning efforts supported by the current model. Wraps to the first level."
+    },
+    {
+      "Name": "Codex Prompt: Test & Fix",
+      "Tooltip": "Prompt Codex to run tests and fix errors."
+    },
+    {
+      "Name": "Codex Prompt: Code Review",
+      "Tooltip": "Prompt Codex to review changes and security risks."
+    },
+    {
+      "Name": "Codex Prompt: Commit Msg",
+      "Tooltip": "Prompt Codex to generate conventional commit messages."
+    },
+    {
+      "Name": "Codex Task 6",
+      "Tooltip": "Open recent Codex task slot 6."
+    },
+    {
+      "Name": "Codex Goal",
+      "Tooltip": "Pause or resume an existing goal in the selected task."
+    },
+    {
+      "Name": "Codex Subagents",
+      "Tooltip": "Show the reported subagent summary and open task agents."
+    },
+    {
+      "Name": "Codex Select Model",
+      "Tooltip": "Cycle to the next available model for the selected task. Wraps to the first model."
+    },
+    {
+      "Name": "Codex View Plan",
+      "Tooltip": "Open the selected task’s existing plan in the Codex side panel when its native control is available."
+    }
   ],
   "Localization": {
     "BridgeSetup": "Codex Bridge Setup",

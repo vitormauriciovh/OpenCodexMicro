@@ -1,10 +1,10 @@
 # Configuration
 
-The OpenCodexMicro layout is configured entirely inside Ulanzi Studio. Open the **AI** category (for Codex Micro and Antigravity) or the **Music** category (for Spotify) and drag actions onto the desired keypad and encoder slots.
+The OpenCodexMicro layout is configured entirely inside Ulanzi Studio. Open the **AI** category (for Codex App and Antigravity) or the **Music** category (for Spotify) and drag actions onto the desired keypad and encoder slots.
 
 ---
 
-## 1. Codex Micro Actions (`com.ulanzi.ulanzistudio.codexmicro`)
+## 1. Codex App Actions (`com.ulanzi.ulanzistudio.codexmicro`)
 
 | Action | Type | Behavior |
 | --- | --- | --- |
@@ -15,7 +15,8 @@ The OpenCodexMicro layout is configured entirely inside Ulanzi Studio. Open the 
 | **Codex Weekly Usage** | Keypad | Display remaining weekly Codex usage ring and live countdown to reset. |
 | **Codex Task Monitor** | Keypad | Show active task type and model. Cycles across tasks or mirrors the current task. |
 | **Codex Token Monitor** | Keypad | Display session token usage and context window percentage. |
-| **Codex Reasoning Effort** | Keypad | Display and cycle reasoning effort level (`Low` / `Med` / `High`). |
+| **Codex Select Model** | Keypad | Advance to the next available model in the selected task; after the last model, return to the first. |
+| **Codex Reasoning Effort** | Keypad | Advance through the current model’s supported effort levels and wrap to the first; display the selected level. |
 | **Codex Approve** | Keypad | One-touch approve pending command or tool confirmation in the active task. |
 | **Codex Deny** | Keypad | One-touch reject or cancel pending tool execution in the active task. |
 | **Codex Attention Alert** | Keypad | Displays the count of tasks requiring attention/intervention; press to jump directly to the pending task. |
@@ -30,6 +31,27 @@ The OpenCodexMicro layout is configured entirely inside Ulanzi Studio. Open the 
 | **Codex Prompt: Code Review** | Keypad | One-tap prompt asking Codex to review recent code changes for bugs and security risks. |
 | **Codex Prompt: Commit Msg** | Keypad | One-tap prompt asking Codex to generate conventional git commit messages. |
 | **Latest Task & Scroll** | Encoder | Press to open task 1; turn left to scroll up and right to scroll down. |
+
+Model changes retain the current effort when the next model supports it; otherwise
+they use that model’s default effort. The keys use the native picker’s available
+options and disabled states, verify the selected task, and confirm the new value
+without opening the menu. Model and effort presses are processed in order.
+
+### Approve and Reject indicators
+
+**Approve** and **Codex Deny** (shown as `REJECT / Approval / DENY REQUEST` on
+the key) send the native approve and reject controls for the selected Codex
+task. `Approval` is the Reject key's subtitle, not another action. These keys
+do not automatically open a task requiring attention; use a task key or
+**Codex Attention Alert** to open it first. **Codex Stop Generation** is the
+separate control for stopping the active turn.
+
+The Approve key shows `OFFLINE` without a connection, `NO PENDING` when no
+attention is reported, and green `ACTION READY` when any reported task needs
+attention or has an error. This is a general attention indicator, not proof
+of an approval request in the selected task. The Reject key currently reflects
+connection status only. Both keys still send their control when pressed;
+the native Codex handler determines whether a pending request can be handled.
 
 ---
 
@@ -98,4 +120,3 @@ The OpenCodexMicro layout is configured entirely inside Ulanzi Studio. Open the 
 - **Antigravity**: Ensure the LaunchAgent `io.openantigravitymicro.bridge` is running on port `17374`.
 - **macOS Accessibility**: Grant permission to Ulanzi Studio in **System Settings > Privacy & Security > Accessibility** for rotary encoder scroll emulation.
 - **Restarting Ulanzi Studio**: Restart Ulanzi Studio whenever new plugins are copied or updated.
-

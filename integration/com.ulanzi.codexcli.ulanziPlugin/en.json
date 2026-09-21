@@ -1,33 +1,33 @@
 {
-  "Description": "Turn Ulanzi D200 Series into a dedicated Codex CLI control surface through Ulanzi Studio.",
+  "Description": "Select and navigate Codex CLI tasks through app-server: approvals, stop, new tasks, forks, saved prompts, steering, prompt shortcuts, next-prompt model settings, native goals, tokens and account usage. Requires a compatible app-server. Does not type into terminals.",
   "Name": "Codex CLI",
   "com.ulanzi.ulanzistudio.codexcli.task1": {
     "Name": "Codex CLI Session 1",
-    "Tooltip": "Open recent Codex CLI session slot 1 and show its live status."
+    "Tooltip": "Select and subscribe to this Codex CLI session for subsequent deck actions."
   },
   "com.ulanzi.ulanzistudio.codexcli.task2": {
     "Name": "Codex CLI Session 2",
-    "Tooltip": "Open recent Codex CLI session slot 2 and show its live status."
+    "Tooltip": "Select and subscribe to this Codex CLI session for subsequent deck actions."
   },
   "com.ulanzi.ulanzistudio.codexcli.task3": {
     "Name": "Codex CLI Session 3",
-    "Tooltip": "Open recent Codex CLI session slot 3 and show its live status."
+    "Tooltip": "Select and subscribe to this Codex CLI session for subsequent deck actions."
   },
   "com.ulanzi.ulanzistudio.codexcli.task4": {
     "Name": "Codex CLI Session 4",
-    "Tooltip": "Open recent Codex CLI session slot 4 and show its live status."
+    "Tooltip": "Select and subscribe to this Codex CLI session for subsequent deck actions."
   },
   "com.ulanzi.ulanzistudio.codexcli.task5": {
     "Name": "Codex CLI Session 5",
-    "Tooltip": "Open recent Codex CLI session slot 5 and show its live status."
+    "Tooltip": "Select and subscribe to this Codex CLI session for subsequent deck actions."
   },
   "com.ulanzi.ulanzistudio.codexcli.approve": {
     "Name": "Codex CLI Approve",
     "Tooltip": "Approve the pending command or patch execution in Codex CLI."
   },
   "com.ulanzi.ulanzistudio.codexcli.reject": {
-    "Name": "Codex CLI Cancel",
-    "Tooltip": "Reject approval or stop execution in Codex CLI."
+    "Name": "Codex CLI Reject",
+    "Tooltip": "Reject the selected task’s pending approval. Does not stop the task if the request was already resolved."
   },
   "com.ulanzi.ulanzistudio.codexcli.status": {
     "Name": "Codex CLI Status",
@@ -38,11 +38,95 @@
     "Tooltip": "Monitor token consumption across Codex CLI turns."
   },
   "com.ulanzi.ulanzistudio.codexcli.queue": {
-    "Name": "Codex CLI Queue Prompt",
-    "Tooltip": "Queue a prompt to continue or review the current session."
+    "Name": "Codex CLI Continue",
+    "Tooltip": "Send Continue to the selected thread through app-server."
   },
   "com.ulanzi.ulanzistudio.codexcli.resume": {
-    "Name": "Codex CLI Resume Last",
-    "Tooltip": "Resume the latest Codex CLI session in terminal."
+    "Name": "Codex CLI Resume Selected",
+    "Tooltip": "Resume and subscribe to the selected session through app-server."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.new": {
+    "Name": "Codex CLI New Task",
+    "Tooltip": "Create and select a new task in the selected task’s project."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.fork": {
+    "Name": "Codex CLI Fork Task",
+    "Tooltip": "Fork and select the selected task through app-server."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.stop": {
+    "Name": "Codex CLI Stop",
+    "Tooltip": "Stop the selected task’s active turn without responding to approvals."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.attention": {
+    "Name": "Codex CLI Attention",
+    "Tooltip": "Cycle through tasks with pending approval requests."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.submit": {
+    "Name": "Codex CLI Submit Prompt",
+    "Tooltip": "Submit the prompt saved for the selected task in this plugin’s inspector."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.steer": {
+    "Name": "Codex CLI Steer Task",
+    "Tooltip": "Send the saved prompt to the selected task’s active turn."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.prompt_test": {
+    "Name": "Codex CLI Test and Fix",
+    "Tooltip": "Ask the selected task to run tests and fix failures."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.prompt_review": {
+    "Name": "Codex CLI Review Changes",
+    "Tooltip": "Ask the selected task to review pending changes."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.prompt_commit": {
+    "Name": "Codex CLI Commit Message",
+    "Tooltip": "Ask the selected task for a Conventional Commit message; does not commit or push."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.usage": {
+    "Name": "Codex CLI Usage",
+    "Tooltip": "Show measured account allowance from app-server."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.usage5h": {
+    "Name": "Codex CLI 5h Usage",
+    "Tooltip": "Show the remaining 5-hour allowance and reset time."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.usageweekly": {
+    "Name": "Codex CLI Weekly Usage",
+    "Tooltip": "Show the remaining weekly allowance and reset time."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.taskmonitor": {
+    "Name": "Codex CLI Task Monitor",
+    "Tooltip": "Show the selected task’s status, elapsed time, and reported model."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.model": {
+    "Name": "Codex CLI Model",
+    "Tooltip": "Cycle available models for the next prompt sent from the deck."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.reasoning": {
+    "Name": "Codex CLI Reasoning",
+    "Tooltip": "Cycle the selected model’s supported reasoning levels for the next deck prompt."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.fast": {
+    "Name": "Codex CLI Fast Mode",
+    "Tooltip": "Toggle Fast for the next deck prompt when the selected model supports it. Fast uses more allowance."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.task6": {
+    "Name": "Codex CLI Session 6",
+    "Tooltip": "Select and subscribe to this Codex CLI session for subsequent deck actions."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.navigate": {
+    "Name": "Codex CLI Navigate Tasks",
+    "Tooltip": "Rotate to select recent tasks. Press to select the next task; older tasks load as needed."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.goal": {
+    "Name": "Codex CLI Goal",
+    "Tooltip": "Pause or resume an existing active or paused goal. Create an objective explicitly in the inspector."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.subagents": {
+    "Name": "Codex CLI Subagents",
+    "Tooltip": "Read the selected task’s non-archived direct child tasks from app-server. Press to refresh; unknown is shown for incomplete results."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.plan": {
+    "Name": "Codex CLI Plan",
+    "Tooltip": "Load the selected task’s latest saved plan. View the plan and live checklist in the plugin inspector; does not modify the task."
   }
 }

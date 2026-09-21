@@ -17,7 +17,7 @@ OpenCodexMicro connects developer tools and media controls to your Ulanzi D200 k
 ### Codex Desktop Integration
 | Feature | Behavior |
 | --- | --- |
-| **Five Live Task Cards** | Display Codex recent tasks with model tags (`5.6 TERRA`, `Claude 3.7`), live elapsed timers, state badges (`WORKING`, `COMPLETED`, `ATTENTION`, `IDLE`), and conversation titles. |
+| **Six Live Task Cards** | Display Codex recent tasks with model tags (`5.6 TERRA`, `Claude 3.7`), live elapsed timers, state badges (`WORKING`, `COMPLETED`, `ATTENTION`, `IDLE`), and conversation titles. |
 | **Dedicated 5H & Weekly Gauges** | Large circular progress rings showing remaining 5-Hour and Weekly allowances with live countdown to reset (`RESET 2H 15M`, `RESET 5H`, `RESET 7D`). |
 | **Task & Token Monitor** | Monitor active task type, model reasoning effort (Low/Med/High), and token / context window consumption. |
 | **Agent Controls & Approvals** | Instant `APPROVE` / `PROCEED`, `CANCEL` / `DENY`, and Attention alert notification counters. |
@@ -27,7 +27,7 @@ OpenCodexMicro connects developer tools and media controls to your Ulanzi D200 k
 ### Antigravity AI Agent Integration
 | Feature | Behavior |
 | --- | --- |
-| **Five Live Session Cards** | Display active Antigravity sessions, execution states, model indicators, and elapsed timers. |
+| **Six Live Session Cards** | Display active Antigravity sessions, execution states, model indicators, and elapsed timers. |
 | **Agent Status HUD** | Real-time agent status HUD (`PLANNING`, `EXECUTING`, `WAITING`, `IDLE`) with session title and live timer. |
 | **One-Touch Approvals** | One-touch `PROCEED` (Approve Plan / Tool Calls) and `CANCEL` (Stop execution) keys. |
 | **Subagents & Token Monitor** | Live subagent counter, cumulative session token tracker, and context window gauge. |
@@ -44,7 +44,7 @@ OpenCodexMicro connects developer tools and media controls to your Ulanzi D200 k
 ### Security & Transport
 | Transport | Security Model |
 | --- | --- |
-| **Loopback-only Endpoints** | Codex Bridge (`127.0.0.1:17373` & CDP `127.0.0.1:9222`) and Antigravity Bridge (`127.0.0.1:17374` & WS `127.0.0.1:17375`) bind strictly to localhost. |
+| **Loopback-only Endpoints** | Codex Bridge (`127.0.0.1:17373` & CDP `127.0.0.1:9222`) and Antigravity Bridge (`127.0.0.1:17374`, including `/events` WebSocket) bind strictly to localhost. |
 
 ---
 
@@ -78,9 +78,9 @@ npm run setup:all
 
 ### 2. Selective Installation
 
-#### Codex Micro Plugin & Bridge
+#### Codex App Plugin & Bridge
 ```bash
-# Install the Codex Micro plugin in Ulanzi Studio
+# Install the Codex App plugin in Ulanzi Studio
 npm run install:plugin
 
 # Build and register the Codex Bridge LaunchAgent (~/Applications/Codex Bridge.app)
@@ -115,20 +115,20 @@ open ~/Applications/Codex\ Bridge.app
 
 Verify the Codex Bridge health and state:
 ```bash
-curl http://127.0.0.1:17373/health
-curl http://127.0.0.1:17373/state
+node scripts/bridge-status.mjs codex health
+node scripts/bridge-status.mjs codex state
 ```
 
 #### Antigravity Bridge
 The Antigravity Bridge runs automatically via its LaunchAgent (`io.openantigravitymicro.bridge`). Verify with:
 ```bash
-curl http://127.0.0.1:17374/health
-curl http://127.0.0.1:17374/state
+node scripts/bridge-status.mjs antigravity health
+node scripts/bridge-status.mjs antigravity state
 ```
 
 #### In Ulanzi Studio
 1. Launch Ulanzi Studio.
-2. In the action list, you will find the **AI** category (with **Codex Micro** and **Antigravity** actions) and the **Music** category (with **Spotify Music Picker** actions).
+2. In the action list, you will find the **AI** category (with **Codex App** and **Antigravity** actions) and the **Music** category (with **Spotify Music Picker** actions).
 3. Drag the actions onto the desired keys on your Ulanzi D200 canvas.
 
 ---
@@ -139,7 +139,7 @@ When an LLM or coding agent performs the setup:
 
 1. Read [AGENTS.md](AGENTS.md) and inspect the installed plugin manifests under `~/Library/Application Support/Ulanzi/UlanziDeck/Plugins/`.
 2. Check for the target plugin UUIDs:
-   - Codex Micro: `com.ulanzi.ulanzistudio.codexmicro`
+   - Codex App: `com.ulanzi.ulanzistudio.codexmicro`
    - Antigravity: `com.ulanzi.ulanzistudio.antigravity`
    - Spotify: `com.ulanzi.ulanzistudio.spotify`
 3. If installing or repairing, follow [`skills/install-ulanzi-studio-plugin/SKILL.md`](skills/install-ulanzi-studio-plugin/SKILL.md) and [`skills/setup-codex-bridge/SKILL.md`](skills/setup-codex-bridge/SKILL.md).

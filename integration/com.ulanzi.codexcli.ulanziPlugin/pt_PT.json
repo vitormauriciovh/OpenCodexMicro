@@ -1,48 +1,132 @@
 {
-  "Description": "Turn Ulanzi D200 Series into a dedicated Codex CLI control surface through Ulanzi Studio.",
+  "Description": "Controle tarefas do Codex CLI através do app-server local: sessões, aprovações, instruções, objetivos e utilização. Não escreve nem muda o foco de terminais.",
   "Name": "Codex CLI",
   "com.ulanzi.ulanzistudio.codexcli.task1": {
-    "Name": "Codex CLI Session 1",
-    "Tooltip": "Open recent Codex CLI session slot 1 and show its live status."
+    "Name": "Codex CLI Sessão 1",
+    "Tooltip": "Selecionar esta sessão para as ações seguintes do dispositivo."
   },
   "com.ulanzi.ulanzistudio.codexcli.task2": {
-    "Name": "Codex CLI Session 2",
-    "Tooltip": "Open recent Codex CLI session slot 2 and show its live status."
+    "Name": "Codex CLI Sessão 2",
+    "Tooltip": "Selecionar esta sessão para as ações seguintes do dispositivo."
   },
   "com.ulanzi.ulanzistudio.codexcli.task3": {
-    "Name": "Codex CLI Session 3",
-    "Tooltip": "Open recent Codex CLI session slot 3 and show its live status."
+    "Name": "Codex CLI Sessão 3",
+    "Tooltip": "Selecionar esta sessão para as ações seguintes do dispositivo."
   },
   "com.ulanzi.ulanzistudio.codexcli.task4": {
-    "Name": "Codex CLI Session 4",
-    "Tooltip": "Open recent Codex CLI session slot 4 and show its live status."
+    "Name": "Codex CLI Sessão 4",
+    "Tooltip": "Selecionar esta sessão para as ações seguintes do dispositivo."
   },
   "com.ulanzi.ulanzistudio.codexcli.task5": {
-    "Name": "Codex CLI Session 5",
-    "Tooltip": "Open recent Codex CLI session slot 5 and show its live status."
+    "Name": "Codex CLI Sessão 5",
+    "Tooltip": "Selecionar esta sessão para as ações seguintes do dispositivo."
   },
   "com.ulanzi.ulanzistudio.codexcli.approve": {
-    "Name": "Codex CLI Approve",
-    "Tooltip": "Approve the pending command or patch execution in Codex CLI."
+    "Name": "Codex CLI Aprovar",
+    "Tooltip": "Aprovar o pedido pendente da tarefa selecionada."
   },
   "com.ulanzi.ulanzistudio.codexcli.reject": {
-    "Name": "Codex CLI Cancel",
-    "Tooltip": "Reject approval or stop execution in Codex CLI."
+    "Name": "Codex CLI Rejeitar",
+    "Tooltip": "Rejeitar a aprovação pendente da tarefa selecionada. Não para a tarefa se o pedido já tiver sido resolvido."
   },
   "com.ulanzi.ulanzistudio.codexcli.status": {
-    "Name": "Codex CLI Status",
-    "Tooltip": "Real-time Codex CLI agent status HUD (WORKING, ATTENTION, IDLE)."
+    "Name": "Codex CLI Estado",
+    "Tooltip": "Mostrar o estado comunicado pela tarefa selecionada."
   },
   "com.ulanzi.ulanzistudio.codexcli.tokens": {
     "Name": "Codex CLI Tokens",
-    "Tooltip": "Monitor token consumption across Codex CLI turns."
+    "Tooltip": "Mostrar os tokens comunicados e a utilização do contexto da tarefa selecionada."
   },
   "com.ulanzi.ulanzistudio.codexcli.queue": {
-    "Name": "Codex CLI Queue Prompt",
-    "Tooltip": "Queue a prompt to continue or review the current session."
+    "Name": "Codex CLI Continuar",
+    "Tooltip": "Enviar a instrução «continue» à tarefa selecionada através do app-server."
   },
   "com.ulanzi.ulanzistudio.codexcli.resume": {
-    "Name": "Codex CLI Resume Last",
-    "Tooltip": "Resume the latest Codex CLI session in terminal."
+    "Name": "Codex CLI Retomar seleção",
+    "Tooltip": "Retomar e acompanhar a sessão selecionada através do app-server."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.new": {
+    "Name": "Codex CLI Nova tarefa",
+    "Tooltip": "Criar e selecionar uma tarefa no projeto da tarefa selecionada."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.fork": {
+    "Name": "Codex CLI Ramificar tarefa",
+    "Tooltip": "Criar e selecionar uma ramificação da tarefa selecionada."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.stop": {
+    "Name": "Codex CLI Parar",
+    "Tooltip": "Parar a execução atual da tarefa selecionada sem responder a aprovações."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.attention": {
+    "Name": "Codex CLI Atenção",
+    "Tooltip": "Percorrer as tarefas com pedidos de aprovação pendentes."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.submit": {
+    "Name": "Codex CLI Enviar instrução",
+    "Tooltip": "Enviar a instrução guardada para esta tarefa no inspetor do plugin."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.steer": {
+    "Name": "Codex CLI Orientar tarefa",
+    "Tooltip": "Enviar a instrução guardada à execução atual da tarefa selecionada."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.prompt_test": {
+    "Name": "Codex CLI Testar e corrigir",
+    "Tooltip": "Pedir à tarefa selecionada para executar testes e corrigir falhas."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.prompt_review": {
+    "Name": "Codex CLI Rever alterações",
+    "Tooltip": "Pedir à tarefa selecionada para rever as alterações pendentes."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.prompt_commit": {
+    "Name": "Codex CLI Mensagem de commit",
+    "Tooltip": "Pedir uma mensagem Conventional Commit; não efetua commit nem push."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.usage": {
+    "Name": "Codex CLI Utilização",
+    "Tooltip": "Mostrar a quota da conta comunicada pelo app-server."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.usage5h": {
+    "Name": "Codex CLI Utilização de 5 h",
+    "Tooltip": "Mostrar a quota restante de cinco horas e a hora de reposição."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.usageweekly": {
+    "Name": "Codex CLI Utilização semanal",
+    "Tooltip": "Mostrar a quota semanal restante e a hora de reposição."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.taskmonitor": {
+    "Name": "Codex CLI Monitor de tarefa",
+    "Tooltip": "Mostrar estado, tempo decorrido e modelo comunicado da tarefa selecionada."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.model": {
+    "Name": "Codex CLI Modelo",
+    "Tooltip": "Percorrer os modelos disponíveis para a próxima instrução enviada pelo dispositivo."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.reasoning": {
+    "Name": "Codex CLI Raciocínio",
+    "Tooltip": "Percorrer os níveis de raciocínio suportados para a próxima instrução enviada pelo dispositivo."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.fast": {
+    "Name": "Codex CLI Modo rápido",
+    "Tooltip": "Alternar o modo rápido para a próxima instrução enviada pelo dispositivo, se suportado. Consome mais quota."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.task6": {
+    "Name": "Codex CLI Sessão 6",
+    "Tooltip": "Selecionar esta sessão para as ações seguintes do dispositivo."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.navigate": {
+    "Name": "Codex CLI Navegar nas tarefas",
+    "Tooltip": "Rodar para selecionar tarefas recentes; premir para a seguinte. As mais antigas são carregadas conforme necessário."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.goal": {
+    "Name": "Codex CLI Objetivo",
+    "Tooltip": "Pausar ou retomar um objetivo ativo ou pausado. Criar explicitamente o objetivo no inspetor."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.subagents": {
+    "Name": "Codex CLI Subagentes",
+    "Tooltip": "Consultar as tarefas filhas diretas não arquivadas. Premir para atualizar; contagens incompletas aparecem como desconhecidas."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.plan": {
+    "Name": "Codex CLI Plano",
+    "Tooltip": "Carregar o último plano guardado da tarefa selecionada. Ver o plano e a lista de passos em tempo real no inspetor; não altera a tarefa."
   }
 }

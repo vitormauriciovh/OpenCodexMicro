@@ -1,3 +1,4 @@
+import "./helpers/env.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { access, chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
@@ -57,14 +58,14 @@ test("bundled installer creates and launches Codex Bridge without a repository p
     assert.equal(installed.installed, true);
     assert.equal(installed.installedVersion, "9.8.7");
     await access(join(home, "Applications", "Codex Bridge.app", "Contents", "MacOS", "Codex Bridge"));
-    await access(join(home, "Library", "Application Support", "OpenCodexMicro", "bridge.mjs"));
+    await access(join(home, "Library", "Application Support", "OpenCodexMicro", "codex", "bridge.mjs"));
     const plist = await readFile(
       join(home, "Library", "LaunchAgents", "io.opencodexmicro.bridge.plist"),
       "utf8"
     );
     assert.match(plist, new RegExp(resolvedSystemNode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     const metadata = JSON.parse(await readFile(
-      join(home, "Library", "Application Support", "OpenCodexMicro", "install.json"),
+      join(home, "Library", "Application Support", "OpenCodexMicro", "codex", "install.json"),
       "utf8"
     ));
     assert.equal(metadata.nodeExecutable, resolvedSystemNode);
@@ -110,4 +111,18 @@ test("bundled installer falls back when the system Node is older than version 20
   } finally {
     await rm(home, { recursive: true, force: true });
   }
+});
+
+test("uninstall preserves sibling runtimes and services, including legacy layout", async () => {
+  const home = await mkdtemp(join(tmpdir(), "bridge-coexist-"));
+  try {
+    const root = join(home, "Library/Application Support/OpenCodexMicro");
+    await mkdir(join(root, "antigravity"), { recursive: true });
+    await writeFile(join(root, "bridge-codex-cli.mjs"), "legacy CLI");
+    await writeFile(join(root, "antigravity/bridge-antigravity.mjs"), "sibling");
+    const installer = createBridgeInstaller({ pluginRoot, bridgeUrl: "http://127.0.0.1:1", version: "test", home, uid: 501, platform: "darwin", execute: async () => ({ stdout: "" }) });
+    await installer.uninstall();
+    assert.equal(await readFile(join(root, "bridge-codex-cli.mjs"), "utf8"), "legacy CLI");
+    assert.equal(await readFile(join(root, "antigravity/bridge-antigravity.mjs"), "utf8"), "sibling");
+  } finally { await rm(home, { recursive: true, force: true }); }
 });

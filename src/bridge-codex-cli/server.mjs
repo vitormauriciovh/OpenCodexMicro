@@ -1,3 +1,6 @@
+import { secureHandler, allowedRequest, readJson } from "../shared/local-api.mjs";
+import { dispatchCliAction, cliActions } from "./actions.mjs";
+import { stateDigest } from "../shared/plugin-runtime.mjs";
 import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
 import { CodexCliClient } from "./app-server-client.mjs";
@@ -7,7 +10,7 @@ const PORT = Number(process.env.CODEX_CLI_BRIDGE_PORT || 17376);
 const REFRESH_MS = 500;
 
 const client = new CodexCliClient();
-client.start();
+
 
 let cached = {
   connected: false,
@@ -30,7 +33,7 @@ const wss = new WebSocketServer({ noServer: true });
 const wsClients = new Set();
 
 function broadcastState() {
-  const digest = `${cached.connected}:${cached.error}:${cached.agentStatus}:${cached.pendingAttentionCount}:${cached.tokenUsage?.totalTokens}:${cached.activeTasks?.length}:${cached.slots?.map((s) => `${s.id}-${s.status}-${s.selected}`).join(",")}`;
+  const digest = stateDigest(cached);
   if (digest === lastBroadcastDigest && wsClients.size > 0) return;
   lastBroadcastDigest = digest;
   const payload = JSON.stringify(cached);
@@ -55,7 +58,7 @@ async function refresh() {
       const snapshot = await client.snapshot();
       cached = {
         ...snapshot,
-        error: null,
+        error: snapshot.error || null,
         updatedAt: Date.now()
       };
       broadcastState();
@@ -78,26 +81,15 @@ setInterval(refresh, REFRESH_MS).unref();
 function json(response, status, body) {
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "no-store",
-    "Access-Control-Allow-Origin": "*"
+    "Cache-Control": "no-store"
   });
   response.end(`${JSON.stringify(body)}\n`);
 }
 
-async function readBodyJson(request) {
-  return new Promise((resolve) => {
-    let data = "";
-    request.on("data", chunk => { data += chunk; });
-    request.on("end", () => {
-      try { resolve(JSON.parse(data || "{}")); }
-      catch { resolve({}); }
-    });
-    request.on("error", () => resolve({}));
-  });
-}
-
-export const server = createServer(async (request, response) => {
+export const server = createServer(secureHandler("codex-cli", PORT, async (request, response) => {
   const url = new URL(request.url || "/", `http://${HOST}:${PORT}`);
+
+  const body = request.method === "POST" ? await readJson(request) : {};
 
   if (request.method === "GET" && url.pathname === "/health") {
     await refresh();
@@ -122,67 +114,40 @@ export const server = createServer(async (request, response) => {
     }
   }
 
-  if (request.method === "POST" && (url.pathname === "/action/approve" || url.pathname === "/action/proceed")) {
-    try {
-      const result = await client.approveLatest();
-      return json(response, 200, { ok: true, action: "approve", result });
-    } catch (error) {
-      return json(response, 500, { ok: false, error: error.message });
-    }
+  if (request.method === "POST" && url.pathname === "/draft") {
+    const result = client.setDraft(body.text, body.threadId);
+    await refresh();
+    return json(response, 200, result);
   }
-
-  if (request.method === "POST" && (url.pathname === "/action/reject" || url.pathname === "/action/cancel" || url.pathname === "/action/stop")) {
-    try {
-      const result = await client.rejectLatest();
-      return json(response, 200, { ok: true, action: "reject", result });
-    } catch (error) {
-      return json(response, 500, { ok: false, error: error.message });
-    }
+  if (request.method === "POST" && url.pathname === "/goal") {
+    const result = await client.createGoal(body.objective, body.threadId);
+    await refresh();
+    return json(response, 200, result);
   }
-
-  if (request.method === "POST" && url.pathname === "/action/resume") {
-    try {
-      const result = await client.resumeLast();
-      return json(response, 200, { ok: true, action: "resume", result });
-    } catch (error) {
-      return json(response, 500, { ok: false, error: error.message });
-    }
-  }
-
-  if (request.method === "POST" && url.pathname === "/action/queue") {
-    try {
-      const body = await readBodyJson(request);
-      const prompt = body.prompt || body.message || "continue";
-      const result = await client.queuePrompt(prompt);
-      return json(response, 200, { ok: true, action: "queue", result });
-    } catch (error) {
-      return json(response, 500, { ok: false, error: error.message });
-    }
-  }
-
-  if (request.method === "POST" && url.pathname === "/action/tokens") {
-    try {
-      await client.focusTerminal();
-      return json(response, 200, { ok: true, action: "tokens" });
-    } catch (error) {
-      return json(response, 500, { ok: false, error: error.message });
-    }
+  const action = url.pathname.startsWith("/action/") ? url.pathname.slice(8) : null;
+  if (request.method === "POST" && cliActions.includes(action)) {
+    const result = await dispatchCliAction(client, action, body);
+    await refresh();
+    return json(response, 200, { ok: true, action, result });
   }
 
   const matchTask = request.method === "POST" && url.pathname.match(/^\/task\/([0-5])\/click$/);
   if (matchTask) {
     try {
-      await client.focusTerminal();
-      return json(response, 200, { ok: true });
+      if (typeof body.threadId !== "string") throw new Error("Session ID is required");
+      const result = await client.selectThread(body.threadId);
+      await refresh();
+      return json(response, 200, result);
     } catch (error) {
       return json(response, 500, { ok: false, error: error.message });
     }
   }
 
   return json(response, 404, { ok: false, error: "Not found" });
-});
+}));
 
 server.on("upgrade", (request, socket, head) => {
+  if (!allowedRequest(request, "codex-cli", PORT)) { socket.destroy(); return; }
   const { pathname } = new URL(request.url || "/", `http://${HOST}:${PORT}`);
   if (pathname === "/events" || pathname === "/ws") {
     wss.handleUpgrade(request, socket, head, (ws) => {
@@ -194,8 +159,11 @@ server.on("upgrade", (request, socket, head) => {
 });
 
 if (process.argv[1] && (process.argv[1].endsWith("server.mjs") || process.argv[1].endsWith("bridge-codex-cli.mjs"))) {
+  client.start();
   server.listen(PORT, HOST, () => {
     console.log(`Codex CLI Bridge listening on http://${HOST}:${PORT}`);
     refresh();
   });
 }
+
+for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => { client.stop(); wss.close(); server.close(() => process.exit(0)); });

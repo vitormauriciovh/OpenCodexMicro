@@ -1,34 +1,132 @@
 {
-  "Name": "Codex Micro",
+  "Name": "Codex App",
   "Overview": "Controle tarefas e ações do Codex Desktop com a Ulanzi D200 Series no Ulanzi Studio.",
-  "Description": "Transforme a Ulanzi D200 Series numa superfície de controlo dedicada ao Codex Desktop através do Ulanzi Studio.\n\nFUNCIONALIDADES\n- Mostra cinco tarefas recentes do Codex com estado em tempo real e abre exatamente a tarefa selecionada.\n- Disponibiliza as ações Fast, Usage, Pin, New, Fork, Steer, Mic e Submit.\n- Use o Encoder Latest Task & Scroll para abrir a task1 e deslocar o Codex.\n- Instale, repare, inicie e verifique o Codex Bridge na página de configuração de cada Action.\n- Mantém a comunicação local através da Codex Bridge.app e de endpoints apenas de loopback.\n\nAMBIENTE DE INSTALAÇÃO\n- macOS 13 ou posterior\n- Codex Desktop\n- Ulanzi Studio 3.0.1 ou posterior\n- Ulanzi D200 Series ligada no Ulanzi Studio\n- Node.js 20 ou posterior apenas para configuração manual pelo repositório\n\nINSTALAÇÃO COM LLM / AGENT\nIntroduza no seu Agent:\nInstala o plugin do Ulanzi Studio por mim: https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation\n\nINSTALAÇÃO MANUAL\n1. Clone https://github.com/UlanziTechnology/OpenCodexMicro e abra a pasta do repositório.\n2. Feche o Ulanzi Studio.\n3. Execute: npm install\n4. Execute: npm run install:plugin\n5. Execute: npm run setup\n6. Reabra o Ulanzi Studio, feche o Codex Desktop e inicie ~/Applications/Codex Bridge.app.\n7. Adicione as ações Codex Micro às teclas pretendidas no Ulanzi Studio.\n8. Selecione uma Action e verifique a instalação, o serviço e o CDP na página do Codex Bridge.\n\nIMPORTANTE\nAo usar o Codex Micro, inicie sempre o Codex através de ~/Applications/Codex Bridge.app. Não abra diretamente o Codex Desktop.\nComando de início: open ~/Applications/Codex\\ Bridge.app",
+  "Description": "Transforme a Ulanzi D200 Series numa superfície de controlo dedicada ao Codex Desktop através do Ulanzi Studio.\n\nFUNCIONALIDADES\n- Mostra seis tarefas recentes do Codex com estado em tempo real e abre exatamente a tarefa selecionada.\n- Disponibiliza as ações Fast, Usage, Pin, New, Fork, Steer, Mic e Submit.\n- Use o Encoder Latest Task & Scroll para abrir a task1 e deslocar o Codex.\n- Instale, repare, inicie e verifique o Codex Bridge na página de configuração de cada Action.\n- Mantém a comunicação local através da Codex Bridge.app e de endpoints apenas de loopback.\n\nAMBIENTE DE INSTALAÇÃO\n- macOS 13 ou posterior\n- Codex Desktop\n- Ulanzi Studio 3.0.1 ou posterior\n- Ulanzi D200 Series ligada no Ulanzi Studio\n- Node.js 20 ou posterior apenas para configuração manual pelo repositório\n\nINSTALAÇÃO COM LLM / AGENT\nIntroduza no seu Agent:\nInstala o plugin do Ulanzi Studio por mim: https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation\n\nINSTALAÇÃO MANUAL\n1. Clone https://github.com/UlanziTechnology/OpenCodexMicro e abra a pasta do repositório.\n2. Feche o Ulanzi Studio.\n3. Execute: npm install\n4. Execute: npm run install:plugin\n5. Execute: npm run setup\n6. Reabra o Ulanzi Studio, feche o Codex Desktop e inicie ~/Applications/Codex Bridge.app.\n7. Adicione as ações Codex App às teclas pretendidas no Ulanzi Studio.\n8. Selecione uma Action e verifique a instalação, o serviço e o CDP na página do Codex Bridge.\n\nIMPORTANTE\nAo usar o Codex App, inicie sempre o Codex através de ~/Applications/Codex Bridge.app. Não abra diretamente o Codex Desktop.\nComando de início: open ~/Applications/Codex\\ Bridge.app",
   "Actions": [
-    { "Name": "Tarefa Codex 1", "Tooltip": "Abre a posição 1 das tarefas recentes do Codex e mostra o estado em tempo real." },
-    { "Name": "Tarefa Codex 2", "Tooltip": "Abre a posição 2 das tarefas recentes do Codex e mostra o estado em tempo real." },
-    { "Name": "Tarefa Codex 3", "Tooltip": "Abre a posição 3 das tarefas recentes do Codex e mostra o estado em tempo real." },
-    { "Name": "Tarefa Codex 4", "Tooltip": "Abre a posição 4 das tarefas recentes do Codex e mostra o estado em tempo real." },
-    { "Name": "Tarefa Codex 5", "Tooltip": "Abre a posição 5 das tarefas recentes do Codex e mostra o estado em tempo real." },
-    { "Name": "Modo rápido Codex", "Tooltip": "Alterna o modo rápido da tarefa ativa do Codex." },
-    { "Name": "Utilização do Codex", "Tooltip": "Mostra a utilização restante do Codex e foca o Codex ao premir." },
-    { "Name": "Utilização 5H Codex", "Tooltip": "Mostra a quota de 5 horas restante do Codex e a contagem de reset." },
-    { "Name": "Utilização Semanal Codex", "Tooltip": "Mostra a quota semanal restante do Codex e a contagem de reset." },
-    { "Name": "Fixar tarefa Codex", "Tooltip": "Fixa ou desafixa a tarefa ativa do Codex." },
-    { "Name": "Nova tarefa Codex", "Tooltip": "Cria uma nova tarefa do Codex." },
-    { "Name": "Tarefa recente e deslocamento", "Tooltip": "Prima para abrir a tarefa mais recente do Codex. Rode para a esquerda para subir e para a direita para descer." },
-    { "Name": "Bifurcar tarefa Codex", "Tooltip": "Bifurca a tarefa ativa do Codex numa nova tarefa." },
-    { "Name": "Orientar Codex", "Tooltip": "Envia o texto atual do editor como orientação para a tarefa em execução." },
-    { "Name": "Microfone Codex", "Tooltip": "Alterna a ação de microfone do Codex." },
-    { "Name": "Enviar para o Codex", "Tooltip": "Envia ou coloca em fila o texto atual do editor do Codex." },
-    { "Name": "Monitor de Tarefas Codex", "Tooltip": "Mostra o tipo de tarefa ativa (WORK/CODEX) e o modelo. Alterna entre tarefas se várias estiverem em execução, ou mostra o modelo da última tarefa." },
-    { "Name": "Aprovar Codex", "Tooltip": "Aprova ou executa confirmações de ferramentas pendentes do Codex." },
-    { "Name": "Recusar Codex", "Tooltip": "Recusa ou cancela confirmações de ferramentas pendentes do Codex." },
-    { "Name": "Alerta de Atenção Codex", "Tooltip": "Mostra contagem de tarefas com atenção/erro pendente e salta para a tarefa." },
-    { "Name": "Parar Geração Codex", "Tooltip": "Cancela ou interrompe instantaneamente a resposta ativa no Codex Desktop." },
-    { "Name": "Monitor de Tokens Codex", "Tooltip": "Exibe o consumo de tokens da sessão e a percentagem da janela de contexto." },
-    { "Name": "Esforço de Raciocínio Codex", "Tooltip": "Exibe e alterna o nível de esforço de raciocínio do modelo (Baixo/Médio/Alto)." },
-    { "Name": "Prompt Codex: Testar e Corrigir", "Tooltip": "Pede ao Codex para executar os testes e corrigir erros." },
-    { "Name": "Prompt Codex: Rever Código", "Tooltip": "Pede ao Codex para rever as alterações e riscos de segurança." },
-    { "Name": "Prompt Codex: Mensagem de Commit", "Tooltip": "Pede ao Codex para gerar uma mensagem de commit semântica." }
+    {
+      "Name": "Tarefa Codex 1",
+      "Tooltip": "Abre a posição 1 das tarefas recentes do Codex e mostra o estado em tempo real."
+    },
+    {
+      "Name": "Tarefa Codex 2",
+      "Tooltip": "Abre a posição 2 das tarefas recentes do Codex e mostra o estado em tempo real."
+    },
+    {
+      "Name": "Tarefa Codex 3",
+      "Tooltip": "Abre a posição 3 das tarefas recentes do Codex e mostra o estado em tempo real."
+    },
+    {
+      "Name": "Tarefa Codex 4",
+      "Tooltip": "Abre a posição 4 das tarefas recentes do Codex e mostra o estado em tempo real."
+    },
+    {
+      "Name": "Tarefa Codex 5",
+      "Tooltip": "Abre a posição 5 das tarefas recentes do Codex e mostra o estado em tempo real."
+    },
+    {
+      "Name": "Modo rápido Codex",
+      "Tooltip": "Alterna o modo rápido da tarefa ativa do Codex."
+    },
+    {
+      "Name": "Utilização do Codex",
+      "Tooltip": "Mostra a utilização restante do Codex e foca o Codex ao premir."
+    },
+    {
+      "Name": "Utilização 5H Codex",
+      "Tooltip": "Mostra a quota de 5 horas restante do Codex e a contagem de reset."
+    },
+    {
+      "Name": "Utilização Semanal Codex",
+      "Tooltip": "Mostra a quota semanal restante do Codex e a contagem de reset."
+    },
+    {
+      "Name": "Fixar tarefa Codex",
+      "Tooltip": "Fixa ou desafixa a tarefa ativa do Codex."
+    },
+    {
+      "Name": "Nova tarefa Codex",
+      "Tooltip": "Cria uma nova tarefa do Codex."
+    },
+    {
+      "Name": "Tarefa recente e deslocamento",
+      "Tooltip": "Prima para abrir a tarefa mais recente do Codex. Rode para a esquerda para subir e para a direita para descer."
+    },
+    {
+      "Name": "Bifurcar tarefa Codex",
+      "Tooltip": "Bifurca a tarefa ativa do Codex numa nova tarefa."
+    },
+    {
+      "Name": "Orientar Codex",
+      "Tooltip": "Envia o texto atual do editor como orientação para a tarefa em execução."
+    },
+    {
+      "Name": "Microfone Codex",
+      "Tooltip": "Alterna a ação de microfone do Codex."
+    },
+    {
+      "Name": "Enviar para o Codex",
+      "Tooltip": "Envia ou coloca em fila o texto atual do editor do Codex."
+    },
+    {
+      "Name": "Monitor de Tarefas Codex",
+      "Tooltip": "Mostra o tipo de tarefa ativa (WORK/CODEX) e o modelo. Alterna entre tarefas se várias estiverem em execução, ou mostra o modelo da última tarefa."
+    },
+    {
+      "Name": "Aprovar Codex",
+      "Tooltip": "Aprova ou executa confirmações de ferramentas pendentes do Codex."
+    },
+    {
+      "Name": "Recusar Codex",
+      "Tooltip": "Recusa ou cancela confirmações de ferramentas pendentes do Codex."
+    },
+    {
+      "Name": "Alerta de Atenção Codex",
+      "Tooltip": "Mostra contagem de tarefas com atenção/erro pendente e salta para a tarefa."
+    },
+    {
+      "Name": "Parar Geração Codex",
+      "Tooltip": "Cancela ou interrompe instantaneamente a resposta ativa no Codex Desktop."
+    },
+    {
+      "Name": "Monitor de Tokens Codex",
+      "Tooltip": "Exibe o consumo de tokens da sessão e a percentagem da janela de contexto."
+    },
+    {
+      "Name": "Esforço de Raciocínio Codex",
+      "Tooltip": "Alterna entre os níveis de esforço de raciocínio aceitos pelo modelo atual. Após o último, volta ao primeiro."
+    },
+    {
+      "Name": "Prompt Codex: Testar e Corrigir",
+      "Tooltip": "Pede ao Codex para executar os testes e corrigir erros."
+    },
+    {
+      "Name": "Prompt Codex: Rever Código",
+      "Tooltip": "Pede ao Codex para rever as alterações e riscos de segurança."
+    },
+    {
+      "Name": "Prompt Codex: Mensagem de Commit",
+      "Tooltip": "Pede ao Codex para gerar uma mensagem de commit semântica."
+    },
+    {
+      "Name": "Tarefa Codex 6",
+      "Tooltip": "Abre a tarefa recente na posição 6."
+    },
+    {
+      "Name": "Objetivo Codex",
+      "Tooltip": "Pausa ou retoma um objetivo existente na tarefa selecionada."
+    },
+    {
+      "Name": "Subagentes Codex",
+      "Tooltip": "Mostra o resumo dos subagentes e abre os agentes da tarefa."
+    },
+    {
+      "Name": "Selecionar modelo Codex",
+      "Tooltip": "Avança para o próximo modelo disponível na tarefa selecionada. Após o último, volta ao primeiro."
+    },
+    {
+      "Name": "Ver plano Codex",
+      "Tooltip": "Abre o plano existente da tarefa selecionada no painel lateral do Codex, quando o controlo nativo está disponível."
+    }
   ],
   "Localization": {
     "BridgeSetup": "Configuração do Codex Bridge",

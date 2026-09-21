@@ -1,48 +1,132 @@
 {
-  "Description": "Turn Ulanzi D200 Series into a dedicated Codex CLI control surface through Ulanzi Studio.",
+  "Description": "ローカルの app-server 経由で Codex CLI のタスク、承認、入力、目標、使用量を操作します。ターミナルへの入力やフォーカス変更は行いません。",
   "Name": "Codex CLI",
   "com.ulanzi.ulanzistudio.codexcli.task1": {
-    "Name": "Codex CLI Session 1",
-    "Tooltip": "Open recent Codex CLI session slot 1 and show its live status."
+    "Name": "Codex CLI セッション 1",
+    "Tooltip": "以降のデッキ操作の対象としてこのセッションを選択します。"
   },
   "com.ulanzi.ulanzistudio.codexcli.task2": {
-    "Name": "Codex CLI Session 2",
-    "Tooltip": "Open recent Codex CLI session slot 2 and show its live status."
+    "Name": "Codex CLI セッション 2",
+    "Tooltip": "以降のデッキ操作の対象としてこのセッションを選択します。"
   },
   "com.ulanzi.ulanzistudio.codexcli.task3": {
-    "Name": "Codex CLI Session 3",
-    "Tooltip": "Open recent Codex CLI session slot 3 and show its live status."
+    "Name": "Codex CLI セッション 3",
+    "Tooltip": "以降のデッキ操作の対象としてこのセッションを選択します。"
   },
   "com.ulanzi.ulanzistudio.codexcli.task4": {
-    "Name": "Codex CLI Session 4",
-    "Tooltip": "Open recent Codex CLI session slot 4 and show its live status."
+    "Name": "Codex CLI セッション 4",
+    "Tooltip": "以降のデッキ操作の対象としてこのセッションを選択します。"
   },
   "com.ulanzi.ulanzistudio.codexcli.task5": {
-    "Name": "Codex CLI Session 5",
-    "Tooltip": "Open recent Codex CLI session slot 5 and show its live status."
+    "Name": "Codex CLI セッション 5",
+    "Tooltip": "以降のデッキ操作の対象としてこのセッションを選択します。"
   },
   "com.ulanzi.ulanzistudio.codexcli.approve": {
-    "Name": "Codex CLI Approve",
-    "Tooltip": "Approve the pending command or patch execution in Codex CLI."
+    "Name": "Codex CLI 承認",
+    "Tooltip": "選択したタスクの保留中のリクエストを承認します。"
   },
   "com.ulanzi.ulanzistudio.codexcli.reject": {
-    "Name": "Codex CLI Cancel",
-    "Tooltip": "Reject approval or stop execution in Codex CLI."
+    "Name": "Codex CLI 拒否",
+    "Tooltip": "選択したタスクの保留中の承認を拒否します。解決済みのリクエストによってタスクが停止することはありません。"
   },
   "com.ulanzi.ulanzistudio.codexcli.status": {
-    "Name": "Codex CLI Status",
-    "Tooltip": "Real-time Codex CLI agent status HUD (WORKING, ATTENTION, IDLE)."
+    "Name": "Codex CLI 状態",
+    "Tooltip": "選択したタスクから報告された状態を表示します。"
   },
   "com.ulanzi.ulanzistudio.codexcli.tokens": {
-    "Name": "Codex CLI Tokens",
-    "Tooltip": "Monitor token consumption across Codex CLI turns."
+    "Name": "Codex CLI トークン",
+    "Tooltip": "選択したタスクの報告済みトークン数とコンテキスト使用量を表示します。"
   },
   "com.ulanzi.ulanzistudio.codexcli.queue": {
-    "Name": "Codex CLI Queue Prompt",
-    "Tooltip": "Queue a prompt to continue or review the current session."
+    "Name": "Codex CLI 続行",
+    "Tooltip": "app-server 経由で選択したタスクに「continue」を送信します。"
   },
   "com.ulanzi.ulanzistudio.codexcli.resume": {
-    "Name": "Codex CLI Resume Last",
-    "Tooltip": "Resume the latest Codex CLI session in terminal."
+    "Name": "Codex CLI 選択したセッションを再開",
+    "Tooltip": "app-server 経由で選択したセッションを再開し、更新を受信します。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.new": {
+    "Name": "Codex CLI 新規タスク",
+    "Tooltip": "選択したタスクのプロジェクトにタスクを作成して選択します。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.fork": {
+    "Name": "Codex CLI タスクを分岐",
+    "Tooltip": "選択したタスクから分岐を作成して選択します。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.stop": {
+    "Name": "Codex CLI 停止",
+    "Tooltip": "承認には応答せず、選択したタスクの実行中のターンを停止します。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.attention": {
+    "Name": "Codex CLI 要対応",
+    "Tooltip": "承認待ちのタスクを順に選択します。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.submit": {
+    "Name": "Codex CLI 入力を送信",
+    "Tooltip": "プラグインのインスペクターでこのタスク用に保存した入力を送信します。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.steer": {
+    "Name": "Codex CLI 実行中の指示を追加",
+    "Tooltip": "選択したタスクの実行中のターンに保存した入力を送信します。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.prompt_test": {
+    "Name": "Codex CLI テストと修正",
+    "Tooltip": "選択したタスクにテストの実行と失敗の修正を依頼します。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.prompt_review": {
+    "Name": "Codex CLI 変更をレビュー",
+    "Tooltip": "選択したタスクに未確定の変更のレビューを依頼します。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.prompt_commit": {
+    "Name": "Codex CLI コミットメッセージ",
+    "Tooltip": "Conventional Commit メッセージを依頼します。コミットやプッシュは行いません。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.usage": {
+    "Name": "Codex CLI 使用量",
+    "Tooltip": "app-server が報告するアカウントの利用枠を表示します。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.usage5h": {
+    "Name": "Codex CLI 5時間の使用量",
+    "Tooltip": "5時間の残り利用枠とリセット時刻を表示します。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.usageweekly": {
+    "Name": "Codex CLI 週間使用量",
+    "Tooltip": "週間の残り利用枠とリセット時刻を表示します。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.taskmonitor": {
+    "Name": "Codex CLI タスクモニター",
+    "Tooltip": "選択したタスクの状態、経過時間、報告されたモデルを表示します。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.model": {
+    "Name": "Codex CLI モデル",
+    "Tooltip": "デッキから次に送信する入力に使用するモデルを切り替えます。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.reasoning": {
+    "Name": "Codex CLI 推論レベル",
+    "Tooltip": "デッキから次に送信する入力に使用する、対応済みの推論レベルを切り替えます。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.fast": {
+    "Name": "Codex CLI 高速モード",
+    "Tooltip": "対応モデルで、デッキから次に送信する入力の高速モードを切り替えます。利用枠の消費が増えます。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.task6": {
+    "Name": "Codex CLI セッション 6",
+    "Tooltip": "以降のデッキ操作の対象としてこのセッションを選択します。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.navigate": {
+    "Name": "Codex CLI タスクを選択",
+    "Tooltip": "回して最近のタスクを選択し、押すと次へ進みます。古いタスクは必要に応じて読み込みます。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.goal": {
+    "Name": "Codex CLI 目標",
+    "Tooltip": "既存の実行中または一時停止中の目標を一時停止・再開します。新しい目標はインスペクターで明示的に作成します。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.subagents": {
+    "Name": "Codex CLI サブエージェント",
+    "Tooltip": "選択したタスクのアーカイブされていない直接の子タスクを取得します。押すと更新し、不完全な件数は不明と表示します。"
+  },
+  "com.ulanzi.ulanzistudio.codexcli.plan": {
+    "Name": "Codex CLI 計画",
+    "Tooltip": "選択したタスクの最新の保存済み計画を読み込みます。計画とリアルタイムのチェックリストをインスペクターで表示します。タスクは変更しません。"
   }
 }

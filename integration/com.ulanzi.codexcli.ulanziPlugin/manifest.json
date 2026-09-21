@@ -2,7 +2,7 @@
   "Author": "OpenCodexMicro",
   "Name": "Codex CLI",
   "Overview": "Monitor and control Codex CLI tasks, approvals, and turns from Ulanzi D200 Series in Ulanzi Studio.",
-  "Description": "Turn Ulanzi D200 Series into a dedicated Codex CLI control surface through Ulanzi Studio.\n\nFEATURES\n- View recent Codex CLI sessions with live status and elapsed execution timer.\n- One-touch Approve and Cancel / Reject actions for tool execution and diffs.\n- Attention alert badge jumping directly to approval requests.\n- Token consumption tracker and session status HUD.\n- Quick prompt queuing and resume session triggers.\n- Keep communication local through loopback-only endpoints.",
+  "Description": "Select and navigate Codex CLI tasks through app-server: approvals, stop, new tasks, forks, saved prompts, steering, prompt shortcuts, next-prompt model settings, native goals, tokens and account usage. Requires a compatible app-server. Does not type into terminals.",
   "Icon": "assets/icons/plugin.png",
   "Category": "AI",
   "CategoryIcon": "assets/icons/plugin.png",
@@ -30,50 +30,85 @@
       "Icon": "assets/icons/task-idle.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexcli.task1",
-      "Tooltip": "Open recent Codex CLI session slot 1 and show its live status.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Select and subscribe to this Codex CLI session for subsequent deck actions.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Session", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Session",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Codex CLI Session 2",
       "Icon": "assets/icons/task-idle.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexcli.task2",
-      "Tooltip": "Open recent Codex CLI session slot 2 and show its live status.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Select and subscribe to this Codex CLI session for subsequent deck actions.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Session", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Session",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Codex CLI Session 3",
       "Icon": "assets/icons/task-idle.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexcli.task3",
-      "Tooltip": "Open recent Codex CLI session slot 3 and show its live status.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Select and subscribe to this Codex CLI session for subsequent deck actions.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Session", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Session",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Codex CLI Session 4",
       "Icon": "assets/icons/task-idle.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexcli.task4",
-      "Tooltip": "Open recent Codex CLI session slot 4 and show its live status.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Select and subscribe to this Codex CLI session for subsequent deck actions.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Session", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Session",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Codex CLI Session 5",
       "Icon": "assets/icons/task-idle.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexcli.task5",
-      "Tooltip": "Open recent Codex CLI session slot 5 and show its live status.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Select and subscribe to this Codex CLI session for subsequent deck actions.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Session", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Session",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Codex CLI Approve",
@@ -81,19 +116,33 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexcli.approve",
       "Tooltip": "Approve the pending command or patch execution in Codex CLI.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Approve", "Image": "assets/icons/approve.png" }]
+      "States": [
+        {
+          "Name": "Approve",
+          "Image": "assets/icons/approve.png"
+        }
+      ]
     },
     {
-      "Name": "Codex CLI Cancel",
+      "Name": "Codex CLI Reject",
       "Icon": "assets/icons/reject.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexcli.reject",
-      "Tooltip": "Reject approval or stop execution in Codex CLI.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Reject the selected task’s pending approval. Does not stop the task if the request was already resolved.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Cancel", "Image": "assets/icons/reject.png" }]
+      "States": [
+        {
+          "Name": "Reject",
+          "Image": "assets/icons/reject.png"
+        }
+      ]
     },
     {
       "Name": "Codex CLI Status",
@@ -101,9 +150,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexcli.status",
       "Tooltip": "Real-time Codex CLI agent status HUD (WORKING, ATTENTION, IDLE).",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Status", "Image": "assets/icons/task-working.png" }]
+      "States": [
+        {
+          "Name": "Status",
+          "Image": "assets/icons/task-working.png"
+        }
+      ]
     },
     {
       "Name": "Codex CLI Tokens",
@@ -111,29 +167,408 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexcli.tokens",
       "Tooltip": "Monitor token consumption across Codex CLI turns.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Tokens", "Image": "assets/icons/usage.png" }]
+      "States": [
+        {
+          "Name": "Tokens",
+          "Image": "assets/icons/usage.png"
+        }
+      ]
     },
     {
-      "Name": "Codex CLI Queue Prompt",
+      "Name": "Codex CLI Continue",
       "Icon": "assets/icons/submit.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexcli.queue",
-      "Tooltip": "Queue a prompt to continue or review the current session.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Send Continue to the selected thread through app-server.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Queue", "Image": "assets/icons/submit.png" }]
+      "States": [
+        {
+          "Name": "Queue",
+          "Image": "assets/icons/submit.png"
+        }
+      ]
     },
     {
-      "Name": "Codex CLI Resume Last",
+      "Name": "Codex CLI Resume Selected",
       "Icon": "assets/icons/fast.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexcli.resume",
-      "Tooltip": "Resume the latest Codex CLI session in terminal.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Resume and subscribe to the selected session through app-server.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Resume", "Image": "assets/icons/fast.png" }]
+      "States": [
+        {
+          "Name": "Resume",
+          "Image": "assets/icons/fast.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI New Task",
+      "Icon": "assets/icons/new.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.new",
+      "Tooltip": "Create and select a new task in the selected task’s project.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "New Task",
+          "Image": "assets/icons/new.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Fork Task",
+      "Icon": "assets/icons/fork.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.fork",
+      "Tooltip": "Fork and select the selected task through app-server.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Fork Task",
+          "Image": "assets/icons/fork.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Stop",
+      "Icon": "assets/icons/reject.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.stop",
+      "Tooltip": "Stop the selected task’s active turn without responding to approvals.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Stop",
+          "Image": "assets/icons/reject.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Attention",
+      "Icon": "assets/icons/attention.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.attention",
+      "Tooltip": "Cycle through tasks with pending approval requests.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Attention",
+          "Image": "assets/icons/attention.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Submit Prompt",
+      "Icon": "assets/icons/submit.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.submit",
+      "Tooltip": "Submit the prompt saved for the selected task in this plugin’s inspector.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Submit Prompt",
+          "Image": "assets/icons/submit.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Steer Task",
+      "Icon": "assets/icons/steer.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.steer",
+      "Tooltip": "Send the saved prompt to the selected task’s active turn.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Steer Task",
+          "Image": "assets/icons/steer.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Test and Fix",
+      "Icon": "assets/icons/submit.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.prompt_test",
+      "Tooltip": "Ask the selected task to run tests and fix failures.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Test and Fix",
+          "Image": "assets/icons/submit.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Review Changes",
+      "Icon": "assets/icons/submit.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.prompt_review",
+      "Tooltip": "Ask the selected task to review pending changes.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Review Changes",
+          "Image": "assets/icons/submit.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Commit Message",
+      "Icon": "assets/icons/submit.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.prompt_commit",
+      "Tooltip": "Ask the selected task for a Conventional Commit message; does not commit or push.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Commit Message",
+          "Image": "assets/icons/submit.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Usage",
+      "Icon": "assets/icons/usage.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.usage",
+      "Tooltip": "Show measured account allowance from app-server.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Usage",
+          "Image": "assets/icons/usage.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI 5h Usage",
+      "Icon": "assets/icons/usage.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.usage5h",
+      "Tooltip": "Show the remaining 5-hour allowance and reset time.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "5h Usage",
+          "Image": "assets/icons/usage.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Weekly Usage",
+      "Icon": "assets/icons/usage.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.usageweekly",
+      "Tooltip": "Show the remaining weekly allowance and reset time.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Weekly Usage",
+          "Image": "assets/icons/usage.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Task Monitor",
+      "Icon": "assets/icons/task-working.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.taskmonitor",
+      "Tooltip": "Show the selected task’s status, elapsed time, and reported model.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Task Monitor",
+          "Image": "assets/icons/task-working.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Model",
+      "Icon": "assets/icons/task-working.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.model",
+      "Tooltip": "Cycle available models for the next prompt sent from the deck.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Model",
+          "Image": "assets/icons/task-working.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Reasoning",
+      "Icon": "assets/icons/task-working.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.reasoning",
+      "Tooltip": "Cycle the selected model’s supported reasoning levels for the next deck prompt.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Reasoning",
+          "Image": "assets/icons/task-working.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Fast Mode",
+      "Icon": "assets/icons/task-working.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.fast",
+      "Tooltip": "Toggle Fast for the next deck prompt when the selected model supports it. Fast uses more allowance.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Fast Mode",
+          "Image": "assets/icons/task-working.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Session 6",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.task6",
+      "Tooltip": "Select and subscribe to this Codex CLI session for subsequent deck actions.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Session 6",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Navigate Tasks",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.navigate",
+      "Tooltip": "Rotate to select recent tasks. Press to select the next task; older tasks load as needed.",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Navigate Tasks",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Goal",
+      "Icon": "assets/icons/task-working.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.goal",
+      "Tooltip": "Pause or resume an existing active or paused goal. Create an objective explicitly in the inspector.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Goal",
+          "Image": "assets/icons/task-working.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Subagents",
+      "Icon": "assets/icons/task-working.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.subagents",
+      "Tooltip": "Read the selected task’s non-archived direct child tasks from app-server. Press to refresh; unknown is shown for incomplete results.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Subagents",
+          "Image": "assets/icons/task-working.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex CLI Plan",
+      "Icon": "assets/icons/task-working.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexcli.plan",
+      "Tooltip": "Load the selected task’s latest saved plan. View the plan and live checklist in the plugin inspector; does not modify the task.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Plan",
+          "Image": "assets/icons/task-working.png"
+        }
+      ]
     }
   ]
 }

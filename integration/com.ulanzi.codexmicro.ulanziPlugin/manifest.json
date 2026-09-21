@@ -1,13 +1,13 @@
 {
   "Author": "OpenCodexMicro",
-  "Name": "Codex Micro",
+  "Name": "Codex App",
   "Overview": "Control Codex Desktop tasks and actions from Ulanzi D200 Series in Ulanzi Studio.",
-  "Description": "Turn Ulanzi D200 Series into a dedicated Codex Desktop control surface through Ulanzi Studio.\n\nFEATURES\n- View five recent Codex tasks with live status and open the exact selected task.\n- Use Fast, Usage, Pin, New, Fork, Steer, Mic, and Submit actions.\n- Use the Latest Task & Scroll Encoder action to open task 1 and scroll Codex.\n- Install, repair, launch, and check Codex Bridge from every Action setup page.\n- Keep communication local through Codex Bridge.app and loopback-only endpoints.\n\nINSTALLATION ENVIRONMENT\n- macOS 13 or later\n- Codex Desktop\n- Ulanzi Studio 3.0.1 or later\n- Ulanzi D200 Series connected in Ulanzi Studio\n- Node.js 20 or later only for manual repository setup\n\nLLM / AGENT INSTALLATION\nIn your Agent, enter:\nInstall the Ulanzi Studio plugin for me: https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation\n\nMANUAL INSTALLATION\n1. Clone https://github.com/UlanziTechnology/OpenCodexMicro and open the repository directory.\n2. Quit Ulanzi Studio.\n3. Run: npm install\n4. Run: npm run install:plugin\n5. Run: npm run setup\n6. Reopen Ulanzi Studio, quit Codex Desktop, and launch ~/Applications/Codex Bridge.app.\n7. Add the Codex Micro actions to your keys in Ulanzi Studio.\n8. Select any Action to check Bridge installation, service, and CDP status.\n\nIMPORTANT\nWhen using Codex Micro, always launch Codex through ~/Applications/Codex Bridge.app. Do not open Codex Desktop directly.\nLaunch command: open ~/Applications/Codex\\ Bridge.app",
+  "Description": "Turn Ulanzi D200 Series into a dedicated Codex Desktop control surface through Ulanzi Studio.\n\nFEATURES\n- View six recent Codex tasks with live status and open the exact selected task.\n- Use Fast, Usage, Pin, New, Fork, Steer, Mic, and Submit actions.\n- Use the Latest Task & Scroll Encoder action to open task 1 and scroll Codex.\n- Install, repair, launch, and check Codex Bridge from every Action setup page.\n- Keep communication local through Codex Bridge.app and loopback-only endpoints.\n\nINSTALLATION ENVIRONMENT\n- macOS 13 or later\n- Codex Desktop\n- Ulanzi Studio 3.0.1 or later\n- Ulanzi D200 Series connected in Ulanzi Studio\n- Node.js 20 or later only for manual repository setup\n\nLLM / AGENT INSTALLATION\nIn your Agent, enter:\nInstall the Ulanzi Studio plugin for me: https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation\n\nMANUAL INSTALLATION\n1. Clone https://github.com/UlanziTechnology/OpenCodexMicro and open the repository directory.\n2. Quit Ulanzi Studio.\n3. Run: npm install\n4. Run: npm run install:plugin\n5. Run: npm run setup\n6. Reopen Ulanzi Studio, quit Codex Desktop, and launch ~/Applications/Codex Bridge.app.\n7. Add the Codex App actions to your keys in Ulanzi Studio.\n8. Select any Action to check Bridge installation, service, and CDP status.\n\nIMPORTANT\nWhen using Codex App, always launch Codex through ~/Applications/Codex Bridge.app. Do not open Codex Desktop directly.\nLaunch command: open ~/Applications/Codex\\ Bridge.app",
   "Icon": "assets/icons/plugin.png",
   "Category": "AI",
   "CategoryIcon": "assets/icons/plugin.png",
   "Banner": [
-    "assets/banners/codex-micro-banner-1.png",
+    "assets/banners/codex-app-banner-1.png",
     "assets/banners/codex-micro-banner-2.png",
     "assets/banners/codex-micro-banner-3.png"
   ],
@@ -31,9 +31,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.task1",
       "Tooltip": "Open recent Codex task slot 1 and show its live status.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Task", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Task",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Codex Task 2",
@@ -41,9 +48,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.task2",
       "Tooltip": "Open recent Codex task slot 2 and show its live status.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Task", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Task",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Codex Task 3",
@@ -51,9 +65,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.task3",
       "Tooltip": "Open recent Codex task slot 3 and show its live status.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Task", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Task",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Codex Task 4",
@@ -61,9 +82,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.task4",
       "Tooltip": "Open recent Codex task slot 4 and show its live status.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Task", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Task",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Codex Task 5",
@@ -71,9 +99,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.task5",
       "Tooltip": "Open recent Codex task slot 5 and show its live status.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Task", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Task",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Codex Fast",
@@ -81,9 +116,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.fast",
       "Tooltip": "Toggle Fast mode for the active Codex task.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Fast", "Image": "assets/icons/fast.png" }]
+      "States": [
+        {
+          "Name": "Fast",
+          "Image": "assets/icons/fast.png"
+        }
+      ]
     },
     {
       "Name": "Codex Usage",
@@ -91,9 +133,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.usage",
       "Tooltip": "Show the remaining Codex usage allowance and focus Codex when pressed.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Usage", "Image": "assets/icons/usage.png" }]
+      "States": [
+        {
+          "Name": "Usage",
+          "Image": "assets/icons/usage.png"
+        }
+      ]
     },
     {
       "Name": "Codex 5H Usage",
@@ -101,9 +150,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.usage5h",
       "Tooltip": "Display remaining 5-hour Codex usage allowance and reset countdown.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "5H Usage", "Image": "assets/icons/usage.png" }]
+      "States": [
+        {
+          "Name": "5H Usage",
+          "Image": "assets/icons/usage.png"
+        }
+      ]
     },
     {
       "Name": "Codex Weekly Usage",
@@ -111,9 +167,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.usageweekly",
       "Tooltip": "Display remaining weekly Codex usage allowance and reset countdown.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Weekly Usage", "Image": "assets/icons/usage.png" }]
+      "States": [
+        {
+          "Name": "Weekly Usage",
+          "Image": "assets/icons/usage.png"
+        }
+      ]
     },
     {
       "Name": "Pin Codex Task",
@@ -121,9 +184,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.pin",
       "Tooltip": "Pin or unpin the active Codex task.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Pin", "Image": "assets/icons/pin.png" }]
+      "States": [
+        {
+          "Name": "Pin",
+          "Image": "assets/icons/pin.png"
+        }
+      ]
     },
     {
       "Name": "New Codex Task",
@@ -131,9 +201,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.new",
       "Tooltip": "Create a new Codex task.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "New", "Image": "assets/icons/new.png" }]
+      "States": [
+        {
+          "Name": "New",
+          "Image": "assets/icons/new.png"
+        }
+      ]
     },
     {
       "Name": "Latest Task & Scroll",
@@ -141,10 +218,19 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.navigate",
       "Tooltip": "Press to open the latest Codex task. Turn left to scroll up and right to scroll down.",
-      "Controllers": ["Encoder"],
-      "Encoder": { "layout": "$UA1" },
+      "Controllers": [
+        "Encoder"
+      ],
+      "Encoder": {
+        "layout": "$UA1"
+      },
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Latest Task", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Latest Task",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Fork Codex Task",
@@ -152,9 +238,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.fork",
       "Tooltip": "Fork the active Codex task into a new task.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Fork", "Image": "assets/icons/fork.png" }]
+      "States": [
+        {
+          "Name": "Fork",
+          "Image": "assets/icons/fork.png"
+        }
+      ]
     },
     {
       "Name": "Steer Codex",
@@ -162,9 +255,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.steer",
       "Tooltip": "Send the current composer text as steering input to the running task.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Steer", "Image": "assets/icons/steer.png" }]
+      "States": [
+        {
+          "Name": "Steer",
+          "Image": "assets/icons/steer.png"
+        }
+      ]
     },
     {
       "Name": "Codex Microphone",
@@ -172,9 +272,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.mic",
       "Tooltip": "Toggle the Codex microphone action.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Microphone", "Image": "assets/icons/mic.png" }]
+      "States": [
+        {
+          "Name": "Microphone",
+          "Image": "assets/icons/mic.png"
+        }
+      ]
     },
     {
       "Name": "Submit to Codex",
@@ -182,9 +289,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.submit",
       "Tooltip": "Submit or queue the current Codex composer text.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Submit", "Image": "assets/icons/submit.png" }]
+      "States": [
+        {
+          "Name": "Submit",
+          "Image": "assets/icons/submit.png"
+        }
+      ]
     },
     {
       "Name": "Codex Task Monitor",
@@ -192,9 +306,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.taskmonitor",
       "Tooltip": "Show active task type (WORK/CODEX) and model. Cycles when multiple tasks run, or shows the latest task model.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Task Monitor", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Task Monitor",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Codex Approve",
@@ -202,9 +323,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.approve",
       "Tooltip": "Approve or execute pending Codex tool confirmations.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Approve", "Image": "assets/icons/approve.png" }]
+      "States": [
+        {
+          "Name": "Approve",
+          "Image": "assets/icons/approve.png"
+        }
+      ]
     },
     {
       "Name": "Codex Deny",
@@ -212,9 +340,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.reject",
       "Tooltip": "Deny or cancel pending Codex tool confirmations.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Deny", "Image": "assets/icons/reject.png" }]
+      "States": [
+        {
+          "Name": "Deny",
+          "Image": "assets/icons/reject.png"
+        }
+      ]
     },
     {
       "Name": "Codex Attention Alert",
@@ -222,9 +357,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.attention",
       "Tooltip": "Show pending attention/error task count and jump to the task.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Attention", "Image": "assets/icons/attention.png" }]
+      "States": [
+        {
+          "Name": "Attention",
+          "Image": "assets/icons/attention.png"
+        }
+      ]
     },
     {
       "Name": "Codex Stop Generation",
@@ -232,9 +374,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.stop",
       "Tooltip": "Instantly cancel or stop the active turn in Codex Desktop.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Stop", "Image": "assets/icons/reject.png" }]
+      "States": [
+        {
+          "Name": "Stop",
+          "Image": "assets/icons/reject.png"
+        }
+      ]
     },
     {
       "Name": "Codex Token Monitor",
@@ -242,19 +391,33 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.tokens",
       "Tooltip": "Display session token usage and context window percentage.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Tokens", "Image": "assets/icons/usage.png" }]
+      "States": [
+        {
+          "Name": "Tokens",
+          "Image": "assets/icons/usage.png"
+        }
+      ]
     },
     {
       "Name": "Codex Reasoning Effort",
       "Icon": "assets/icons/fast.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.reasoning",
-      "Tooltip": "Display and cycle model reasoning effort (Low/Med/High).",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Cycle through the reasoning efforts supported by the current model. Wraps to the first level.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Reasoning", "Image": "assets/icons/fast.png" }]
+      "States": [
+        {
+          "Name": "Reasoning",
+          "Image": "assets/icons/fast.png"
+        }
+      ]
     },
     {
       "Name": "Codex Prompt: Test & Fix",
@@ -262,9 +425,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.prompt_test",
       "Tooltip": "Prompt Codex to run tests and fix errors.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Test & Fix", "Image": "assets/icons/plugin.png" }]
+      "States": [
+        {
+          "Name": "Test & Fix",
+          "Image": "assets/icons/plugin.png"
+        }
+      ]
     },
     {
       "Name": "Codex Prompt: Code Review",
@@ -272,9 +442,16 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.prompt_review",
       "Tooltip": "Prompt Codex to review changes and security risks.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Review", "Image": "assets/icons/plugin.png" }]
+      "States": [
+        {
+          "Name": "Review",
+          "Image": "assets/icons/plugin.png"
+        }
+      ]
     },
     {
       "Name": "Codex Prompt: Commit Msg",
@@ -282,9 +459,101 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.prompt_commit",
       "Tooltip": "Prompt Codex to generate conventional commit messages.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Commit", "Image": "assets/icons/plugin.png" }]
+      "States": [
+        {
+          "Name": "Commit",
+          "Image": "assets/icons/plugin.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex Task 6",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.task6",
+      "Tooltip": "Open recent Codex task slot 6 and show its live status.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Task",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex Goal",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.goal",
+      "Tooltip": "Pause or resume an existing goal in the selected task. Create a goal in Codex first.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Task",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex Subagents",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.subagents",
+      "Tooltip": "Show the reported subagent summary and open the selected task’s agents.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Task",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex Select Model",
+      "Icon": "assets/icons/fast.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.model",
+      "Tooltip": "Cycle to the next available model for the selected task. Wraps to the first model.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Model",
+          "Image": "assets/icons/fast.png"
+        }
+      ]
+    },
+    {
+      "Name": "Codex View Plan",
+      "Icon": "assets/icons/fast.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.plan",
+      "Tooltip": "Open the selected task’s existing plan in the Codex side panel when its native control is available.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Plan",
+          "Image": "assets/icons/fast.png"
+        }
+      ]
     }
   ]
 }

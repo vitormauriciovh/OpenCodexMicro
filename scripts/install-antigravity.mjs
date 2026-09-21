@@ -13,7 +13,7 @@ const home = homedir();
 const uid = process.getuid();
 const packageMetadata = JSON.parse(await readFile(resolve("package.json"), "utf8"));
 const releaseVersion = String(packageMetadata.version);
-const appRoot = join(home, "Library", "Application Support", "OpenCodexMicro");
+const appRoot = join(home, "Library", "Application Support", "OpenCodexMicro", "antigravity");
 const agentsRoot = join(home, "Library", "LaunchAgents");
 const bridgeAgent = join(agentsRoot, "io.openantigravitymicro.bridge.plist");
 

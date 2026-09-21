@@ -1,85 +1,144 @@
 {
-  "Description": "Ulanzi Studio を通じて Ulanzi D200 Series で Antigravity AI Agent を操作します。",
+  "Description": "Antigravity Desktop\u306e\u9078\u629e\u4e2d\u306e\u30bf\u30b9\u30af\u3092\u64cd\u4f5c\u3057\u307e\u3059\u3002\u30c8\u30fc\u30af\u30f3\u306f\u63a8\u5b9a\u5024\u3067\u3001\u78ba\u8a8d\u3067\u304d\u306a\u3044\u4f7f\u7528\u91cf\u306f\u4e0d\u660e\u3068\u8868\u793a\u3057\u307e\u3059\u3002",
   "Name": "Antigravity",
   "com.ulanzi.ulanzistudio.antigravity.task1": {
-    "Name": "Antigravity セッション 1",
-    "Tooltip": "最新の Antigravity セッション 1 を開き、リアルタイム状態を表示します。"
+    "Name": "Antigravity \u30bb\u30c3\u30b7\u30e7\u30f3 1",
+    "Tooltip": "Antigravity Desktop\u3067\u3053\u306e\u30bf\u30b9\u30af\u3092\u9078\u629e\u3057\u3001\u72b6\u614b\u3092\u8868\u793a\u3057\u307e\u3059\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.task2": {
-    "Name": "Antigravity セッション 2",
-    "Tooltip": "最新の Antigravity セッション 2 を開き、リアルタイム状態を表示します。"
+    "Name": "Antigravity \u30bb\u30c3\u30b7\u30e7\u30f3 2",
+    "Tooltip": "Antigravity Desktop\u3067\u3053\u306e\u30bf\u30b9\u30af\u3092\u9078\u629e\u3057\u3001\u72b6\u614b\u3092\u8868\u793a\u3057\u307e\u3059\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.task3": {
-    "Name": "Antigravity セッション 3",
-    "Tooltip": "最新の Antigravity セッション 3 を開き、リアルタイム状態を表示します。"
+    "Name": "Antigravity \u30bb\u30c3\u30b7\u30e7\u30f3 3",
+    "Tooltip": "Antigravity Desktop\u3067\u3053\u306e\u30bf\u30b9\u30af\u3092\u9078\u629e\u3057\u3001\u72b6\u614b\u3092\u8868\u793a\u3057\u307e\u3059\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.task4": {
-    "Name": "Antigravity セッション 4",
-    "Tooltip": "最新の Antigravity セッション 4 を開き、リアルタイム状態を表示します。"
+    "Name": "Antigravity \u30bb\u30c3\u30b7\u30e7\u30f3 4",
+    "Tooltip": "Antigravity Desktop\u3067\u3053\u306e\u30bf\u30b9\u30af\u3092\u9078\u629e\u3057\u3001\u72b6\u614b\u3092\u8868\u793a\u3057\u307e\u3059\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.task5": {
-    "Name": "Antigravity セッション 5",
-    "Tooltip": "最新の Antigravity セッション 5 を開き、リアルタイム状態を表示します。"
+    "Name": "Antigravity \u30bb\u30c3\u30b7\u30e7\u30f3 5",
+    "Tooltip": "Antigravity Desktop\u3067\u3053\u306e\u30bf\u30b9\u30af\u3092\u9078\u629e\u3057\u3001\u72b6\u614b\u3092\u8868\u793a\u3057\u307e\u3059\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.proceed": {
-    "Name": "Antigravity 承認 / Proceed",
-    "Tooltip": "保留中の計画やツール実行をワンタッチで承認します。"
+    "Name": "Antigravity \u627f\u8a8d",
+    "Tooltip": "\u9078\u629e\u4e2d\u306e\u30bf\u30b9\u30af\u306b\u8868\u793a\u3055\u308c\u305f\u4e00\u4ef6\u306e\u4fdd\u7559\u30ea\u30af\u30a8\u30b9\u30c8\u3092\u627f\u8a8d\u3057\u307e\u3059\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.cancel": {
-    "Name": "Antigravity キャンセル / 停止",
-    "Tooltip": "実行を停止または保留中のアクションをキャンセルします。"
+    "Name": "Antigravity \u505c\u6b62",
+    "Tooltip": "\u9078\u629e\u4e2d\u306e\u30bf\u30b9\u30af\u3092\u505c\u6b62\u3057\u307e\u3059\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.attention": {
-    "Name": "Antigravity アテンション通知",
-    "Tooltip": "対応が必要なセッション数を表示し、直接開きます。"
+    "Name": "Antigravity \u30a2\u30c6\u30f3\u30b7\u30e7\u30f3\u901a\u77e5",
+    "Tooltip": "\u78ba\u8a8d\u304c\u5fc5\u8981\u306a\u6b21\u306e\u30bf\u30b9\u30af\u3092\u9078\u629e\u3057\u307e\u3059\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.subagents": {
-    "Name": "Antigravity サブエージェント",
-    "Tooltip": "稼働中のサブエージェント数を表示します。"
+    "Name": "Antigravity \u30b5\u30d6\u30a8\u30fc\u30b8\u30a7\u30f3\u30c8",
+    "Tooltip": "\u5c65\u6b74\u304b\u3089\u63a8\u5b9a\u3057\u305f\u30b5\u30d6\u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u6d3b\u52d5\u3092\u8868\u793a\u3057\u307e\u3059\u3002\u5b9f\u884c\u4e2d\u30d7\u30ed\u30bb\u30b9\u6570\u3067\u306f\u3042\u308a\u307e\u305b\u3093\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.plan": {
-    "Name": "Antigravity 計画を表示",
-    "Tooltip": "VS Code で現在の実装計画を開きます。"
+    "Name": "Antigravity \u8a08\u753b\u3092\u8868\u793a",
+    "Tooltip": "\u9078\u629e\u4e2d\u306e\u30bf\u30b9\u30af\u306e\u6210\u679c\u7269\u3092\u8a2d\u5b9a\u6e08\u307f\u30a8\u30c7\u30a3\u30bf\u3067\u958b\u304d\u307e\u3059\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.walkthrough": {
-    "Name": "Antigravity まとめを表示",
-    "Tooltip": "VS Code で成果サマリーを開きます。"
+    "Name": "Antigravity \u307e\u3068\u3081\u3092\u8868\u793a",
+    "Tooltip": "\u9078\u629e\u4e2d\u306e\u30bf\u30b9\u30af\u306e\u6210\u679c\u7269\u3092\u8a2d\u5b9a\u6e08\u307f\u30a8\u30c7\u30a3\u30bf\u3067\u958b\u304d\u307e\u3059\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.usage": {
-    "Name": "Antigravity 使用量 / クォータ",
-    "Tooltip": "コンテキストウィンドウとセッション残量、リセットまでのカウントダウンを表示します。"
+    "Name": "Antigravity \u4f7f\u7528\u91cf / \u30af\u30a9\u30fc\u30bf",
+    "Tooltip": "\u78ba\u8a8d\u6e08\u307f\u306e\u4e0a\u9650\u306e\u307f\u8868\u793a\u3057\u3001\u4e0d\u660e\u306a\u5024\u306f\u4e0d\u660e\u306e\u307e\u307e\u306b\u3057\u307e\u3059\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.usage5h": {
-    "Name": "Antigravity 5時間使用量",
-    "Tooltip": "Antigravity の5時間枠の残量とリセットまでのカウントダウンを表示します。"
+    "Name": "Antigravity 5\u6642\u9593\u4f7f\u7528\u91cf",
+    "Tooltip": "\u78ba\u8a8d\u6e08\u307f\u306e\u4e0a\u9650\u306e\u307f\u8868\u793a\u3057\u3001\u4e0d\u660e\u306a\u5024\u306f\u4e0d\u660e\u306e\u307e\u307e\u306b\u3057\u307e\u3059\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.usageweekly": {
-    "Name": "Antigravity 週間使用量",
-    "Tooltip": "Antigravity の週間枠の残量とリセットまでのカウントダウンを表示します。"
+    "Name": "Antigravity \u9031\u9593\u4f7f\u7528\u91cf",
+    "Tooltip": "\u78ba\u8a8d\u6e08\u307f\u306e\u4e0a\u9650\u306e\u307f\u8868\u793a\u3057\u3001\u4e0d\u660e\u306a\u5024\u306f\u4e0d\u660e\u306e\u307e\u307e\u306b\u3057\u307e\u3059\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.new": {
-    "Name": "Antigravity 新規セッション",
-    "Tooltip": "VS Code にフォーカスして新しいセッションを開始します。"
+    "Name": "Antigravity \u65b0\u898f\u30bb\u30c3\u30b7\u30e7\u30f3",
+    "Tooltip": "\u73fe\u5728\u306e\u30d7\u30ed\u30b8\u30a7\u30af\u30c8\u3067\u65b0\u3057\u3044\u4f1a\u8a71\u3092\u958b\u304d\u307e\u3059\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.navigate": {
-    "Name": "Antigravity 最新セッションとスクロール",
-    "Tooltip": "押して最新セッションを表示、回して VS Code をスクロールします。"
+    "Name": "Antigravity \u6700\u65b0\u30bb\u30c3\u30b7\u30e7\u30f3\u3068\u30b9\u30af\u30ed\u30fc\u30eb",
+    "Tooltip": "\u62bc\u3059\u3068\u6700\u65b0\u30bf\u30b9\u30af\u3092\u9078\u629e\u3057\u3001\u56de\u3059\u3068\u9078\u629e\u4e2d\u306e\u4f1a\u8a71\u3092\u30b9\u30af\u30ed\u30fc\u30eb\u3057\u307e\u3059\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.hud": {
-    "Name": "Antigravity エージェント HUD",
-    "Tooltip": "エージェントのリアルタイム状態（PLANNING, EXECUTING, WAITING, IDLE）とタイマーを表示します。"
+    "Name": "Antigravity \u30a8\u30fc\u30b8\u30a7\u30f3\u30c8 HUD",
+    "Tooltip": "\u9078\u629e\u4e2d\u306e\u30bf\u30b9\u30af\u3067\u89b3\u6e2c\u3055\u308c\u305f\u72b6\u614b\u3092\u8868\u793a\u3057\u307e\u3059\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.boost": {
     "Name": "Antigravity /boost",
-    "Tooltip": "深い思考と厳格な検証を行う /boost コマンドを挿入します。"
+    "Tooltip": "\u5229\u7528\u4e0d\u53ef\u3002\u3053\u306e\u30d0\u30fc\u30b8\u30e7\u30f3\u3067\u306f\u540c\u7b49\u6a5f\u80fd\u3092\u78ba\u8a8d\u3067\u304d\u307e\u305b\u3093\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.grillme": {
     "Name": "Antigravity /grill-me",
-    "Tooltip": "設計整合のための対話型インタビュー /grill-me を挿入します。"
+    "Tooltip": "\u5229\u7528\u4e0d\u53ef\u3002\u3053\u306e\u30d0\u30fc\u30b8\u30e7\u30f3\u3067\u306f\u540c\u7b49\u6a5f\u80fd\u3092\u78ba\u8a8d\u3067\u304d\u307e\u305b\u3093\u3002"
   },
   "com.ulanzi.ulanzistudio.antigravity.goal": {
     "Name": "Antigravity /goal",
-    "Tooltip": "自律的な長時間タスク実行 /goal コマンドを挿入します。"
+    "Tooltip": "\u5229\u7528\u4e0d\u53ef\u3002\u3053\u306e\u30d0\u30fc\u30b8\u30e7\u30f3\u3067\u306f\u540c\u7b49\u6a5f\u80fd\u3092\u78ba\u8a8d\u3067\u304d\u307e\u305b\u3093\u3002"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.tokens": {
+    "Name": "Antigravity Tokens",
+    "Tooltip": "\u5c65\u6b74\u306e\u6587\u5b57\u6570\u304b\u3089\u63a8\u5b9a\u3057\u307e\u3059\u3002\u8ab2\u91d1\u4f7f\u7528\u91cf\u3084\u30b3\u30f3\u30c6\u30ad\u30b9\u30c8\u5360\u6709\u7387\u3067\u306f\u3042\u308a\u307e\u305b\u3093\u3002"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.approve": {
+    "Name": "Antigravity \u627f\u8a8d",
+    "Tooltip": "\u9078\u629e\u4e2d\u306e\u30bf\u30b9\u30af\u306b\u8868\u793a\u3055\u308c\u305f\u4e00\u4ef6\u306e\u4fdd\u7559\u30ea\u30af\u30a8\u30b9\u30c8\u3092\u627f\u8a8d\u3057\u307e\u3059\u3002"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.reject": {
+    "Name": "Antigravity \u62d2\u5426",
+    "Tooltip": "\u9078\u629e\u4e2d\u306e\u30bf\u30b9\u30af\u306b\u8868\u793a\u3055\u308c\u305f\u4e00\u4ef6\u306e\u4fdd\u7559\u30ea\u30af\u30a8\u30b9\u30c8\u3092\u62d2\u5426\u3057\u307e\u3059\u3002"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.stop": {
+    "Name": "Antigravity \u505c\u6b62",
+    "Tooltip": "\u9078\u629e\u4e2d\u306e\u30bf\u30b9\u30af\u3092\u505c\u6b62\u3057\u307e\u3059\u3002"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.pin": {
+    "Name": "Antigravity \u56fa\u5b9a",
+    "Tooltip": "\u9078\u629e\u4e2d\u306e\u30bf\u30b9\u30af\u3092\u56fa\u5b9a\u307e\u305f\u306f\u89e3\u9664\u3057\u307e\u3059\u3002"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.submit": {
+    "Name": "Antigravity \u9001\u4fe1",
+    "Tooltip": "\u73fe\u5728\u306e\u4e0b\u66f8\u304d\u3092\u9001\u4fe1\u3057\u307e\u3059\u3002\u5b9f\u884c\u4e2d\u306fAntigravity\u306e\u9001\u4fe1\u8a2d\u5b9a\u306b\u5f93\u3044\u307e\u3059\u3002"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.mic": {
+    "Name": "Antigravity \u30de\u30a4\u30af",
+    "Tooltip": "\u97f3\u58f0\u9332\u97f3\u3092\u958b\u59cb\u307e\u305f\u306f\u7d42\u4e86\u3057\u307e\u3059\u3002"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.model": {
+    "Name": "Antigravity \u30e2\u30c7\u30eb\u9078\u629e",
+    "Tooltip": "\u9078\u629e\u4e2d\u306e\u30bf\u30b9\u30af\u306e\u30e2\u30c7\u30eb\u8a2d\u5b9a\u3092\u958b\u304d\u307e\u3059\u3002"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.prompt_test": {
+    "Name": "Antigravity \u30c6\u30b9\u30c8\u3068\u4fee\u6b63",
+    "Tooltip": "\u30c6\u30b9\u30c8\u3068\u4fee\u6b63\u3092\u4f9d\u983c\u3057\u307e\u3059\u3002\u65e2\u5b58\u306e\u4e0b\u66f8\u304d\u306f\u4fdd\u6301\u3057\u307e\u3059\u3002"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.prompt_review": {
+    "Name": "Antigravity \u5909\u66f4\u3092\u30ec\u30d3\u30e5\u30fc",
+    "Tooltip": "\u5909\u66f4\u306e\u30ec\u30d3\u30e5\u30fc\u3092\u4f9d\u983c\u3057\u307e\u3059\u3002\u65e2\u5b58\u306e\u4e0b\u66f8\u304d\u306f\u4fdd\u6301\u3057\u307e\u3059\u3002"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.prompt_commit": {
+    "Name": "Antigravity \u30b3\u30df\u30c3\u30c8\u30e1\u30c3\u30bb\u30fc\u30b8",
+    "Tooltip": "Conventional Commit\u30e1\u30c3\u30bb\u30fc\u30b8\u3092\u4f9d\u983c\u3057\u307e\u3059\u3002\u30b3\u30df\u30c3\u30c8\u3084\u30d7\u30c3\u30b7\u30e5\u306f\u3057\u307e\u305b\u3093\u3002"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.fork": {
+    "Name": "Antigravity \u30bf\u30b9\u30af\u3092\u5206\u5c90",
+    "Tooltip": "\u5229\u7528\u53ef\u80fd\u306a\u5834\u5408\u3001\u6700\u5f8c\u306e\u8868\u793a\u5fdc\u7b54\u304b\u3089\u73fe\u5728\u306e\u30ef\u30fc\u30af\u30b9\u30da\u30fc\u30b9\u306b\u5206\u5c90\u3057\u307e\u3059\u3002\u5b9f\u884c\u505c\u6b62\u3068\u4e0b\u66f8\u304d\u306e\u89e3\u6d88\u304c\u5fc5\u8981\u3067\u3059\u3002"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.reasoning": {
+    "Name": "Antigravity \u63a8\u8ad6\u30ec\u30d9\u30eb",
+    "Tooltip": "\u73fe\u5728\u306e\u30e2\u30c7\u30eb\u306e\u63a8\u8ad6\u30ec\u30d9\u30eb\u3092\u9806\u306b\u5207\u308a\u66ff\u3048\u307e\u3059\u3002\u9078\u629e\u80a2\u304c\u306a\u3051\u308c\u3070\u901a\u77e5\u3057\u307e\u3059\u3002"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task6": {
+    "Name": "Antigravity \u30bb\u30c3\u30b7\u30e7\u30f3 6",
+    "Tooltip": "Antigravity Desktop\u3067\u3053\u306e\u30bf\u30b9\u30af\u3092\u9078\u629e\u3057\u3001\u72b6\u614b\u3092\u8868\u793a\u3057\u307e\u3059\u3002"
+  },
+  "com.ulanzi.ulanzistudio.antigravity.steer": {
+    "Name": "Antigravity \u5f85\u6a5f\u30e1\u30c3\u30bb\u30fc\u30b8\u3092\u4eca\u3059\u3050\u9001\u4fe1",
+    "Tooltip": "\u9078\u629e\u4e2d\u306e\u30bf\u30b9\u30af\u306e\u5c55\u958b\u3055\u308c\u305f\u30ad\u30e5\u30fc\u306b\u3042\u308b\u552f\u4e00\u306e\u9001\u4fe1\u53ef\u80fd\u306a\u30e1\u30c3\u30bb\u30fc\u30b8\u3092\u5373\u6642\u9001\u4fe1\u3057\u307e\u3059\u3002\u4e0b\u66f8\u304d\u306f\u4fdd\u6301\u3057\u307e\u3059\u3002\u8907\u6570\u3042\u308b\u5834\u5408\u306fAntigravity\u3067\u9078\u629e\u3057\u3066\u304f\u3060\u3055\u3044\u3002"
   }
 }
-

@@ -1,34 +1,132 @@
 {
-  "Name": "Codex Micro",
+  "Name": "Codex App",
   "Overview": "Ulanzi Studio의 Ulanzi D200 Series에서 Codex Desktop 작업과 동작을 제어합니다.",
-  "Description": "Ulanzi Studio를 통해 Ulanzi D200 Series를 Codex Desktop 전용 컨트롤 표면으로 사용합니다.\n\n기능\n- 최근 Codex 작업 5개의 실시간 상태를 표시하고 선택한 작업을 정확히 엽니다.\n- Fast, Usage, Pin, New, Fork, Steer, Mic, Submit 동작을 제공합니다.\n- Latest Task & Scroll Encoder로 task1을 열고 Codex를 위아래로 스크롤합니다.\n- 각 Action 설정 페이지에서 Codex Bridge를 설치, 복구, 실행하고 상태를 확인합니다.\n- Codex Bridge.app과 루프백 전용 엔드포인트를 통해 통신을 로컬로 유지합니다.\n\n설치 환경\n- macOS 13 이상\n- Codex Desktop\n- Ulanzi Studio 3.0.1 이상\n- Ulanzi Studio에 연결된 Ulanzi D200 Series\n- 저장소에서 수동 설정할 때만 Node.js 20 이상 필요\n\nLLM / AGENT 설치\nAgent에 다음과 같이 입력하세요:\nUlanzi Studio 플러그인을 설치해 주세요: https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation\n\n수동 설치\n1. https://github.com/UlanziTechnology/OpenCodexMicro 저장소를 복제하고 디렉터리를 엽니다.\n2. Ulanzi Studio를 종료합니다.\n3. 실행: npm install\n4. 실행: npm run install:plugin\n5. 실행: npm run setup\n6. Ulanzi Studio를 다시 열고 Codex Desktop을 종료한 다음 ~/Applications/Codex Bridge.app을 실행합니다.\n7. Ulanzi Studio에서 Codex Micro actions를 원하는 키에 추가합니다.\n8. Action을 선택하고 Codex Bridge 설정 페이지에서 설치, 서비스, CDP 상태를 확인합니다.\n\n중요 사항\nCodex Micro를 사용할 때는 항상 ~/Applications/Codex Bridge.app을 통해 Codex를 실행하세요. Codex Desktop을 직접 열지 마세요.\n실행 명령: open ~/Applications/Codex\\ Bridge.app",
+  "Description": "Ulanzi Studio를 통해 Ulanzi D200 Series를 Codex Desktop 전용 컨트롤 표면으로 사용합니다.\n\n기능\n- 최근 Codex 작업 6개의 실시간 상태를 표시하고 선택한 작업을 정확히 엽니다.\n- Fast, Usage, Pin, New, Fork, Steer, Mic, Submit 동작을 제공합니다.\n- Latest Task & Scroll Encoder로 task1을 열고 Codex를 위아래로 스크롤합니다.\n- 각 Action 설정 페이지에서 Codex Bridge를 설치, 복구, 실행하고 상태를 확인합니다.\n- Codex Bridge.app과 루프백 전용 엔드포인트를 통해 통신을 로컬로 유지합니다.\n\n설치 환경\n- macOS 13 이상\n- Codex Desktop\n- Ulanzi Studio 3.0.1 이상\n- Ulanzi Studio에 연결된 Ulanzi D200 Series\n- 저장소에서 수동 설정할 때만 Node.js 20 이상 필요\n\nLLM / AGENT 설치\nAgent에 다음과 같이 입력하세요:\nUlanzi Studio 플러그인을 설치해 주세요: https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation\n\n수동 설치\n1. https://github.com/UlanziTechnology/OpenCodexMicro 저장소를 복제하고 디렉터리를 엽니다.\n2. Ulanzi Studio를 종료합니다.\n3. 실행: npm install\n4. 실행: npm run install:plugin\n5. 실행: npm run setup\n6. Ulanzi Studio를 다시 열고 Codex Desktop을 종료한 다음 ~/Applications/Codex Bridge.app을 실행합니다.\n7. Ulanzi Studio에서 Codex App actions를 원하는 키에 추가합니다.\n8. Action을 선택하고 Codex Bridge 설정 페이지에서 설치, 서비스, CDP 상태를 확인합니다.\n\n중요 사항\nCodex Micro를 사용할 때는 항상 ~/Applications/Codex Bridge.app을 통해 Codex를 실행하세요. Codex Desktop을 직접 열지 마세요.\n실행 명령: open ~/Applications/Codex\\ Bridge.app",
   "Actions": [
-    { "Name": "Codex 작업 1", "Tooltip": "최근 Codex 작업 슬롯 1을 열고 실시간 상태를 표시합니다." },
-    { "Name": "Codex 작업 2", "Tooltip": "최근 Codex 작업 슬롯 2를 열고 실시간 상태를 표시합니다." },
-    { "Name": "Codex 작업 3", "Tooltip": "최근 Codex 작업 슬롯 3을 열고 실시간 상태를 표시합니다." },
-    { "Name": "Codex 작업 4", "Tooltip": "최근 Codex 작업 슬롯 4를 열고 실시간 상태를 표시합니다." },
-    { "Name": "Codex 작업 5", "Tooltip": "최근 Codex 작업 슬롯 5를 열고 실시간 상태를 표시합니다." },
-    { "Name": "Codex 빠른 모드", "Tooltip": "활성 Codex 작업의 빠른 모드를 전환합니다." },
-    { "Name": "Codex 사용량", "Tooltip": "남은 Codex 사용량을 표시하고 누르면 Codex에 포커스를 맞춥니다." },
-    { "Name": "Codex 5시간 사용량", "Tooltip": "남은 5시간 Codex 사용량과 리셋 타이머를 표시합니다." },
-    { "Name": "Codex 주간 사용량", "Tooltip": "남은 주간 Codex 사용량과 리셋 타이머를 표시합니다." },
-    { "Name": "Codex 작업 고정", "Tooltip": "활성 Codex 작업을 고정하거나 고정을 해제합니다." },
-    { "Name": "새 Codex 작업", "Tooltip": "새 Codex 작업을 만듭니다." },
-    { "Name": "최신 작업 및 스크롤", "Tooltip": "누르면 최신 Codex 작업을 엽니다. 왼쪽으로 돌리면 위로, 오른쪽으로 돌리면 아래로 스크롤합니다." },
-    { "Name": "Codex 작업 포크", "Tooltip": "활성 Codex 작업을 새 작업으로 포크합니다." },
-    { "Name": "Codex 조정", "Tooltip": "현재 입력창 텍스트를 실행 중인 작업에 조정 입력으로 보냅니다." },
-    { "Name": "Codex 마이크", "Tooltip": "Codex 마이크 동작을 전환합니다." },
-    { "Name": "Codex에 제출", "Tooltip": "현재 Codex 입력창 텍스트를 제출하거나 대기열에 추가합니다." },
-    { "Name": "Codex 작업 모니터", "Tooltip": "활성 작업 유형(WORK/CODEX)과 모델을 표시합니다. 여러 작업 실행 시 순환하거나 최근 작업 모델을 표시합니다." },
-    { "Name": "Codex 승인", "Tooltip": "대기 중인 Codex 도구 확인을 승인하거나 실행합니다." },
-    { "Name": "Codex 거부", "Tooltip": "대기 중인 Codex 도구 확인을 거부하거나 취소합니다." },
-    { "Name": "Codex 주의 알림", "Tooltip": "주의/오류가 필요한 작업 수를 표시하고 해당 작업으로 이동합니다." },
-    { "Name": "Codex 생성 중지", "Tooltip": "Codex Desktop에서 활성 생성을 즉시 취소하거나 중지합니다." },
-    { "Name": "Codex 토큰 모니터", "Tooltip": "세션 토큰 사용량과 컨텍스트 창 백분율을 표시합니다." },
-    { "Name": "Codex 추론 노력", "Tooltip": "모델 추론 노력 수준을 표시하고 전환합니다(낮음/중간/높음)." },
-    { "Name": "Codex 프롬프트: 테스트 및 수정", "Tooltip": "Codex에 테스트를 실행하고 오류를 수정하도록 요청합니다." },
-    { "Name": "Codex 프롬프트: 코드 검토", "Tooltip": "Codex에 변경 사항 및 보안 위험을 검토하도록 요청합니다." },
-    { "Name": "Codex 프롬프트: 커밋 메시지", "Tooltip": "Codex에 시맨틱 커밋 메시지를 생성하도록 요청합니다." }
+    {
+      "Name": "Codex 작업 1",
+      "Tooltip": "최근 Codex 작업 슬롯 1을 열고 실시간 상태를 표시합니다."
+    },
+    {
+      "Name": "Codex 작업 2",
+      "Tooltip": "최근 Codex 작업 슬롯 2를 열고 실시간 상태를 표시합니다."
+    },
+    {
+      "Name": "Codex 작업 3",
+      "Tooltip": "최근 Codex 작업 슬롯 3을 열고 실시간 상태를 표시합니다."
+    },
+    {
+      "Name": "Codex 작업 4",
+      "Tooltip": "최근 Codex 작업 슬롯 4를 열고 실시간 상태를 표시합니다."
+    },
+    {
+      "Name": "Codex 작업 5",
+      "Tooltip": "최근 Codex 작업 슬롯 5를 열고 실시간 상태를 표시합니다."
+    },
+    {
+      "Name": "Codex 빠른 모드",
+      "Tooltip": "활성 Codex 작업의 빠른 모드를 전환합니다."
+    },
+    {
+      "Name": "Codex 사용량",
+      "Tooltip": "남은 Codex 사용량을 표시하고 누르면 Codex에 포커스를 맞춥니다."
+    },
+    {
+      "Name": "Codex 5시간 사용량",
+      "Tooltip": "남은 5시간 Codex 사용량과 리셋 타이머를 표시합니다."
+    },
+    {
+      "Name": "Codex 주간 사용량",
+      "Tooltip": "남은 주간 Codex 사용량과 리셋 타이머를 표시합니다."
+    },
+    {
+      "Name": "Codex 작업 고정",
+      "Tooltip": "활성 Codex 작업을 고정하거나 고정을 해제합니다."
+    },
+    {
+      "Name": "새 Codex 작업",
+      "Tooltip": "새 Codex 작업을 만듭니다."
+    },
+    {
+      "Name": "최신 작업 및 스크롤",
+      "Tooltip": "누르면 최신 Codex 작업을 엽니다. 왼쪽으로 돌리면 위로, 오른쪽으로 돌리면 아래로 스크롤합니다."
+    },
+    {
+      "Name": "Codex 작업 포크",
+      "Tooltip": "활성 Codex 작업을 새 작업으로 포크합니다."
+    },
+    {
+      "Name": "Codex 조정",
+      "Tooltip": "현재 입력창 텍스트를 실행 중인 작업에 조정 입력으로 보냅니다."
+    },
+    {
+      "Name": "Codex 마이크",
+      "Tooltip": "Codex 마이크 동작을 전환합니다."
+    },
+    {
+      "Name": "Codex에 제출",
+      "Tooltip": "현재 Codex 입력창 텍스트를 제출하거나 대기열에 추가합니다."
+    },
+    {
+      "Name": "Codex 작업 모니터",
+      "Tooltip": "활성 작업 유형(WORK/CODEX)과 모델을 표시합니다. 여러 작업 실행 시 순환하거나 최근 작업 모델을 표시합니다."
+    },
+    {
+      "Name": "Codex 승인",
+      "Tooltip": "대기 중인 Codex 도구 확인을 승인하거나 실행합니다."
+    },
+    {
+      "Name": "Codex 거부",
+      "Tooltip": "대기 중인 Codex 도구 확인을 거부하거나 취소합니다."
+    },
+    {
+      "Name": "Codex 주의 알림",
+      "Tooltip": "주의/오류가 필요한 작업 수를 표시하고 해당 작업으로 이동합니다."
+    },
+    {
+      "Name": "Codex 생성 중지",
+      "Tooltip": "Codex Desktop에서 활성 생성을 즉시 취소하거나 중지합니다."
+    },
+    {
+      "Name": "Codex 토큰 모니터",
+      "Tooltip": "세션 토큰 사용량과 컨텍스트 창 백분율을 표시합니다."
+    },
+    {
+      "Name": "Codex 추론 노력",
+      "Tooltip": "현재 모델이 지원하는 추론 수준을 순서대로 전환합니다. 마지막 수준 다음에는 처음으로 돌아갑니다."
+    },
+    {
+      "Name": "Codex 프롬프트: 테스트 및 수정",
+      "Tooltip": "Codex에 테스트를 실행하고 오류를 수정하도록 요청합니다."
+    },
+    {
+      "Name": "Codex 프롬프트: 코드 검토",
+      "Tooltip": "Codex에 변경 사항 및 보안 위험을 검토하도록 요청합니다."
+    },
+    {
+      "Name": "Codex 프롬프트: 커밋 메시지",
+      "Tooltip": "Codex에 시맨틱 커밋 메시지를 생성하도록 요청합니다."
+    },
+    {
+      "Name": "Codex 작업 6",
+      "Tooltip": "최근 작업 슬롯 6을 엽니다."
+    },
+    {
+      "Name": "Codex 목표",
+      "Tooltip": "선택한 작업의 기존 목표를 일시 중지하거나 재개합니다."
+    },
+    {
+      "Name": "Codex 하위 에이전트",
+      "Tooltip": "하위 에이전트 요약을 표시하고 작업 에이전트를 엽니다."
+    },
+    {
+      "Name": "Codex 모델 선택",
+      "Tooltip": "선택한 작업에서 사용 가능한 다음 모델로 전환합니다. 마지막 모델 다음에는 처음으로 돌아갑니다."
+    },
+    {
+      "Name": "Codex 계획 보기",
+      "Tooltip": "기본 컨트롤을 사용할 수 있으면 선택한 작업의 기존 계획을 Codex 측면 패널에서 엽니다."
+    }
   ],
   "Localization": {
     "BridgeSetup": "Codex Bridge 설정",

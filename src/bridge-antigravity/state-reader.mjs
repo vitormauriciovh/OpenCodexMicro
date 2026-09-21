@@ -2,11 +2,35 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 
+// A model quota without an explicit window does not establish either account
+// allowance. In particular GetUserStatus.quotaInfo cannot be labeled "5h".
+export function windowedQuotaSummary(data) {
+  const groups = Array.isArray(data?.response?.groups) ? data.response.groups : [];
+  const group = groups.find(item => item.displayName?.includes("Gemini")) || groups[0];
+  const buckets = Array.isArray(group?.buckets) ? group.buckets : [];
+  const readWindow = name => {
+    const matches = buckets.filter(bucket => bucket.window === name);
+    if (matches.length !== 1) return { remaining: null, reset: null };
+    const bucket = matches[0], fraction = bucket.remainingFraction;
+    if (typeof fraction !== "number" || !Number.isFinite(fraction) || fraction < 0 || fraction > 1) return { remaining: null, reset: null };
+    const reset = typeof bucket.resetTime === "string" ? Date.parse(bucket.resetTime) : NaN;
+    return { remaining: Math.round(fraction * 100), reset: Number.isFinite(reset) ? reset : null };
+  };
+  const fiveHour = readWindow("5h"), weekly = readWindow("weekly");
+  if (fiveHour.remaining === null && weekly.remaining === null) return null;
+  return { fiveHourRemaining: fiveHour.remaining, fiveHourReset: fiveHour.reset,
+    weeklyRemaining: weekly.remaining, weeklyReset: weekly.reset };
+}
+
 export class AntigravityStateReader {
   constructor(options = {}) {
     this.brainDir = options.brainDir || process.env.ANTIGRAVITY_BRAIN_DIR || path.join(os.homedir(), ".gemini/antigravity/brain");
     this.cachedState = null;
     this.lastReadTime = 0;
+    this.transcriptCache = new Map();
+    this.quotaTtl = options.quotaTtl ?? 60000;
+    this.fetch = options.fetchImpl || fetch;
+    this.quotaFetch = options.quotaFetch || (() => this.fetchLiveAgyQuota());
   }
 
   async getConversationDirs() {
@@ -79,6 +103,7 @@ export class AntigravityStateReader {
       // no metadata files
     }
 
+    try { await fs.access(path.join(convPath, "implementation_plan.md")); hasPlan = true; } catch {}
     try {
       await fs.access(path.join(convPath, "walkthrough.md"));
       hasWalkthrough = true;
@@ -91,8 +116,14 @@ export class AntigravityStateReader {
     try {
       const tStat = await fs.stat(transcriptPath);
       transcriptMtimeMs = tStat.mtimeMs;
-      const content = await fs.readFile(transcriptPath, "utf-8");
-      const lines = content.trim().split("\n").filter(Boolean);
+      let cached = this.transcriptCache.get(transcriptPath);
+      if (!cached || cached.mtimeMs !== tStat.mtimeMs || cached.size !== tStat.size) {
+        const content = await fs.readFile(transcriptPath, "utf-8");
+        cached = { mtimeMs: tStat.mtimeMs, size: tStat.size, lines: content.trim().split("\n").filter(Boolean) };
+        this.transcriptCache.set(transcriptPath, cached);
+        while (this.transcriptCache.size > 6) this.transcriptCache.delete(this.transcriptCache.keys().next().value);
+      }
+      const lines = cached.lines;
 
       // Extract title, model & subagents:
       let initialTitle = convId.slice(0, 8);
@@ -176,30 +207,10 @@ export class AntigravityStateReader {
       }
       title = latestPrompt || initialTitle;
 
-      const formatAgyModel = (raw) => {
-        if (!raw) return "gemini-2.5";
-        const s = String(raw).toLowerCase();
-        if (s.includes("flash-lite") || s.includes("flash_lite")) return "flash-lite";
-        if (s.includes("3.7") || (s.includes("flash") && s.includes("3.7"))) return "flash-3.7";
-        if (s.includes("flash")) return "flash";
-        if (s.includes("2.5") || (s.includes("pro") && s.includes("2.5"))) return "pro-2.5";
-        if (s.includes("pro")) return "pro";
-        if (s.includes("gemini")) return "gemini";
-        if (s.includes("claude") || s.includes("sonnet") || s.includes("opus")) return "claude";
-        if (s.includes("gpt") || s.includes("o1") || s.includes("o3")) return "gpt-4o";
-        return "gemini-2.5";
-      };
-
-      const model = formatAgyModel(detectedModel);
-      const getModelContextWindow = (modelName) => {
-        const m = String(modelName).toLowerCase();
-        if (m.includes("pro")) return 2000000;
-        if (m.includes("claude") || m.includes("sonnet") || m.includes("opus")) return 200000;
-        if (m.includes("gpt-4o")) return 128000;
-        if (m.includes("o1") || m.includes("o3")) return 200000;
-        return 1000000;
-      };
-      const modelContextWindow = getModelContextWindow(model);
+      // Preserve the model identifier from evidence. Transcript characters
+      // cannot reveal the model's actual context capacity or compaction state.
+      const model = detectedModel || null;
+      const modelContextWindow = null;
 
       // Token usage calculation aligned with Codex schema
       let totalInputChars = 0;
@@ -228,17 +239,17 @@ export class AntigravityStateReader {
         }
       }
 
-      // Convert characters to tokens using 3.5 chars/token ratio (standard for code + multi-language tokenizers)
-      const inputTokens = Math.max(1, Math.round(totalInputChars / 3.5));
+      // Approximate transcript size at 3.5 characters/token; this is not billed usage.
+      const inputTokens = Math.round(totalInputChars / 3.5);
       const outputTokens = Math.round(totalOutputChars / 3.5);
-      const totalTokens = Math.max(1, inputTokens + outputTokens);
+      const totalTokens = inputTokens + outputTokens;
 
-      const lastTurnInputTokens = Math.max(1, Math.round(lastTurnInputChars / 3.5));
+      const lastTurnInputTokens = Math.round(lastTurnInputChars / 3.5);
       const lastTurnOutputTokens = Math.round(lastTurnOutputChars / 3.5);
-      const lastTurnTokens = Math.max(1, lastTurnInputTokens + lastTurnOutputTokens);
+      const lastTurnTokens = lastTurnInputTokens + lastTurnOutputTokens;
 
-      const activeContextTokens = totalTokens <= modelContextWindow ? totalTokens : lastTurnTokens;
-      const ctxPct = Math.min(100, Math.max(0, Math.round((activeContextTokens / modelContextWindow) * 100)));
+      const activeContextTokens = null;
+      const ctxPct = null;
 
       const tokenUsage = {
         total: {
@@ -253,6 +264,8 @@ export class AntigravityStateReader {
         },
         contextTokens: activeContextTokens,
         modelContextWindow,
+        estimated: true,
+        source: "transcript-character-estimate",
         usedPercent: ctxPct,
         percentage: ctxPct
       };
@@ -317,8 +330,8 @@ export class AntigravityStateReader {
             agentStatus = "EXECUTING";
           }
         } else {
-          status = isRecentlyCompleted ? "completed" : "idle";
-          agentStatus = "IDLE";
+          status = entryStatus === "DONE" ? "completed" : entryStatus === "ERROR" ? "error" : "unknown";
+          agentStatus = status === "unknown" ? "UNKNOWN" : status === "error" ? "ERROR" : "IDLE";
         }
       }
 
@@ -348,16 +361,9 @@ export class AntigravityStateReader {
         status,
         agentStatus: agentStatus || "IDLE",
         startedAt,
-        model: "gemini-2.5",
-        ctxPct: 0,
-        tokenUsage: {
-          total: { totalTokens: 0, inputTokens: 0, outputTokens: 0 },
-          last: { totalTokens: 0, inputTokens: 0, outputTokens: 0 },
-          contextTokens: 0,
-          modelContextWindow: 1000000,
-          usedPercent: 0,
-          percentage: 0
-        },
+        model: null,
+        ctxPct: null,
+        tokenUsage: null,
         pendingFeedback,
         subagentsCount,
         hasPlan,
@@ -372,7 +378,10 @@ export class AntigravityStateReader {
     const dirs = await this.getConversationDirs();
     if (dirs.length === 0) {
       return {
-        connected: true,
+        schemaVersion: 1,
+      connected: true,
+      applicationConnected: null,
+      capabilities: { approve: false, stop: false, navigate: false, scroll: false, artifacts: true },
         slots: Array.from({ length: 6 }, (_, id) => ({
           id, threadKey: null, title: null, status: "off", selected: false
         })),
@@ -435,7 +444,10 @@ export class AntigravityStateReader {
     const usage = await this.calculateRollingUsage(dirs);
 
     return {
+      schemaVersion: 1,
       connected: true,
+      applicationConnected: null,
+      capabilities: { approve: false, stop: false, navigate: false, scroll: false, artifacts: true },
       agentStatus: tasks[0]?.agentStatus || "IDLE",
       slots,
       activeTasks,
@@ -471,158 +483,38 @@ export class AntigravityStateReader {
       }
       const port = this._cachedAgyPort;
 
-      const htmlRes = await fetch(`http://127.0.0.1:${port}/`, { signal: AbortSignal.timeout(1000) });
+      const htmlRes = await this.fetch(`http://127.0.0.1:${port}/`, { signal: AbortSignal.timeout(1000) });
+      if (!htmlRes.ok) return null;
       const html = await htmlRes.text();
       const csrfMatch = html.match(/"csrfToken":"([^"]+)"/);
       const csrfToken = csrfMatch ? csrfMatch[1] : null;
       if (!csrfToken) return null;
 
-      // 1. Query official RetrieveUserQuotaSummary for exact live weekly & 5h limits
-      try {
-        const summaryRes = await fetch(`http://127.0.0.1:${port}/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-codeium-csrf-token": csrfToken
-          },
-          body: "{}",
-          signal: AbortSignal.timeout(1200)
-        });
-        const summaryData = await summaryRes.json();
-        const groups = summaryData?.response?.groups || [];
-        const geminiGroup = groups.find(g => g.displayName?.includes("Gemini")) || groups[0];
-        const buckets = geminiGroup?.buckets || [];
-        const weeklyBucket = buckets.find(b => b.window === "weekly" || b.bucketId?.includes("weekly"));
-        const fiveHourBucket = buckets.find(b => b.window === "5h" || b.bucketId?.includes("5h"));
-
-        if (weeklyBucket || fiveHourBucket) {
-          const fiveHourRemaining = fiveHourBucket?.remainingFraction !== undefined
-            ? Math.max(0, Math.min(100, Math.round(Number(fiveHourBucket.remainingFraction) * 100)))
-            : null;
-          const fiveHourReset = fiveHourBucket?.resetTime ? new Date(fiveHourBucket.resetTime).getTime() : null;
-
-          const weeklyRemaining = weeklyBucket?.remainingFraction !== undefined
-            ? Math.max(0, Math.min(100, Math.round(Number(weeklyBucket.remainingFraction) * 100)))
-            : null;
-          const weeklyReset = weeklyBucket?.resetTime ? new Date(weeklyBucket.resetTime).getTime() : null;
-
-          return {
-            fiveHourRemaining,
-            fiveHourReset,
-            weeklyRemaining,
-            weeklyReset
-          };
-        }
-      } catch {}
-
-      // 2. Fallback to GetUserStatus
-      const statusRes = await fetch(`http://127.0.0.1:${port}/exa.language_server_pb.LanguageServerService/GetUserStatus`, {
+      const summaryRes = await this.fetch(`http://127.0.0.1:${port}/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-codeium-csrf-token": csrfToken
-        },
+        headers: { "Content-Type": "application/json", "x-codeium-csrf-token": csrfToken },
         body: "{}",
         signal: AbortSignal.timeout(1200)
       });
-      const data = await statusRes.json();
-      const configs = data?.userStatus?.cascadeModelConfigData?.clientModelConfigs || [];
-      const geminiConfig = configs.find(c => c.label && c.label.includes("Gemini") && c.quotaInfo) || configs.find(c => c.quotaInfo);
-
-      if (geminiConfig?.quotaInfo) {
-        const remaining = Math.round(Number(geminiConfig.quotaInfo.remainingFraction) * 100);
-        const resetMs = new Date(geminiConfig.quotaInfo.resetTime).getTime();
-        return {
-          fiveHourRemaining: Math.max(0, Math.min(100, remaining)),
-          fiveHourReset: resetMs,
-          weeklyRemaining: null,
-          weeklyReset: null
-        };
-      }
+      if (!summaryRes.ok) return null;
+      return windowedQuotaSummary(await summaryRes.json());
     } catch {
-      // fallback
+      // Missing or invalid measured quota remains unknown.
     }
     return null;
   }
 
-  async calculateRollingUsage(dirs) {
+  async calculateRollingUsage() {
     const now = Date.now();
-    const liveQuota = await this.fetchLiveAgyQuota();
-
-    const fiveHoursAgo = now - 5 * 3600 * 1000;
-    const sevenDaysAgo = now - 7 * 24 * 3600 * 1000;
-
-    let turnsLast5h = 0;
-    let turnsLast7d = 0;
-    let oldestIn5h = null;
-
-    for (const dir of dirs || []) {
-      const transcriptPath = path.join(dir.fullPath, ".system_generated/logs/transcript.jsonl");
-      try {
-        const content = await fs.readFile(transcriptPath, "utf-8");
-        const lines = content.trim().split("\n").filter(Boolean);
-        for (const line of lines) {
-          try {
-            const item = JSON.parse(line);
-            if (item.type === "USER_INPUT" && item.created_at) {
-              const t = new Date(item.created_at).getTime();
-              if (t >= fiveHoursAgo) {
-                turnsLast5h++;
-                if (oldestIn5h === null || t < oldestIn5h) {
-                  oldestIn5h = t;
-                }
-              }
-              if (t >= sevenDaysAgo) {
-                turnsLast7d++;
-              }
-            }
-          } catch {}
-        }
-      } catch {}
-    }
-
-    const fiveHourReset = (liveQuota?.fiveHourReset && liveQuota.fiveHourReset > now)
-      ? liveQuota.fiveHourReset
-      : (oldestIn5h && oldestIn5h + 5 * 3600 * 1000 > now
-          ? oldestIn5h + 5 * 3600 * 1000
-          : now + 5 * 3600 * 1000);
-
-    const fiveHourRemaining = liveQuota?.fiveHourRemaining !== null && liveQuota?.fiveHourRemaining !== undefined
-      ? liveQuota.fiveHourRemaining
-      : Math.max(1, 100 - Math.min(99, Math.round((turnsLast5h / 50) * 100)));
-
-    const weeklyRemaining = liveQuota?.weeklyRemaining !== null && liveQuota?.weeklyRemaining !== undefined
-      ? liveQuota.weeklyRemaining
-      : Math.max(1, 100 - Math.min(99, Math.max(1, Math.round((turnsLast7d / 200) * 100))));
-
-    const d = new Date(now);
-    const day = d.getUTCDay();
-    const daysUntilMon = (8 - day) % 7 || 7;
-    const fallbackWeeklyReset = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + daysUntilMon, 0, 0, 0)).getTime();
-
-    const weeklyReset = (liveQuota?.weeklyReset && liveQuota.weeklyReset > now)
-      ? liveQuota.weeklyReset
-      : fallbackWeeklyReset;
-
-    return {
+    if (this.quotaCache && now - this.quotaCache.observedAt < this.quotaTtl) return this.quotaCache;
+    const live = await this.quotaFetch();
+    this.quotaCache = {
       windows: [
-        {
-          id: "five-hour",
-          kind: "five-hour",
-          usedPercent: 100 - fiveHourRemaining,
-          remainingPercent: fiveHourRemaining,
-          resetsAt: fiveHourReset
-        },
-        {
-          id: "weekly",
-          kind: "weekly",
-          usedPercent: 100 - weeklyRemaining,
-          remainingPercent: weeklyRemaining,
-          resetsAt: weeklyReset
-        }
-      ],
-      observedAt: now
+        { id: "five-hour", kind: "five-hour", remainingPercent: live?.fiveHourRemaining ?? null, resetsAt: live?.fiveHourReset ?? null },
+        { id: "weekly", kind: "weekly", remainingPercent: live?.weeklyRemaining ?? null, resetsAt: live?.weeklyReset ?? null }
+      ].map(window => ({ ...window, usedPercent: window.remainingPercent == null ? null : 100 - window.remainingPercent })),
+      source: live ? "live-quota" : "unavailable", estimated: false, observedAt: now
     };
+    return this.quotaCache;
   }
 }
-

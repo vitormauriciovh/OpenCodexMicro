@@ -78,9 +78,9 @@ npm run setup:all
 
 ### 2. 按需选择性安装
 
-#### Codex Micro 插件与 Bridge
+#### Codex App 插件与 Bridge
 ```bash
-# 安装 Codex Micro 插件至 Ulanzi Studio
+# 安装 Codex App 插件至 Ulanzi Studio
 npm run install:plugin
 
 # 构建并注册 Codex Bridge LaunchAgent 服务（~/Applications/Codex Bridge.app）
@@ -128,7 +128,7 @@ curl http://127.0.0.1:17374/state
 
 #### 在 Ulanzi Studio 中配置
 1. 启动 Ulanzi Studio。
-2. 在左侧动作列表中，可找到 **AI** 分类（包含 **Codex Micro** 与 **Antigravity**）和 **Music** 分类（包含 **Spotify Music Picker**）。
+2. 在左侧动作列表中，可找到 **AI** 分类（包含 **Codex App** 与 **Antigravity**）和 **Music** 分类（包含 **Spotify Music Picker**）。
 3. 将所需 Action 拖拽至 Ulanzi D200 虚拟键盘对应的按键或旋钮槽位。
 
 ---
@@ -139,7 +139,7 @@ LLM 或代码 Agent 必须遵循以下流程：
  
 1. 阅读 [AGENTS.md](AGENTS.md)，检查 `~/Library/Application Support/Ulanzi/UlanziDeck/Plugins/` 下已安装插件的 manifest。
 2. 校验插件 UUID：
-   - Codex Micro：`com.ulanzi.ulanzistudio.codexmicro`
+   - Codex App：`com.ulanzi.ulanzistudio.codexmicro`
    - Antigravity：`com.ulanzi.ulanzistudio.antigravity`
    - Spotify：`com.ulanzi.ulanzistudio.spotify`
 3. 若需安装或修复，参考 [`skills/install-ulanzi-studio-plugin/SKILL.md`](skills/install-ulanzi-studio-plugin/SKILL.md) 与 [`skills/setup-codex-bridge/SKILL.md`](skills/setup-codex-bridge/SKILL.md)。

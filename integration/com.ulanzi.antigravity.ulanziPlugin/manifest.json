@@ -1,8 +1,8 @@
 {
   "Author": "OpenCodexMicro",
   "Name": "Antigravity",
-  "Overview": "Control Antigravity VS Code agent tasks, plans, and actions from Ulanzi D200 Series in Ulanzi Studio.",
-  "Description": "Turn Ulanzi D200 Series into a dedicated Antigravity AI Agent control surface through Ulanzi Studio.\n\nFEATURES\n- View recent Antigravity sessions with live status and elapsed execution timer.\n- One-touch Proceed / Approve Plan and Cancel / Stop actions.\n- Attention alert badge jumping directly to threads needing feedback.\n- Active Subagents monitor and direct Plan / Walkthrough inspectors.\n- Use the Latest Session & Scroll Encoder action to switch session and scroll VS Code.\n- Keep communication local through loopback-only endpoints.",
+  "Overview": "Control and monitor Antigravity Desktop tasks from Ulanzi Studio.",
+  "Description": "Monitor Antigravity tasks and control the selected Desktop conversation: new task, approval, rejection, stop, pin, fork when available, reasoning options, composer submission, prompt shortcuts, microphone and scrolling. Transcript tokens are estimates; unavailable quota and context values remain unknown.",
   "Icon": "assets/icons/plugin.png",
   "Category": "AI",
   "CategoryIcon": "assets/icons/plugin.png",
@@ -30,166 +30,295 @@
       "Icon": "assets/icons/task-idle.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.task1",
-      "Tooltip": "Open recent Antigravity session slot 1 and show its live status.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Select this task in Antigravity Desktop and show its state.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Session", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Session",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity Session 2",
       "Icon": "assets/icons/task-idle.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.task2",
-      "Tooltip": "Open recent Antigravity session slot 2 and show its live status.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Select this task in Antigravity Desktop and show its state.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Session", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Session",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity Session 3",
       "Icon": "assets/icons/task-idle.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.task3",
-      "Tooltip": "Open recent Antigravity session slot 3 and show its live status.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Select this task in Antigravity Desktop and show its state.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Session", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Session",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity Session 4",
       "Icon": "assets/icons/task-idle.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.task4",
-      "Tooltip": "Open recent Antigravity session slot 4 and show its live status.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Select this task in Antigravity Desktop and show its state.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Session", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Session",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity Session 5",
       "Icon": "assets/icons/task-idle.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.task5",
-      "Tooltip": "Open recent Antigravity session slot 5 and show its live status.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Select this task in Antigravity Desktop and show its state.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Session", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Session",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
+    },
+    {
+      "Name": "Antigravity Session 6",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.task6",
+      "Tooltip": "Select this task in Antigravity Desktop and show its state.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Session",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity Proceed",
       "Icon": "assets/icons/approve.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.proceed",
-      "Tooltip": "Approve the pending implementation plan or tool call in Antigravity.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Approve the single visible pending request in the selected Antigravity Desktop task.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Proceed", "Image": "assets/icons/approve.png" }]
+      "States": [
+        {
+          "Name": "Proceed",
+          "Image": "assets/icons/approve.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity Cancel",
       "Icon": "assets/icons/reject.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.cancel",
-      "Tooltip": "Stop execution or cancel the pending action in Antigravity.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Stop the selected Antigravity Desktop task.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Cancel", "Image": "assets/icons/reject.png" }]
+      "States": [
+        {
+          "Name": "Cancel",
+          "Image": "assets/icons/reject.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity Attention",
       "Icon": "assets/icons/attention.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.attention",
-      "Tooltip": "Show pending attention count and switch directly to the active session.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Select the next Antigravity task awaiting feedback.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Attention", "Image": "assets/icons/attention.png" }]
+      "States": [
+        {
+          "Name": "Attention",
+          "Image": "assets/icons/attention.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity Subagents",
       "Icon": "assets/icons/fast.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.subagents",
-      "Tooltip": "Display count of active subagents in Antigravity.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Show subagent activity inferred from saved transcripts; this is not a live process count.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Subagents", "Image": "assets/icons/fast.png" }]
+      "States": [
+        {
+          "Name": "Subagents",
+          "Image": "assets/icons/fast.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity View Plan",
       "Icon": "assets/icons/pin.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.plan",
-      "Tooltip": "Open the active implementation plan in VS Code.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Open the selected task\u2019s plan artifact in the configured editor.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Plan", "Image": "assets/icons/pin.png" }]
+      "States": [
+        {
+          "Name": "Plan",
+          "Image": "assets/icons/pin.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity Walkthrough",
       "Icon": "assets/icons/steer.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.walkthrough",
-      "Tooltip": "Open the walkthrough artifact in VS Code.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Open the selected task\u2019s walkthrough artifact in the configured editor.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Walkthrough", "Image": "assets/icons/steer.png" }]
+      "States": [
+        {
+          "Name": "Walkthrough",
+          "Image": "assets/icons/steer.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity Usage",
       "Icon": "assets/icons/usage.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.usage",
-      "Tooltip": "Display remaining Antigravity context window and session allowance with reset countdown.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Show verified usage data when available. Unsupported account limits remain unknown.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Usage", "Image": "assets/icons/usage.png" }]
+      "States": [
+        {
+          "Name": "Usage",
+          "Image": "assets/icons/usage.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity 5H Usage",
       "Icon": "assets/icons/usage.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.usage5h",
-      "Tooltip": "Display remaining 5-hour Antigravity allowance and reset countdown.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Show verified usage data when available. Unsupported account limits remain unknown.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "5H Usage", "Image": "assets/icons/usage.png" }]
+      "States": [
+        {
+          "Name": "5H Usage",
+          "Image": "assets/icons/usage.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity Weekly Usage",
       "Icon": "assets/icons/usage.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.usageweekly",
-      "Tooltip": "Display remaining weekly Antigravity allowance and reset countdown.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Show verified usage data when available. Unsupported account limits remain unknown.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Weekly Usage", "Image": "assets/icons/usage.png" }]
+      "States": [
+        {
+          "Name": "Weekly Usage",
+          "Image": "assets/icons/usage.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity New Session",
       "Icon": "assets/icons/new.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.new",
-      "Tooltip": "Focus VS Code to start a new Antigravity session.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Open a new Antigravity Desktop conversation in the current project.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "New Session", "Image": "assets/icons/new.png" }]
+      "States": [
+        {
+          "Name": "New Session",
+          "Image": "assets/icons/new.png"
+        }
+      ]
     },
     {
-      "Name": "Antigravity Latest & Scroll",
+      "Name": "Antigravity Latest Plan",
       "Icon": "assets/icons/task-idle.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.navigate",
-      "Tooltip": "Press to focus latest session; turn left or right to scroll VS Code.",
-      "Controllers": ["Encoder"],
+      "Tooltip": "Press to select the latest task. Rotate to scroll the selected Antigravity Desktop conversation.",
+      "Controllers": [
+        "Encoder"
+      ],
       "Encoder": {
         "TriggerDescription": {
-          "Rotate": "Rotate to scroll VS Code",
-          "Push": "Press to focus latest Antigravity session"
+          "Rotate": "Scroll the selected Antigravity conversation",
+          "Push": "Select the most recent task"
         }
       },
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Latest & Scroll", "Image": "assets/icons/task-idle.png" }]
+      "States": [
+        {
+          "Name": "Latest & Scroll",
+          "Image": "assets/icons/task-idle.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity Agent HUD",
@@ -197,50 +326,305 @@
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.hud",
       "Tooltip": "Real-time Agent Status HUD (PLANNING, EXECUTING, WAITING, IDLE) with session title and elapsed timer.",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "HUD", "Image": "assets/icons/task-working.png" }]
+      "States": [
+        {
+          "Name": "HUD",
+          "Image": "assets/icons/task-working.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity /boost",
       "Icon": "assets/icons/fast.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.boost",
-      "Tooltip": "Inject /boost slash command for deep thinking and rigorous verification.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Unavailable: this Antigravity version has no verified equivalent.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Boost", "Image": "assets/icons/fast.png" }]
+      "States": [
+        {
+          "Name": "Boost",
+          "Image": "assets/icons/fast.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity /grill-me",
       "Icon": "assets/icons/steer.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.grillme",
-      "Tooltip": "Inject /grill-me slash command for interactive architectural interview.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Unavailable: this Antigravity version has no verified equivalent.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Grill-Me", "Image": "assets/icons/steer.png" }]
+      "States": [
+        {
+          "Name": "Grill-Me",
+          "Image": "assets/icons/steer.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity Tokens",
       "Icon": "assets/icons/usage.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.tokens",
-      "Tooltip": "Display cumulative session tokens, last turn token usage, and context window gauge.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Estimated tokens from transcript text; these are not measured account usage.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Tokens", "Image": "assets/icons/usage.png" }]
+      "States": [
+        {
+          "Name": "Tokens",
+          "Image": "assets/icons/usage.png"
+        }
+      ]
     },
     {
       "Name": "Antigravity /goal",
       "Icon": "assets/icons/plugin.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.antigravity.goal",
-      "Tooltip": "Inject /goal slash command for autonomous long-running task execution.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Unavailable: this Antigravity version has no verified equivalent.",
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
-      "States": [{ "Name": "Goal", "Image": "assets/icons/plugin.png" }]
+      "States": [
+        {
+          "Name": "Goal",
+          "Image": "assets/icons/plugin.png"
+        }
+      ]
+    },
+    {
+      "Name": "Antigravity Approve",
+      "Icon": "assets/icons/approve.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.approve",
+      "Tooltip": "Approve the single visible pending request in the selected task.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Approve",
+          "Image": "assets/icons/approve.png"
+        }
+      ]
+    },
+    {
+      "Name": "Antigravity Reject",
+      "Icon": "assets/icons/reject.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.reject",
+      "Tooltip": "Reject the single visible pending request in the selected task.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Reject",
+          "Image": "assets/icons/reject.png"
+        }
+      ]
+    },
+    {
+      "Name": "Antigravity Stop",
+      "Icon": "assets/icons/reject.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.stop",
+      "Tooltip": "Stop the selected task through its verified composer control.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Stop",
+          "Image": "assets/icons/reject.png"
+        }
+      ]
+    },
+    {
+      "Name": "Antigravity Pin Task",
+      "Icon": "assets/icons/pin.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.pin",
+      "Tooltip": "Pin or unpin the selected Antigravity Desktop task.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Pin Task",
+          "Image": "assets/icons/pin.png"
+        }
+      ]
+    },
+    {
+      "Name": "Antigravity Submit",
+      "Icon": "assets/icons/submit.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.submit",
+      "Tooltip": "Send the current Antigravity composer text.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Submit",
+          "Image": "assets/icons/submit.png"
+        }
+      ]
+    },
+    {
+      "Name": "Antigravity Microphone",
+      "Icon": "assets/icons/mic.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.mic",
+      "Tooltip": "Toggle Antigravity\u2019s voice memo control.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Microphone",
+          "Image": "assets/icons/mic.png"
+        }
+      ]
+    },
+    {
+      "Name": "Antigravity Select Model",
+      "Icon": "assets/icons/usage.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.model",
+      "Tooltip": "Open the model and reasoning options for the selected task.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Select Model",
+          "Image": "assets/icons/usage.png"
+        }
+      ]
+    },
+    {
+      "Name": "Antigravity Test and Fix",
+      "Icon": "assets/icons/submit.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.prompt_test",
+      "Tooltip": "Ask the selected task to run tests and fix failures; preserves an existing composer draft.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Test and Fix",
+          "Image": "assets/icons/submit.png"
+        }
+      ]
+    },
+    {
+      "Name": "Antigravity Review Changes",
+      "Icon": "assets/icons/submit.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.prompt_review",
+      "Tooltip": "Ask the selected task to review pending changes; preserves an existing composer draft.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Review Changes",
+          "Image": "assets/icons/submit.png"
+        }
+      ]
+    },
+    {
+      "Name": "Antigravity Commit Message",
+      "Icon": "assets/icons/submit.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.prompt_commit",
+      "Tooltip": "Ask for a Conventional Commit message; does not commit or push.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Commit Message",
+          "Image": "assets/icons/submit.png"
+        }
+      ]
+    },
+    {
+      "Name": "Antigravity Fork Task",
+      "Icon": "assets/icons/new.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.fork",
+      "Tooltip": "Fork from the latest visible response in the current workspace when Antigravity offers it. Finish the running turn and clear drafts first.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Fork Task",
+          "Image": "assets/icons/new.png"
+        }
+      ]
+    },
+    {
+      "Name": "Antigravity Reasoning",
+      "Icon": "assets/icons/usage.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.reasoning",
+      "Tooltip": "Cycle the reasoning options offered for the current model. Models without reasoning choices report unavailable.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Reasoning",
+          "Image": "assets/icons/usage.png"
+        }
+      ]
+    },
+    {
+      "Name": "Antigravity Send Queued Message Now",
+      "Icon": "assets/icons/steer.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.antigravity.steer",
+      "Tooltip": "Immediately deliver the single enabled message in the expanded queue of the selected task. Preserves the composer draft. Multiple queued messages require selection in Antigravity.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Send Queued Now",
+          "Image": "assets/icons/steer.png"
+        }
+      ]
     }
   ]
 }
-

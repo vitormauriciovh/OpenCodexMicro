@@ -1,22 +1,26 @@
+import { spotifyUri } from "../../../src/shared/spotify-uri.mjs";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
 export class SpotifyLocalController {
-  constructor() {
+  constructor({ execute = execFileAsync } = {}) {
+    this.execute = execute;
     this._cachedState = null;
     this._lastPolled = 0;
   }
 
   async runJxa(script) {
     try {
-      const { stdout } = await execFileAsync("osascript", ["-l", "JavaScript", "-e", script], {
+      const { stdout } = await this.execute("osascript", ["-l", "JavaScript", "-e", script], {
         timeout: 1500
       });
-      return JSON.parse(stdout.trim());
-    } catch {
-      return null;
+      const result = JSON.parse(stdout.trim());
+      if (result?.ok === false || result?.error) throw new Error(result.error || "Spotify action failed");
+      return result;
+    } catch (error) {
+      throw new Error(`Spotify automation failed: ${error.message}`);
     }
   }
 
@@ -101,12 +105,13 @@ export class SpotifyLocalController {
   }
 
   async setVolume(volume) {
+    if (!Number.isFinite(volume)) throw new Error("Invalid volume");
     const vol = Math.max(0, Math.min(100, Math.round(volume)));
     return this.runJxa(`
       (() => {
         try {
           const sp = Application("Spotify");
-          sp.setSoundVolume(${vol});
+          sp.soundVolume = ${vol};
           return JSON.stringify({ ok: true, volume: ${vol} });
         } catch (e) { return JSON.stringify({ ok: false, error: e.message }); }
       })()
@@ -114,13 +119,14 @@ export class SpotifyLocalController {
   }
 
   async changeVolume(delta) {
+    if (!Number.isFinite(delta) || Math.abs(delta) > 100) throw new Error("Invalid volume change");
     return this.runJxa(`
       (() => {
         try {
           const sp = Application("Spotify");
           const cur = sp.soundVolume() || 0;
           const next = Math.max(0, Math.min(100, cur + (${delta})));
-          sp.setSoundVolume(next);
+          sp.soundVolume = next;
           return JSON.stringify({ ok: true, volume: next });
         } catch (e) { return JSON.stringify({ ok: false, error: e.message }); }
       })()
@@ -128,19 +134,19 @@ export class SpotifyLocalController {
   }
 
   async playUri(uri) {
-    if (!uri) return null;
-    const cleanUri = uri.trim();
-    const isTrack = cleanUri.startsWith("spotify:track:");
-    const script = isTrack
-      ? `tell application "Spotify" to play track "${cleanUri}"`
-      : `tell application "Spotify" to play track "" in context "${cleanUri}"`;
-
-    try {
-      await execFileAsync("osascript", ["-e", script], { timeout: 2000 });
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, error: e.message };
-    }
+    const cleanUri = spotifyUri(uri);
+    const script = `on run argv
+      set targetUri to item 1 of argv
+      tell application "Spotify"
+        if targetUri starts with "spotify:track:" then
+          play track targetUri
+        else
+          play track "" in context targetUri
+        end if
+      end tell
+    end run`;
+    await this.execute("/usr/bin/osascript", ["-e", script, cleanUri], { timeout: 3000 });
+    return { ok: true };
   }
 
   async toggleShuffle() {

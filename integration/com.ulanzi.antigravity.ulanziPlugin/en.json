@@ -1,85 +1,144 @@
 {
-  "Description": "Turn Ulanzi D200 Series into a dedicated Antigravity AI Agent control surface through Ulanzi Studio.",
+  "Description": "Monitor Antigravity tasks and control the selected Desktop conversation: new task, approval, rejection, stop, pin, fork when available, reasoning options, composer submission, prompt shortcuts, microphone and scrolling. Transcript tokens are estimates; unavailable quota and context values remain unknown.",
   "Name": "Antigravity",
   "com.ulanzi.ulanzistudio.antigravity.task1": {
     "Name": "Antigravity Session 1",
-    "Tooltip": "Open recent Antigravity session slot 1 and show its live status."
+    "Tooltip": "Select this task in Antigravity Desktop and show its state."
   },
   "com.ulanzi.ulanzistudio.antigravity.task2": {
     "Name": "Antigravity Session 2",
-    "Tooltip": "Open recent Antigravity session slot 2 and show its live status."
+    "Tooltip": "Select this task in Antigravity Desktop and show its state."
   },
   "com.ulanzi.ulanzistudio.antigravity.task3": {
     "Name": "Antigravity Session 3",
-    "Tooltip": "Open recent Antigravity session slot 3 and show its live status."
+    "Tooltip": "Select this task in Antigravity Desktop and show its state."
   },
   "com.ulanzi.ulanzistudio.antigravity.task4": {
     "Name": "Antigravity Session 4",
-    "Tooltip": "Open recent Antigravity session slot 4 and show its live status."
+    "Tooltip": "Select this task in Antigravity Desktop and show its state."
   },
   "com.ulanzi.ulanzistudio.antigravity.task5": {
     "Name": "Antigravity Session 5",
-    "Tooltip": "Open recent Antigravity session slot 5 and show its live status."
+    "Tooltip": "Select this task in Antigravity Desktop and show its state."
   },
   "com.ulanzi.ulanzistudio.antigravity.proceed": {
     "Name": "Antigravity Proceed",
-    "Tooltip": "Approve the pending implementation plan or tool call in Antigravity."
+    "Tooltip": "Approve the single visible pending request in the selected Antigravity Desktop task."
   },
   "com.ulanzi.ulanzistudio.antigravity.cancel": {
     "Name": "Antigravity Cancel",
-    "Tooltip": "Stop execution or cancel the pending action in Antigravity."
+    "Tooltip": "Stop the selected Antigravity Desktop task."
   },
   "com.ulanzi.ulanzistudio.antigravity.attention": {
     "Name": "Antigravity Attention",
-    "Tooltip": "Show pending attention count and switch directly to the active session."
+    "Tooltip": "Select the next Antigravity task awaiting feedback."
   },
   "com.ulanzi.ulanzistudio.antigravity.subagents": {
     "Name": "Antigravity Subagents",
-    "Tooltip": "Display count of active subagents in Antigravity."
+    "Tooltip": "Show subagent activity inferred from saved transcripts; this is not a live process count."
   },
   "com.ulanzi.ulanzistudio.antigravity.plan": {
     "Name": "Antigravity View Plan",
-    "Tooltip": "Open the active implementation plan in VS Code."
+    "Tooltip": "Open the selected task\u2019s plan artifact in the configured editor."
   },
   "com.ulanzi.ulanzistudio.antigravity.walkthrough": {
     "Name": "Antigravity Walkthrough",
-    "Tooltip": "Open the walkthrough artifact in VS Code."
+    "Tooltip": "Open the selected task\u2019s walkthrough artifact in the configured editor."
   },
   "com.ulanzi.ulanzistudio.antigravity.usage": {
     "Name": "Antigravity Usage",
-    "Tooltip": "Display remaining Antigravity context window and session allowance with reset countdown."
+    "Tooltip": "Show verified usage data when available. Unsupported account limits remain unknown."
   },
   "com.ulanzi.ulanzistudio.antigravity.usage5h": {
     "Name": "Antigravity 5H Usage",
-    "Tooltip": "Display remaining 5-hour Antigravity usage allowance and reset countdown."
+    "Tooltip": "Show verified usage data when available. Unsupported account limits remain unknown."
   },
   "com.ulanzi.ulanzistudio.antigravity.usageweekly": {
     "Name": "Antigravity Weekly Usage",
-    "Tooltip": "Display remaining weekly Antigravity usage allowance and reset countdown."
+    "Tooltip": "Show verified usage data when available. Unsupported account limits remain unknown."
   },
   "com.ulanzi.ulanzistudio.antigravity.new": {
     "Name": "Antigravity New Session",
-    "Tooltip": "Focus VS Code to start a new Antigravity session."
+    "Tooltip": "Open a new Antigravity Desktop conversation in the current project."
   },
   "com.ulanzi.ulanzistudio.antigravity.navigate": {
-    "Name": "Antigravity Latest & Scroll",
-    "Tooltip": "Press to focus latest session; turn left or right to scroll VS Code."
+    "Name": "Antigravity Latest Plan",
+    "Tooltip": "Press to select the latest task. Rotate to scroll the selected Antigravity Desktop conversation."
   },
   "com.ulanzi.ulanzistudio.antigravity.hud": {
     "Name": "Antigravity Agent HUD",
-    "Tooltip": "Show real-time agent status (PLANNING, EXECUTING, WAITING, IDLE) with session title and elapsed timer."
+    "Tooltip": "Real-time Agent Status HUD (PLANNING, EXECUTING, WAITING, IDLE) with session title and elapsed timer."
   },
   "com.ulanzi.ulanzistudio.antigravity.boost": {
     "Name": "Antigravity /boost",
-    "Tooltip": "Inject /boost slash command for deep thinking and rigorous verification."
+    "Tooltip": "Unavailable: this Antigravity version has no verified equivalent."
   },
   "com.ulanzi.ulanzistudio.antigravity.grillme": {
     "Name": "Antigravity /grill-me",
-    "Tooltip": "Inject /grill-me slash command for interactive architectural interview."
+    "Tooltip": "Unavailable: this Antigravity version has no verified equivalent."
   },
   "com.ulanzi.ulanzistudio.antigravity.goal": {
     "Name": "Antigravity /goal",
-    "Tooltip": "Inject /goal slash command for autonomous long-running task execution."
+    "Tooltip": "Unavailable: this Antigravity version has no verified equivalent."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.tokens": {
+    "Name": "Antigravity Tokens",
+    "Tooltip": "Estimated tokens from transcript text; these are not measured account usage."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.approve": {
+    "Name": "Antigravity Approve",
+    "Tooltip": "Approve the single visible pending request in the selected task."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.reject": {
+    "Name": "Antigravity Reject",
+    "Tooltip": "Reject the single visible pending request in the selected task."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.stop": {
+    "Name": "Antigravity Stop",
+    "Tooltip": "Stop the selected task through its verified composer control."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.pin": {
+    "Name": "Antigravity Pin Task",
+    "Tooltip": "Pin or unpin the selected Antigravity Desktop task."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.submit": {
+    "Name": "Antigravity Submit",
+    "Tooltip": "Send the current Antigravity composer text."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.mic": {
+    "Name": "Antigravity Microphone",
+    "Tooltip": "Toggle Antigravity\u2019s voice memo control."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.model": {
+    "Name": "Antigravity Select Model",
+    "Tooltip": "Open the model and reasoning options for the selected task."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.prompt_test": {
+    "Name": "Antigravity Test and Fix",
+    "Tooltip": "Ask the selected task to run tests and fix failures; preserves an existing composer draft."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.prompt_review": {
+    "Name": "Antigravity Review Changes",
+    "Tooltip": "Ask the selected task to review pending changes; preserves an existing composer draft."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.prompt_commit": {
+    "Name": "Antigravity Commit Message",
+    "Tooltip": "Ask for a Conventional Commit message; does not commit or push."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.fork": {
+    "Name": "Antigravity Fork Task",
+    "Tooltip": "Fork from the latest visible response in the current workspace when Antigravity offers it. Finish the running turn and clear drafts first."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.reasoning": {
+    "Name": "Antigravity Reasoning",
+    "Tooltip": "Cycle the reasoning options offered for the current model. Models without reasoning choices report unavailable."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task6": {
+    "Name": "Antigravity Session 6",
+    "Tooltip": "Select this task in Antigravity Desktop and show its state."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.steer": {
+    "Name": "Antigravity Send Queued Message Now",
+    "Tooltip": "Immediately deliver the single enabled message in the expanded queue of the selected task. Preserves the composer draft. Multiple queued messages require selection in Antigravity."
   }
 }
-

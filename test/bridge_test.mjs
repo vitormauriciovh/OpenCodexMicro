@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
+import { contextPercent } from "../src/shared/token-metrics.mjs";
 
 import {
   decodeThreadPathSegment,
@@ -11,10 +12,22 @@ import {
   CodexCdpClient,
   composerPromptExpression,
   composerSteerExpression,
-  rendererActionExpression
+  rendererActionExpression,
+  threadGuardExpression,
+  findNativePlanControl
 } from "../src/bridge/codex-cdp.mjs";
 
 const UUID = "f6805b8a-332a-43a0-a118-52d3e59542f6";
+
+test("context metrics distinguish unknown capacity, cumulative usage and measured zero", () => {
+  assert.equal(contextPercent(null), null);
+  assert.equal(contextPercent({ last: { totalTokens: 250 } }), null);
+  assert.equal(contextPercent({ total: { totalTokens: 250 }, modelContextWindow: 1000 }), null);
+  assert.equal(contextPercent({ last: { totalTokens: 0 }, modelContextWindow: 1000 }), 0);
+  assert.equal(contextPercent({ last: { totalTokens: 250 }, modelContextWindow: 1000 }), 25);
+  const serialized = vm.runInNewContext(`(${contextPercent.toString()})`);
+  assert.equal(serialized({ contextTokens: 50, modelContextWindow: 100 }), 50);
+});
 
 test("accepts formal and explicit temporary Codex thread ids", () => {
   assert.equal(validateThreadId(UUID), UUID);
@@ -50,7 +63,7 @@ test("named Micro actions preserve press and release phases", async () => {
   ]) {
     await client.dispatchNamedAction(action, true);
     await client.dispatchNamedAction(action, false);
-    assert.deepEqual(calls.splice(0), [[key, 1], [key, 0]]);
+    assert.deepEqual(calls.splice(0), [[key, 1, undefined], [key, 0, undefined]]);
   }
 });
 
@@ -59,11 +72,11 @@ test("renderer actions execute once on key down", async () => {
   const calls = [];
   client.dispatchRendererAction = async (action) => calls.push(action);
 
-  for (const action of ["pin", "new", "stop", "reasoning"]) {
+  for (const action of ["pin", "new", "stop", "model", "reasoning", "goal", "subagents", "plan"]) {
     await client.dispatchNamedAction(action, true);
     await client.dispatchNamedAction(action, false);
   }
-  assert.deepEqual(calls, ["pin", "new", "stop", "reasoning"]);
+  assert.deepEqual(calls, ["pin", "new", "stop", "model", "reasoning", "goal", "subagents", "plan"]);
 });
 
 test("new renderer action accepts the current localized New conversation control", () => {
@@ -293,26 +306,20 @@ test("stop renderer action accepts localized Stop buttons", () => {
   assert.equal(clicks, 1);
 });
 
-test("reasoning renderer action clicks the reasoning effort trigger", () => {
-  let clicks = 0;
-  const triggerButton = {
-    offsetParent: {},
-    click() { clicks += 1; }
-  };
-  const effortSpan = {
-    closest(sel) { return sel === "button" ? triggerButton : null; }
-  };
-  const document = {
-    querySelector(sel) {
-      return sel.includes("ModelPickerTriggerEffortText") ? effortSpan : null;
-    },
-    querySelectorAll() { return []; }
-  };
-  assert.equal(
-    vm.runInNewContext(rendererActionExpression("reasoning"), { document }),
-    true
-  );
-  assert.equal(clicks, 1);
+test("stop ignores recording and modal controls and refuses ambiguity", () => {
+  const clicked = [];
+  const button = (label, extra = {}) => ({ offsetParent: {}, innerText: label,
+    getAttribute: name => name === 'aria-label' ? label : null,
+    click: () => clicked.push(label), ...extra });
+  let buttons = [button('Stop recording'), button('Cancel'), button('Stop', { closest: () => ({}) }), button('Stop generating')];
+  const document = { querySelector: () => null, querySelectorAll: () => buttons };
+  assert.equal(vm.runInNewContext(rendererActionExpression('stop'), { document }), true);
+  assert.deepEqual(clicked, ['Stop generating']);
+  buttons = [button('Stop generating', { disabled: true }), button('Cancel')];
+  assert.throws(() => vm.runInNewContext(rendererActionExpression('stop'), { document }), /No unique/);
+  buttons = [button('Stop generating'), button('Stop')];
+  assert.throws(() => vm.runInNewContext(rendererActionExpression('stop'), { document }), /No unique/);
+  assert.equal(clicked.length, 1);
 });
 
 test("composerPromptExpression focuses editor and inserts prompt text", () => {
@@ -338,9 +345,56 @@ test("composerPromptExpression focuses editor and inserts prompt text", () => {
   );
   assert.equal(focused, 1);
   assert.deepEqual(commands, [
-    { cmd: "selectAll", val: null },
     { cmd: "insertText", val: "Execute os testes" }
   ]);
+});
+
+test("prompt shortcuts preserve composer drafts and reject a changed task before insertion", () => {
+  let writes = 0;
+  const editor = { offsetParent: {}, textContent: "My unfinished draft", focus() {} };
+  const document = {
+    querySelector: () => ({ getAttribute: () => `local:${UUID}` }),
+    querySelectorAll: () => [editor],
+    execCommand() { writes++; return true; }
+  };
+  assert.throws(() => vm.runInNewContext(composerPromptExpression("Test", UUID), { document }), /draft/);
+  editor.textContent = "";
+  assert.throws(() => vm.runInNewContext(composerPromptExpression("Test", "different-task"), { document }), /task changed/);
+  assert.equal(writes, 0);
+  assert.doesNotThrow(() => vm.runInNewContext(threadGuardExpression(UUID), { document }));
+});
+
+test("native approval executes once without a second renderer approval", async () => {
+  const client = new CodexCdpClient(), calls = [];
+  client.dispatchAction = async (...args) => calls.push(args);
+  client.dispatchRendererAction = async () => { throw new Error("Must not duplicate native approval"); };
+  for (const [action, key] of [["approve", "ACT07"], ["reject", "ACT08"]]) {
+    await client.dispatchNamedAction(action, true, UUID);
+    await client.dispatchNamedAction(action, false, UUID);
+    assert.deepEqual(calls.splice(0), [[key, 1, UUID], [key, 0, UUID]]);
+  }
+});
+
+test("goal and subagent controls require a unique enabled control for the expected task", () => {
+  let clicks = 0;
+  const button = { offsetParent: {}, getAttribute: name => name === 'aria-label' ? 'Resume goal' : null, click() { clicks++; } };
+  const document = { querySelector: () => ({ getAttribute: () => UUID }), querySelectorAll: () => [button] };
+  assert.equal(vm.runInNewContext(rendererActionExpression('goal', UUID), { document }), true);
+  assert.equal(clicks, 1);
+  document.querySelectorAll = () => [button, button];
+  assert.throws(() => vm.runInNewContext(rendererActionExpression('goal', UUID), { document }), /unique/);
+  document.querySelectorAll = () => [{ ...button, getAttribute: () => 'Open subagents' }];
+  assert.equal(vm.runInNewContext(rendererActionExpression('subagents', UUID), { document }), true);
+  assert.equal(clicks, 2);
+});
+
+test("native controls report absent handlers instead of pretending an action succeeded", async () => {
+  const client = new CodexCdpClient(), messages = [];
+  const bus = { handlers: new Map([['codex-micro-hid-event', new Set()]]), dispatchHostMessage: message => messages.push(message) };
+  const context = { Map, Symbol, setTimeout: callback => { callback(); }, [Symbol.for('codex-keyboard-micro-bus')]: bus };
+  client.evaluate = expression => vm.runInNewContext(expression, context);
+  await assert.rejects(client.dispatchAction('ACT07', 1), /no handler/);
+  assert.equal(messages.length, 1); assert.equal(messages[0].type, 'codex-micro-device-state-changed');
 });
 
 test("unknown bridge actions are rejected", async () => {
@@ -349,4 +403,24 @@ test("unknown bridge actions are rejected", async () => {
     client.dispatchNamedAction("unknown", true),
     /Unsupported Codex bridge action/
   );
+});
+
+test('plan opens only the unique enabled native control of the expected task', () => {
+  let clicks = 0;
+  const make = (label, extras = {}) => ({ offsetParent: {}, getAttribute: name => name === 'aria-label' ? label : null, click: () => clicks++, ...extras });
+  let buttons = [make('Implement plan'), make('Download plan'), make('Abrir plano no painel lateral')];
+  const document = { querySelectorAll: () => buttons, querySelector: () => ({ getAttribute: () => 'local:task-a' }) };
+  assert.equal(vm.runInNewContext(rendererActionExpression('plan', 'local:task-a'), { document }), true);
+  assert.throws(() => vm.runInNewContext(rendererActionExpression('plan', 'local:task-b'), { document }), /task changed/);
+  for (const extras of [{ disabled: true }, { offsetParent: null }, { closest: () => ({}) }, { getAttribute: name => name === 'aria-disabled' ? 'true' : 'Open plan in side panel' }]) {
+    buttons = [make('Open plan in side panel', extras)];
+    assert.equal(findNativePlanControl(document), null);
+    assert.throws(() => vm.runInNewContext(rendererActionExpression('plan', 'task-a'), { document }), /No unique plan/);
+  }
+  buttons = [make('Open plan in side panel'), make('Open plan in side panel')];
+  assert.equal(findNativePlanControl(document), null);
+  assert.throws(() => vm.runInNewContext(rendererActionExpression('plan', 'task-a'), { document }), /No unique plan/);
+  buttons = [make('Implement plan'), make('Plan')];
+  assert.equal(findNativePlanControl(document), null);
+  assert.equal(clicks, 1);
 });

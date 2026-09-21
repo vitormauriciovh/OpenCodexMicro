@@ -1,3 +1,4 @@
+import "../../../test/helpers/env.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -82,7 +83,7 @@ for (const locale of [
   "es_ES.json"
 ]) {
   const messages = JSON.parse(await readFile(new URL(locale, packageRootUrl)));
-  assert.equal(messages.Name, "Codex Micro", `${locale} must localize Name`);
+  assert.equal(messages.Name, "Codex App", `${locale} must localize Name`);
   assert.ok(messages.Overview?.length > 20, `${locale} must localize Overview`);
   assert.match(messages.Description, /https:\/\/github\.com\/UlanziTechnology\/OpenCodexMicro/);
   assert.match(messages.Description, /npm run install:plugin/);
@@ -129,8 +130,9 @@ const bridge = createServer((request, response) => {
   if (request.url === "/state") {
     response.end(JSON.stringify({
       connected: true,
+      planAvailable: true,
       slots: [
-        { id: 0, threadKey: "11111111-1111-1111-1111-111111111111", title: "Working task", status: "thinking" },
+        { id: 0, threadKey: "11111111-1111-1111-1111-111111111111", title: "Working task", status: "thinking", tokenUsage: { totalTokens: 987654 } },
         { id: 1, threadKey: "22222222-2222-2222-2222-222222222222", title: "Unread task", status: "unread" },
         { id: 2, threadKey: "33333333-3333-3333-3333-333333333333", title: "Input task", status: "input" },
         { id: 3, threadKey: "44444444-4444-4444-4444-444444444444", title: "Failed task", status: "error" },
@@ -258,10 +260,11 @@ try {
     2,
     "Encoder press must open task slot 1"
   );
-  assert.deepEqual(
-    messages.filter(message => message.cmd === "hotkey").map(message => message.keylist),
-    ["SCROLL UP", "SCROLL DOWN"]
-  );
+  assert.equal(messages.filter(message => message.cmd === "hotkey").length, 0);
+  for (const direction of ["up", "down"]) {
+    assert.ok(bridgeRequests.includes(`POST /joystick/${direction}/down`));
+    assert.ok(bridgeRequests.includes(`POST /joystick/${direction}/up`));
+  }
   const navigateState = messages.find(message =>
     message.cmd === "state" &&
     message.param?.statelist?.[0]?.uuid === navigateEvent.uuid
@@ -278,6 +281,16 @@ try {
     client.send(JSON.stringify({ cmd: "run", ...event }));
     client.send(JSON.stringify({ cmd: "keyup", ...event }));
   }
+  const modelEvent = { uuid: "com.ulanzi.ulanzistudio.codexmicro.model", actionid: "model-action", key: "2_9", param: {} };
+  client.send(JSON.stringify({ cmd: "add", ...modelEvent }));
+  client.send(JSON.stringify({ cmd: "keydown", ...modelEvent }));
+  client.send(JSON.stringify({ cmd: "run", ...modelEvent }));
+  client.send(JSON.stringify({ cmd: "keyup", ...modelEvent }));
+  const planEvent = { uuid: "com.ulanzi.ulanzistudio.codexmicro.plan", actionid: "plan-action", key: "2_10", param: {} };
+  client.send(JSON.stringify({ cmd: "add", ...planEvent }));
+  client.send(JSON.stringify({ cmd: "keydown", ...planEvent }));
+  client.send(JSON.stringify({ cmd: "run", ...planEvent }));
+  client.send(JSON.stringify({ cmd: "keyup", ...planEvent }));
   const usageEvent = {
     uuid: "com.ulanzi.ulanzistudio.codexmicro.usage",
     actionid: "action-usage",
@@ -290,8 +303,12 @@ try {
   client.send(JSON.stringify({ cmd: "keyup", ...usageEvent }));
   await new Promise(resolve => setTimeout(resolve, 250));
 
+  assert.equal(bridgeRequests.filter(item => item === "POST /action/model/down").length, 1);
+  assert.equal(bridgeRequests.filter(item => item === "POST /action/plan/down").length, 1);
+  assert.equal(bridgeRequests.filter(item => item === "POST /action/plan/up").length, 0);
+  assert.equal(bridgeRequests.filter(item => item === "POST /action/model/up").length, 0);
   for (const action of actions) {
-    const bridgeAction = action === "reject" ? "stop" : action;
+    const bridgeAction = action;
     assert.equal(
       bridgeRequests.filter(item => item === `POST /action/${bridgeAction}/down`).length,
       1,
@@ -373,7 +390,18 @@ try {
   const attentionSvg = Buffer.from(attentionItem.data.split(",")[1], "base64").toString();
   assert.match(attentionSvg, />2</); // 2 pending: input task + error task
 
-  process.stdout.write("Codex Micro plugin smoke test passed.\n");
+  // Slot zero belongs to another task; selected-task cards must remain unknown.
+  const tokenEvent = { uuid: "com.ulanzi.ulanzistudio.codexmicro.tokens", actionid: "tokens-selected", key: "3_7", param: {} };
+  client.send(JSON.stringify({ cmd: "add", ...tokenEvent }));
+  await new Promise(resolve => setTimeout(resolve, 150));
+  for (const [uuid, expected] of [[tokenEvent.uuid, /CONTEXT UNKNOWN/], [modelEvent.uuid, />Unknown</], [planEvent.uuid, />Open plan</]]) {
+    const item = messages.find(message => message.cmd === "state" && message.param?.statelist?.[0]?.uuid === uuid)?.param?.statelist?.[0];
+    assert.ok(item?.data, `Missing selected task card ${uuid}`);
+    const svg = Buffer.from(item.data.split(',')[1], 'base64').toString();
+    assert.match(svg, expected);
+    assert.doesNotMatch(svg, /988k|5.6 LUNA/);
+  }
+  process.stdout.write("Codex App plugin smoke test passed.\n");
 } finally {
   child.kill("SIGTERM");
   host.close();

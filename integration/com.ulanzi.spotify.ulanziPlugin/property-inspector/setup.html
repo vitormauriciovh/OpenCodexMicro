@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html data-action="com.ulanzi.ulanzistudio.spotify.nowplaying" lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -123,6 +123,7 @@
     <div class="version">Spotify Music Picker v0.4.1</div>
   </main>
 
+  <script src="inspector-api.js"></script>
   <script>
     const HTTP_URL = "http://127.0.0.1:17375";
 
@@ -138,7 +139,7 @@
       const clientIdInput = document.getElementById("clientIdInput");
 
       try {
-        const res = await fetch(`${HTTP_URL}/status`);
+        const res = await localFetch(`${HTTP_URL}/status`);
         if (res.ok) {
           const data = await res.json();
           const state = data.state || {};
@@ -162,11 +163,11 @@
           playlistsCount.textContent = String(currentPlaylists.length);
 
           if (!linksArea.value && currentPlaylists.length > 0) {
-            linksArea.value = currentPlaylists.map(p => p.url).filter(Boolean).join("\n");
+            linksArea.value = (data.manualPlaylists || []).map(p => p.url).filter(Boolean).join("\n");
           }
         }
 
-        const authRes = await fetch(`${HTTP_URL}/auth/status`);
+        const authRes = await localFetch(`${HTTP_URL}/auth/status`);
         if (authRes.ok) {
           const authData = await authRes.json();
           if (authData.isAuthenticated) {
@@ -197,7 +198,7 @@
       msg.textContent = "Iniciando autorização no navegador...";
 
       try {
-        const res = await fetch(`${HTTP_URL}/auth/start?clientId=${encodeURIComponent(clientId)}`);
+        const res = await localFetch(`${HTTP_URL}/auth/start?clientId=${encodeURIComponent(clientId)}`);
         const data = await res.json();
         if (data.ok && data.url) {
           msg.className = "message success";
@@ -219,7 +220,7 @@
       msg.textContent = "Buscando playlists da sua conta...";
 
       try {
-        const res = await fetch(`${HTTP_URL}/sync`, { method: "POST" });
+        const res = await localFetch(`${HTTP_URL}/sync`, { method: "POST" });
         const data = await res.json();
         if (data.ok) {
           msg.className = "message success";
@@ -254,7 +255,7 @@
       msg.textContent = "Buscando informações e capas das playlists...";
 
       try {
-        const res = await fetch(`${HTTP_URL}/playlists`, {
+        const res = await localFetch(`${HTTP_URL}/playlists`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ links })

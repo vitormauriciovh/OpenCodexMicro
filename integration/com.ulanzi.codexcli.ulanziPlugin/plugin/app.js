@@ -1,8 +1,12 @@
+import { textCard, usageCard } from "../../../src/shared/deck-cards.mjs";
+import { encoderTicks, invalidateDisplays, reportActionError, bridgeFeed, inspectorReply } from "../../../src/shared/plugin-runtime.mjs";
+import { localClient } from "../../../src/shared/local-api.mjs";
 import WebSocket from "ws";
 import { dirname, resolve } from "node:path";
 
 const PLUGIN_UUID = "com.ulanzi.ulanzistudio.codexcli";
 const BRIDGE_URL = process.env.CODEX_CLI_BRIDGE_URL || "http://127.0.0.1:17376";
+const requestLocal = localClient("codex-cli", BRIDGE_URL);
 const [address = "127.0.0.1", port = "3906"] = process.argv.slice(2);
 const HOST_URL = `ws://${address}:${port}`;
 const instances = new Map();
@@ -13,12 +17,18 @@ const ACTION_LABELS = Object.freeze({
   task3: "SESSION 3",
   task4: "SESSION 4",
   task5: "SESSION 5",
+  task6: "SESSION 6", navigate: "TASKS", goal: "GOAL", subagents: "AGENTS", plan: "PLAN",
   approve: "APPROVE",
   reject: "REJECT",
   status: "STATUS",
   tokens: "TOKENS",
-  queue: "QUEUE",
-  resume: "RESUME"
+  queue: "CONTINUE",
+  resume: "RESUME",
+  new: "NEW TASK", fork: "FORK", stop: "STOP", attention: "ATTENTION",
+  submit: "SUBMIT", steer: "STEER", taskmonitor: "MONITOR",
+  prompt_test: "TEST", prompt_review: "REVIEW", prompt_commit: "COMMIT MSG",
+  usage: "USAGE", usage5h: "5H USAGE", usageweekly: "WEEKLY",
+  model: "MODEL", reasoning: "REASONING", fast: "FAST"
 });
 
 function escapeXml(value) {
@@ -45,6 +55,7 @@ function formatElapsed(sec) {
 }
 
 function formatTokenCount(num) {
+  if (num == null) return "—";
   if (!num || num <= 0) return "0";
   if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
   if (num >= 1_000) return `${(num / 1_000).toFixed(1)}k`;
@@ -168,7 +179,7 @@ function rejectIconData({ connected = true, isRunning = false }) {
   const bgCol = isRunning ? "#450a0a" : "#0f172a";
   const strokeCol = isRunning ? "#ef4444" : "#1e293b";
   const iconCol = isRunning ? "#ef4444" : "#475569";
-  const subText = isRunning ? "CANCEL" : "STOP";
+  const subText = !connected ? "OFFLINE" : isRunning ? "READY" : "NO REQUEST";
   const subColor = isRunning ? "#fca5a5" : "#64748b";
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
@@ -178,15 +189,19 @@ function rejectIconData({ connected = true, isRunning = false }) {
       <circle cx="0" cy="0" r="32" fill="${iconCol}"/>
       <path d="M-8 -8 L8 8 M8 -8 L-8 8" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round"/>
     </g>
-    <text x="98" y="142" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="15" font-weight="900" fill="#ffffff" letter-spacing="1">CANCEL</text>
+    <text x="98" y="142" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="15" font-weight="900" fill="#ffffff" letter-spacing="1">REJECT</text>
     <text x="98" y="162" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="800" fill="${subColor}" letter-spacing="0.8">${subText}</text>
   </svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
 
 function tokensIconData(tokenUsage, connected = true) {
-  const total = tokenUsage?.totalTokens || 0;
+  const total = tokenUsage?.totalTokens ?? null;
   const totalStr = formatTokenCount(total);
+  const context = tokenUsage?.contextTokens;
+  const window = tokenUsage?.modelContextWindow;
+  const contextLabel = Number.isFinite(context) && Number.isFinite(window) && window > 0
+    ? `${Math.min(100, Math.max(0, Math.round(context / window * 100)))}% CONTEXT` : "CONTEXT UNKNOWN";
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
     <rect width="196" height="196" rx="24" fill="#0d1117"/>
@@ -196,8 +211,9 @@ function tokensIconData(tokenUsage, connected = true) {
       <text x="0" y="5" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="11" font-weight="900" fill="#94a3b8" letter-spacing="1">CLI TOKENS</text>
     </g>
     <text x="98" y="105" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="32" font-weight="900" fill="#f8fafc" letter-spacing="0.5">${totalStr}</text>
-    <text x="98" y="150" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#64748b">INPUT: ${formatTokenCount(tokenUsage?.inputTokens || 0)}</text>
-    <text x="98" y="168" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#64748b">OUTPUT: ${formatTokenCount(tokenUsage?.outputTokens || 0)}</text>
+    <text x="98" y="126" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" fill="#94a3b8">${contextLabel}</text>
+    <text x="98" y="150" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#64748b">INPUT: ${formatTokenCount(tokenUsage?.inputTokens ?? null)}</text>
+    <text x="98" y="168" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#64748b">OUTPUT: ${formatTokenCount(tokenUsage?.outputTokens ?? null)}</text>
   </svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
@@ -210,7 +226,7 @@ function queueIconData() {
       <circle cx="0" cy="0" r="32" fill="#2563eb"/>
       <path d="M-6 -10 L10 0 L-6 10 Z" fill="#ffffff"/>
     </g>
-    <text x="98" y="142" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="15" font-weight="900" fill="#ffffff" letter-spacing="1">QUEUE</text>
+    <text x="98" y="142" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="15" font-weight="900" fill="#ffffff" letter-spacing="1">CONTINUE</text>
     <text x="98" y="162" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="800" fill="#93c5fd" letter-spacing="0.8">SEND PROMPT</text>
   </svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
@@ -259,6 +275,7 @@ function contextOf(message) {
 }
 
 function sendSvgState(instance, dataUrl) {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
   if (!instance.active || instance.lastDisplay === dataUrl) return;
   instance.lastDisplay = dataUrl;
   send({
@@ -289,7 +306,7 @@ function sendSvgState(instance, dataUrl) {
 }
 
 function taskSlot(uuid) {
-  const match = String(uuid || "").match(/\.task([1-5])$/);
+  const match = String(uuid || "").match(/\.task([1-6])$/);
   return match ? Number(match[1]) - 1 : null;
 }
 
@@ -315,6 +332,7 @@ function addInstance(message) {
 }
 
 function renderInstance(instance) {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
   if (!instance.active) return;
   const slot = taskSlot(instance.uuid);
   const slots = latestState?.slots || [];
@@ -359,25 +377,51 @@ function renderInstance(instance) {
   if (name === "approve") {
     sendSvgState(instance, approveIconData({
       connected: Boolean(latestState?.connected),
-      hasAction: (latestState?.pendingAttentionCount || 0) > 0
+      hasAction: (latestState?.lastTask?.pendingApprovalCount || 0) === 1
     }));
   } else if (name === "reject") {
     sendSvgState(instance, rejectIconData({
       connected: Boolean(latestState?.connected),
-      isRunning: latestState?.agentStatus === "WORKING"
+      isRunning: (latestState?.lastTask?.pendingApprovalCount || 0) === 1
     }));
+  } else if (name === "tokens" && !latestState?.connected) {
+    sendSvgState(instance, textCard("CLI TOKENS", "Offline", "Waiting for app-server", false));
   } else if (name === "tokens") {
     sendSvgState(instance, tokensIconData(latestState?.tokenUsage, Boolean(latestState?.connected)));
   } else if (name === "queue") {
     sendSvgState(instance, queueIconData());
   } else if (name === "resume") {
     sendSvgState(instance, resumeIconData());
-  } else if (name === "status") {
+  } else if (["usage", "usage5h", "usageweekly"].includes(name)) {
+    sendSvgState(instance, usageCard(latestState?.usage, name === "usage5h" ? "five-hour" : name === "usageweekly" ? "weekly" : null, Boolean(latestState?.connected)));
+  } else if (name === "attention") {
+    sendSvgState(instance, textCard("ATTENTION", latestState?.pendingAttentionCount || 0, "Select pending task", Boolean(latestState?.connected)));
+  } else if (name === "plan") {
+    const plan = latestState?.plan;
+    const steps = plan?.checklist?.steps;
+    const summary = plan?.error ? "Read failed" : steps ? `${steps.filter(step => step.status === "completed").length}/${steps.length} steps` : plan?.document ? "Saved plan" : plan?.historyStatus === "complete" ? "No saved plan" : "Load plan";
+    sendSvgState(instance, textCard("PLAN", summary, "View in plugin inspector", Boolean(latestState?.connected)));
+  } else if (name === "subagents") {
+    const agents = latestState?.subagents;
+    sendSvgState(instance, textCard("CHILD TASKS", agents?.count ?? "Unknown", agents?.error ? "Refresh failed" : agents ? "Press to refresh" : "Press to load", Boolean(latestState?.connected)));
+  } else if (name === "goal") {
+    const goal = latestState?.goal;
+    sendSvgState(instance, textCard("GOAL", goal?.status || (latestState?.goalError ? "Unavailable" : "No goal"), goal?.status === "active" ? "Press to pause" : goal?.status === "paused" ? "Press to resume" : "Configure in inspector", Boolean(latestState?.connected)));
+  } else if (name === "navigate") {
+    sendSvgState(instance, textCard("TASKS", latestState?.lastTask?.title || "No task", "Rotate or press to select", Boolean(latestState?.connected)));
+  } else if (["model", "reasoning", "fast"].includes(name)) {
+    const pending = latestState?.nextPromptSettings;
+    const current = latestState?.lastTask;
+    const value = name === "model" ? (pending?.model || current?.model) : name === "reasoning" ? (pending?.effort || current?.reasoningEffort) : ((pending ? pending.serviceTier : current?.serviceTier) === "priority" ? "Fast" : "Standard");
+    sendSvgState(instance, textCard(ACTION_LABELS[name], value || "Unknown", pending ? "Next deck prompt" : "Press to change", Boolean(latestState?.connected)));
+  } else if (["new", "fork", "stop", "submit", "steer", "prompt_test", "prompt_review", "prompt_commit"].includes(name)) {
+    sendSvgState(instance, textCard("CODEX CLI", ACTION_LABELS[name], name === "submit" || name === "steer" ? (latestState?.draft ? "Saved prompt ready" : "Set prompt in inspector") : "Selected task", Boolean(latestState?.connected)));
+  } else if (name === "status" || name === "taskmonitor") {
     const last = latestState?.lastTask;
     sendSvgState(instance, sessionCardIconData({
       headerLeft: "CLI",
       headerRight: "STATUS",
-      title: last?.title || "Codex CLI",
+      title: latestState?.selectedTaskError ? "TASK READ-ONLY" : last?.title || "Codex CLI",
       status: latestState?.agentStatus || "IDLE",
       elapsed: last?.elapsedSec ? formatElapsed(last.elapsedSec) : "",
       model: last?.model || "Codex CLI",
@@ -393,55 +437,14 @@ function renderAll() {
   }
 }
 
-let bridgeSocket = null;
-let bridgeWsReconnectTimer = null;
-let bridgeFallbackTimer = null;
-
-function connectBridgeWs() {
-  clearTimeout(bridgeWsReconnectTimer);
-  try {
-    const wsUrl = BRIDGE_URL.replace(/^http/, "ws") + "/events";
-    bridgeSocket = new WebSocket(wsUrl);
-
-    bridgeSocket.on("open", () => {
-      clearInterval(bridgeFallbackTimer);
-      bridgeFallbackTimer = setInterval(() => void pollBridgeState(), 5000);
-      bridgeFallbackTimer.unref();
-    });
-
-    bridgeSocket.on("message", (raw) => {
-      try {
-        latestState = JSON.parse(String(raw));
-        renderAll();
-      } catch {}
-    });
-
-    bridgeSocket.on("close", () => {
-      bridgeSocket = null;
-      clearInterval(bridgeFallbackTimer);
-      bridgeFallbackTimer = setInterval(() => void pollBridgeState(), 3000);
-      bridgeFallbackTimer.unref();
-      bridgeWsReconnectTimer = setTimeout(connectBridgeWs, 2000);
-      bridgeWsReconnectTimer.unref();
-    });
-
-    bridgeSocket.on("error", () => {
-      bridgeSocket?.close();
-    });
-  } catch {
-    bridgeWsReconnectTimer = setTimeout(connectBridgeWs, 2000);
-    bridgeWsReconnectTimer.unref();
-  }
-}
+const feed = bridgeFeed({ component: "codex-cli", url: BRIDGE_URL, poll: pollBridgeState, onState: state => { latestState = state;  renderAll(); } });
+function connectBridgeWs() { feed.start(); }
 
 async function pollBridgeState() {
   if (pollInFlight) return;
   pollInFlight = true;
   try {
-    const res = await fetch(`${BRIDGE_URL}/state`, { signal: AbortSignal.timeout(1200) });
-    if (res.ok) {
-      latestState = await res.json();
-    }
+    latestState = await requestLocal("/state");
   } catch (err) {
     latestState = { connected: false, error: err.message, slots: [] };
   } finally {
@@ -450,33 +453,33 @@ async function pollBridgeState() {
   }
 }
 
-async function invokeAction(name, param) {
-  try {
-    await fetch(`${BRIDGE_URL}/action/${name}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(param || {}),
-      signal: AbortSignal.timeout(1500)
-    });
-  } catch {}
+async function clickSlot(slot) {
+  const threadId = latestState?.slots?.[slot]?.threadKey;
+  if (!threadId) throw new Error("No session in this slot");
+  return requestLocal(`/task/${slot}/click`, { method: "POST", body: JSON.stringify({ threadId }) });
 }
-
+async function invokeAction(name, param = {}) {
+  return requestLocal(`/action/${name}`, { method: "POST", body: JSON.stringify({ threadId: latestState?.selectedThreadId, ...param }) });
+}
 async function invoke(instance, pressed) {
   if (!pressed) return;
   const slot = taskSlot(instance.uuid);
-  if (slot !== null) {
-    await fetch(`${BRIDGE_URL}/task/${slot}/click`, { method: "POST", signal: AbortSignal.timeout(1500) }).catch(() => {});
-    return;
-  }
-
+  if (slot !== null) return clickSlot(slot);
   const name = actionName(instance.uuid);
-  if (!name) return;
+  if (["tokens", "status", "taskmonitor", "usage", "usage5h", "usageweekly"].includes(name)) return;
+  if (name) await invokeAction(name);
+}
 
-  if (name === "approve" || name === "reject" || name === "resume" || name === "queue") {
-    await invokeAction(name);
-  } else {
-    await fetch(`${BRIDGE_URL}/focus`, { method: "POST", signal: AbortSignal.timeout(1500) }).catch(() => {});
-  }
+async function handleInspector(message) {
+  try {
+    const { path, method = "GET", body } = message.payload;
+    if (typeof path !== "string" || !path.startsWith("/") || path.startsWith("//") || typeof body === "string" && body.length > 65536) throw new Error("Invalid inspector request");
+    const target = new URL(path, "http://localhost");
+    const allowed = ["GET /state", "POST /draft", "POST /goal", "POST /action/plan"];
+    if (!allowed.includes(`${method} ${target.pathname}`)) throw new Error("Unsupported inspector operation");
+    const data = await requestLocal(target.pathname + target.search, { method, body, signal: AbortSignal.timeout(110000) });
+    inspectorReply(send, message, { data });
+  } catch (error) { inspectorReply(send, message, { error: error.message }); }
 }
 
 function handleMessage(raw) {
@@ -485,6 +488,10 @@ function handleMessage(raw) {
     message = JSON.parse(String(raw));
   } catch {
     return;
+  }
+
+  if (message.cmd === "sendToPlugin" && message.payload?.type === "localApi") {
+    ack(message); void handleInspector(message); return;
   }
 
   if (message.cmd === "add" || message.cmd === "paramfromapp") {
@@ -519,8 +526,13 @@ function handleMessage(raw) {
 
   if (["dialdown", "dialup", "dialrotate"].includes(message.cmd)) {
     const instance = instances.get(contextOf(message)) || addInstance(message);
-    if (actionName(instance.uuid) === "resume") {
-      void fetch(`${BRIDGE_URL}/focus`, { method: "POST" }).catch(() => {});
+    if (actionName(instance.uuid) === "navigate") {
+      if (message.cmd === "dialrotate") {
+        const ticks = encoderTicks(message);
+        if (ticks) void invokeAction("navigate", { ticks }).catch(error => reportActionError(send, instance, error));
+      } else if (message.cmd === "dialdown") void invoke(instance, true).catch(error => reportActionError(send, instance, error));
+    } else if (actionName(instance.uuid) === "resume") {
+      if (message.cmd === "dialdown") void invoke(instance, true).catch(error => reportActionError(send, instance, error));
     }
     ack(message);
     return;
@@ -528,44 +540,50 @@ function handleMessage(raw) {
 
   if (["keydown", "keyup"].includes(message.cmd)) {
     const instance = instances.get(contextOf(message)) || addInstance(message);
-    void invoke(instance, message.cmd !== "keyup");
+    void invoke(instance, message.cmd !== "keyup").catch(error => reportActionError(send, instance, error));
     ack(message);
   }
 }
 
 function connect() {
   clearTimeout(reconnectTimer);
-  socket = new WebSocket(HOST_URL);
+  const hostSocket = new WebSocket(HOST_URL);
+  socket = hostSocket;
 
-  socket.on("open", () => {
+  hostSocket.on("open", () => {
+    if (socket !== hostSocket) return;
     send({ code: 0, cmd: "connected", uuid: PLUGIN_UUID });
+    invalidateDisplays(instances);
+    renderAll();
     connectBridgeWs();
     void pollBridgeState();
   });
 
-  socket.on("message", handleMessage);
+  hostSocket.on("message", raw => { if (socket === hostSocket) handleMessage(raw); });
 
-  socket.on("close", () => {
-    clearInterval(bridgeFallbackTimer);
-    bridgeSocket?.close();
+  hostSocket.on("close", () => {
+    if (socket !== hostSocket) return;
+    feed.stop();
     reconnectTimer = setTimeout(connect, 1000);
     reconnectTimer.unref();
   });
 
-  socket.on("error", (err) => {
+  hostSocket.on("error", (err) => {
     console.error("WS error:", err);
-    socket.close();
+    hostSocket.close();
   });
 }
+
+const renderTimer = setInterval(renderAll, 1000);
+renderTimer.unref();
 
 connect();
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {
     clearTimeout(reconnectTimer);
-    clearTimeout(bridgeWsReconnectTimer);
-    clearInterval(bridgeFallbackTimer);
-    bridgeSocket?.close();
+    clearInterval(renderTimer);
+    feed.stop();
     socket?.close();
     process.exit(0);
   });

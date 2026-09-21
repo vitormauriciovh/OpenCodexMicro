@@ -20,3 +20,5 @@ await build({
 
 await writeFile(path.resolve(distDir, "package.json"), '{\n  "type": "commonjs"\n}\n');
 await rm(path.resolve(distDir, "licenses"), { recursive: true, force: true });
+
+await (await import("node:fs/promises")).copyFile(path.resolve(__dirname, "../../src/shared/inspector-api.js"), path.resolve(__dirname, "property-inspector/inspector-api.js"));

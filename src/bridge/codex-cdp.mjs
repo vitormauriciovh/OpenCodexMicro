@@ -1,3 +1,5 @@
+import { contextPercent } from "../shared/token-metrics.mjs";
+import { readNativeModelPicker, cycleNativeModelPicker } from "./model-picker.mjs";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import WebSocket from "ws";
@@ -20,7 +22,7 @@ const MICRO_ACTION_KEYS = Object.freeze({
   mic: "ACT10",
   submit: "ACT12"
 });
-const RENDERER_ACTIONS = new Set(["pin", "new", "approve", "reject", "stop", "reasoning"]);
+const RENDERER_ACTIONS = new Set(["pin", "new", "approve", "reject", "stop", "model", "reasoning", "goal", "subagents", "plan"]);
 const PIN_ACTION_LABELS = Object.freeze([
   "Pin chat",
   "Unpin chat",
@@ -112,8 +114,45 @@ const REJECT_ACTION_LABELS = Object.freeze([
   "Abbrechen"
 ]);
 
-export function rendererActionExpression(action) {
+export function threadGuardExpression(threadId) {
+  return `const expectedThread = ${JSON.stringify(threadId)};
+    if (expectedThread !== undefined) {
+      const actualThread = document.querySelector('[data-above-composer-conversation-id]')?.getAttribute('data-above-composer-conversation-id')
+        ?? document.querySelector('[data-app-action-sidebar-thread-id][data-app-action-sidebar-thread-active=true]')?.getAttribute('data-app-action-sidebar-thread-id') ?? null;
+      const normalizeThread = value => value == null ? null : String(value).replace(/^local:/, '');
+      if (normalizeThread(actualThread) !== normalizeThread(expectedThread)) throw new Error('Codex task changed; refresh the deck and try again');
+    }`;
+}
+
+// Exact labels from localConversation.planSummary.openInSidePanel in the
+// installed desktop bundle. Never match Implement, Download, or summary text.
+export function findNativePlanControl(document) {
+  const labels = new Set(["Open plan in side panel", "Abrir plano no painel lateral", "Plan im Seitenbereich öffnen", "Abrir plan en el panel lateral", "サイドパネルでプランを開く", "사이드 패널에서 계획 열기", "在侧边面板中打开套餐", "在側邊面板中開啟計劃", "在側邊面板開啟方案"]);
+  const matches = [...document.querySelectorAll('button[aria-label]')].filter(button =>
+    button.offsetParent !== null && !button.disabled && button.getAttribute('aria-disabled') !== 'true' &&
+    !button.closest?.('[role="dialog"], [aria-modal="true"], [inert], [aria-hidden="true"]') &&
+    labels.has(button.getAttribute('aria-label')));
+  return matches.length === 1 ? matches[0] : null;
+}
+
+export function rendererActionExpression(action, threadId) {
+  if (action === "model" || action === "reasoning") {
+    return `(async () => {
+      const guard = () => { ${threadGuardExpression(threadId)} };
+      const readPicker = () => (${readNativeModelPicker.toString()})(document);
+      guard();
+      const expected = (${cycleNativeModelPicker.toString()})(readPicker(), ${JSON.stringify(action)});
+      for (let attempt = 0; attempt < 40; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        guard();
+        const { props } = readPicker();
+        if (props.model === expected.model && props.reasoningEffort === expected.reasoningEffort) return true;
+      }
+      throw new Error('Codex did not confirm the model settings change');
+    })()`;
+  }
   return `(() => {
+    ${threadGuardExpression(threadId)}
     const action = ${JSON.stringify(action)};
     const visible = (element) => element && element.offsetParent !== null;
     let target = null;
@@ -172,20 +211,22 @@ export function rendererActionExpression(action) {
         button.matches?.('[data-testid*="stop"],[data-testid*="cancel"],[data-testid*="reject"],[data-testid*="deny"]')
       );
     } else if (action === "stop") {
-      const labels = ["Stop", "Stop generating", "Cancel", "Parar", "Cancelar", "Interromper", "停止", "停止生成", "取消", "中止", "Abbrechen", "Stoppen"];
-      const buttons = [...document.querySelectorAll("button, [role=button]")].filter(visible);
-      target = buttons.find((button) => {
-        const aria = button.getAttribute("aria-label") || "";
-        const title = button.getAttribute("title") || "";
-        const text = (button.innerText || "").trim();
-        return labels.some((l) => aria.includes(l) || title.includes(l) || text.includes(l));
-      }) ?? buttons.find((button) => button.matches?.('[data-testid*="stop"],[data-testid*="cancel"]'));
-    } else if (action === "reasoning") {
-      const trigger = document.querySelector('[class*="ModelPickerTriggerEffortText"]')?.closest("button")
-        ?? document.querySelector('[class*="ModelPickerTriggerEffortLabel"]')?.closest("button")
-        ?? document.querySelector('[class*="ModelPickerTriggerContent"]')?.closest("button")
-        ?? [...document.querySelectorAll("button")].find((b) => visible(b) && (b.getAttribute("aria-label")?.includes("reasoning") || b.getAttribute("title")?.includes("reasoning")));
-      if (trigger) target = trigger;
+      const labels = new Set(["Stop", "Stop generating", "Parar", "Interromper", "停止", "停止生成", "中止", "Stoppen"]);
+      const matches = [...document.querySelectorAll("button, [role=button]")].filter(button =>
+        visible(button) && !button.disabled && button.getAttribute("aria-disabled") !== "true" &&
+        !button.closest?.('[role="dialog"], [aria-modal="true"]') &&
+        [button.getAttribute("aria-label"), button.getAttribute("title"), (button.innerText || "").trim()].some(label => labels.has(label))
+      );
+      if (matches.length !== 1) throw new Error("No unique stop control is available for this task");
+      target = matches[0];
+    } else if (action === "plan") {
+      target = (${findNativePlanControl.toString()})(document);
+      if (!target) throw new Error("No unique plan control is available for this task");
+    } else if (action === "goal" || action === "subagents") {
+      const labels = action === "goal" ? ["Pause goal", "Resume goal", "Pausar objetivo", "Retomar objetivo"] : ["Open subagents", "Abrir subagentes"];
+      const matches = [...document.querySelectorAll("button")].filter(button => visible(button) && !button.disabled && labels.includes(button.getAttribute("aria-label")));
+      if (matches.length !== 1) throw new Error("No unique " + action + " control is available for this task");
+      target = matches[0];
     }
     if (!target) return false;
     target.click();
@@ -193,8 +234,9 @@ export function rendererActionExpression(action) {
   })()`;
 }
 
-export function composerSteerExpression() {
+export function composerSteerExpression(threadId) {
   return `(() => {
+    ${threadGuardExpression(threadId)}
     const editor = [...document.querySelectorAll('[contenteditable="true"][role="textbox"]')]
       .find((element) => element.offsetParent !== null);
     if (!editor) throw new Error("Codex composer is not available");
@@ -214,14 +256,15 @@ export function composerSteerExpression() {
   })()`;
 }
 
-export function composerPromptExpression(text) {
+export function composerPromptExpression(text, threadId) {
   return `(() => {
+    ${threadGuardExpression(threadId)}
     const editor = [...document.querySelectorAll('[contenteditable="true"][role="textbox"]')]
       .find((element) => element.offsetParent !== null);
     if (!editor) throw new Error("Codex composer is not available");
+    if (editor.textContent?.trim()) throw new Error("Composer already contains a draft; send or clear it in Codex first");
     editor.focus();
-    document.execCommand("selectAll", false, null);
-    document.execCommand("insertText", false, ${JSON.stringify(text)});
+    if (!document.execCommand("insertText", false, ${JSON.stringify(text)})) throw new Error("Could not insert prompt");
     return true;
   })()`;
 }
@@ -497,38 +540,7 @@ const SNAPSHOT_EXPRESSION = `(async () => {
     ?? null;
   const normalizeThreadKey = (value) => String(value ?? "").replace(/^local:/, "");
 
-  const computeCtxPct = (tokenInfo) => {
-    if (!tokenInfo || typeof tokenInfo !== "object") return 0;
-    const directPct = tokenInfo.usedPercent ?? tokenInfo.used_percent ?? tokenInfo.percentage ?? tokenInfo.percent;
-    if (typeof directPct === "number" && Number.isFinite(directPct)) {
-      return Math.min(100, Math.max(0, Math.round(directPct)));
-    }
-    const contextWindow = Number(
-      tokenInfo.modelContextWindow ||
-      tokenInfo.model_context_window ||
-      tokenInfo.contextWindow ||
-      tokenInfo.context_window ||
-      200000
-    ) || 200000;
-    const lastTokens = Number(
-      tokenInfo.last?.totalTokens ??
-      tokenInfo.last?.total_tokens ??
-      (Number(tokenInfo.last?.inputTokens ?? tokenInfo.last?.input_tokens ?? 0) +
-       Number(tokenInfo.last?.outputTokens ?? tokenInfo.last?.output_tokens ?? 0))
-    );
-    const activeTokens = Number(
-      tokenInfo.contextTokens ??
-      tokenInfo.context_tokens ??
-      (lastTokens > 0 ? lastTokens : null) ??
-      tokenInfo.total?.totalTokens ??
-      tokenInfo.total?.total_tokens ??
-      tokenInfo.totalTokens ??
-      tokenInfo.total_tokens ??
-      0
-    );
-    if (activeTokens <= 0) return 0;
-    return Math.min(100, Math.max(1, Math.round((activeTokens / contextWindow) * 100)));
-  };
+  const computeCtxPct = ${contextPercent.toString()};
 
   const enrichedSlots = found.map((slot) => {
     const threadId = normalizeThreadKey(slot.threadKey);
@@ -625,12 +637,13 @@ const SNAPSHOT_EXPRESSION = `(async () => {
     lastTask = enrichedSlots[0];
   }
 
-  const activeMeta = (activeThreadKey && conversationsMeta.get(normalizeThreadKey(activeThreadKey)))
-    || (enrichedSlots[0]?.threadId && conversationsMeta.get(enrichedSlots[0].threadId))
-    || null;
+  const activeMeta = (activeThreadKey && conversationsMeta.get(normalizeThreadKey(activeThreadKey))) || null;
   const tokenUsage = activeMeta?.latestTokenUsageInfo || activeMeta?.tokenUsageInfo || activeMeta?.tokenUsage || null;
+  let modelPicker = null;
+  try { modelPicker = (${readNativeModelPicker.toString()})(document).props; } catch {}
   
   const detectLiveReasoningEffort = () => {
+    if (modelPicker?.reasoningEffort) return modelPicker.reasoningEffort;
     const srEffort = document.querySelector("[class*='ModelPickerTriggerEffortLabel'] .sr-only")?.textContent?.trim()?.toLowerCase();
     if (srEffort) return srEffort;
     const activeEffortEl = document.querySelector("[data-reasoning-effort][style*='opacity: 1']")
@@ -638,12 +651,17 @@ const SNAPSHOT_EXPRESSION = `(async () => {
     if (activeEffortEl) {
       return activeEffortEl.getAttribute("data-reasoning-effort") || activeEffortEl.textContent?.trim()?.toLowerCase();
     }
-    return activeMeta?.latestReasoningEffort || activeMeta?.reasoningEffort || "medium";
+    return activeMeta?.latestReasoningEffort || activeMeta?.reasoningEffort || null;
   };
   const reasoningEffort = detectLiveReasoningEffort();
 
   return {
     activeThreadKey,
+    planAvailable: Boolean((${findNativePlanControl.toString()})(document)),
+    model: modelPicker?.model || activeMeta?.latestModel || activeMeta?.latestThreadSettings?.model || activeMeta?.previousTurnModel || null,
+    goalState: [...document.querySelectorAll('button')].some(b => b.offsetParent !== null && ['Pause goal', 'Pausar objetivo'].includes(b.getAttribute('aria-label'))) ? 'active'
+      : [...document.querySelectorAll('button')].some(b => b.offsetParent !== null && ['Resume goal', 'Retomar objetivo'].includes(b.getAttribute('aria-label'))) ? 'paused' : null,
+    subagentsSummary: [...document.querySelectorAll('button')].find(b => b.offsetParent !== null && ['Open subagents', 'Abrir subagentes'].includes(b.getAttribute('aria-label')))?.innerText?.trim() || null,
     slots: enrichedSlots,
     activeTasks,
     lastTask,
@@ -692,6 +710,7 @@ export class CodexCdpClient {
   nextId = 0;
   pending = new Map();
   lastSnapshot = null;
+  modelActionQueue = Promise.resolve();
 
   async connect() {
     if (this.socket?.readyState === WebSocket.OPEN) return;
@@ -757,62 +776,65 @@ export class CodexCdpClient {
     }, "codex-micro-hid-event");
   }
 
-  async dispatchAction(key, act) {
+  async dispatchAction(key, act, threadId) {
     return this.dispatchMicroMessage({
       type: "codex-micro-hid-event",
       event: { key, act, slot: null, threadKey: null }
-    }, "codex-micro-hid-event");
+    }, "codex-micro-hid-event", act === 1 ? threadId : undefined);
   }
 
-  async dispatchNamedAction(action, pressed) {
+  async dispatchNamedAction(action, pressed, threadId) {
     const key = MICRO_ACTION_KEYS[action];
     if (key) {
-      const result = await this.dispatchAction(key, pressed ? 1 : 0);
-      if (pressed && (action === "approve" || action === "reject")) {
-        void this.dispatchRendererAction(action).catch(() => {});
-      }
-      return result;
+      // Native approval handlers must not be followed by a second DOM click:
+      // the first approval may already have exposed a different request.
+      return this.dispatchAction(key, pressed ? 1 : 0, threadId);
     }
     if (!RENDERER_ACTIONS.has(action)) {
       throw new Error(`Unsupported Codex bridge action: ${action}`);
     }
     if (!pressed) return true;
-    return this.dispatchRendererAction(action);
+    if (action === "model" || action === "reasoning") {
+      const pending = this.modelActionQueue.catch(() => {}).then(() => this.dispatchRendererAction(action, threadId));
+      this.modelActionQueue = pending;
+      return pending;
+    }
+    return this.dispatchRendererAction(action, threadId);
   }
 
-  async dispatchRendererAction(action) {
+  async dispatchRendererAction(action, threadId) {
     await this.connect();
-    const invoked = await this.evaluate(rendererActionExpression(action));
+    const invoked = await this.evaluate(rendererActionExpression(action, threadId));
     if (!invoked) throw new Error(`Codex ${action} action is not available`);
     return true;
   }
 
-  async dispatchComposerSteer() {
+  async dispatchComposerSteer(threadId) {
     await this.connect();
-    const clicked = await this.evaluate(composerSteerExpression());
+    const clicked = await this.evaluate(composerSteerExpression(threadId));
     if (!clicked) throw new Error("Codex Steer action is not available");
   }
 
-  async submitPrompt(text) {
+  async submitPrompt(text, threadId) {
     await this.connect();
-    await this.evaluate(composerPromptExpression(text));
+    await this.evaluate(composerPromptExpression(text, threadId));
     await new Promise((resolve) => setTimeout(resolve, 60));
-    await this.dispatchAction(MICRO_ACTION_KEYS.submit, 1);
+    await this.dispatchAction(MICRO_ACTION_KEYS.submit, 1, threadId);
     await new Promise((resolve) => setTimeout(resolve, 35));
     await this.dispatchAction(MICRO_ACTION_KEYS.submit, 0);
     return true;
   }
 
-  async dispatchJoystick(direction, distance) {
+  async dispatchJoystick(direction, distance, threadId) {
     const angle = { up: 0.75, right: 0, down: 0.25, left: 0.5 }[direction];
     if (angle === undefined) throw new Error(`Unknown joystick direction: ${direction}`);
     return this.dispatchMicroMessage({
       type: "codex-micro-joystick-event",
       event: { angle, distance }
-    }, "codex-micro-joystick-event");
+    }, "codex-micro-joystick-event", distance ? threadId : undefined);
   }
 
-  async dispatchMicroMessage(message, requiredHandler) {
+  async dispatchMicroMessage(message, requiredHandler, threadId) {
     return this.evaluate(`(async () => {
       const cacheKey = Symbol.for("codex-keyboard-micro-bus");
       const isMicroBus = (candidate) =>
@@ -848,11 +870,12 @@ export class CodexCdpClient {
       const dispatch = bus.dispatchHostMessage ?? bus.dispatchMessage;
       if ((bus.handlers.get(${JSON.stringify(requiredHandler)})?.size ?? 0) === 0) {
         dispatch.call(bus, ${JSON.stringify(DEVICE_STATE)});
+        for (let attempt = 0; attempt < 3 && !(bus.handlers.get(${JSON.stringify(requiredHandler)})?.size > 0); attempt++) {
+          await new Promise(resolve => setTimeout(resolve, 35));
+        }
       }
-      // Never put Micro handler discovery on the physical key hot path. The
-      // native event is dispatched immediately; clickAgent keeps a DOM
-      // activation fallback in the background in case Codex has not installed
-      // its handler yet.
+      if (!(bus.handlers.get(${JSON.stringify(requiredHandler)})?.size > 0)) throw new Error("Codex has no handler for this control");
+      ${threadGuardExpression(threadId)}
       dispatch.call(bus, ${JSON.stringify(message)});
       return true;
     })()`);

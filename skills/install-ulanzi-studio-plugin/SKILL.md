@@ -1,6 +1,6 @@
 ---
 name: install-ulanzi-studio-plugin
-description: Install, update, verify, or diagnose the repository's prebuilt Codex Micro .ulanziPlugin directory in Ulanzi Studio on macOS. Use for local Ulanzi Studio plugin installation, not plugin development or Codex Bridge.app setup.
+description: Install, update, verify, or diagnose the repository's prebuilt Codex App .ulanziPlugin directory in Ulanzi Studio on macOS. Use for local Ulanzi Studio plugin installation, not plugin development or Codex Bridge.app setup.
 ---
 
 # Install the Ulanzi Studio Plugin
@@ -37,7 +37,7 @@ Resolve the project root as two directories above this file. Require
    done
    ```
 
-6. Ask the user to reopen Ulanzi Studio and confirm that the **Codex Micro**
+6. Ask the user to reopen Ulanzi Studio and confirm that the **Codex App**
    category and actions appear. If actions show offline, verify the Bridge with
    `curl --fail http://127.0.0.1:17373/state` and use the
    `$setup-codex-bridge` skill if Bridge repair is requested.

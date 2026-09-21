@@ -2263,9 +2263,9 @@ var require_websocket = __commonJS({
     var http = require("http");
     var net = require("net");
     var tls = require("tls");
-    var { randomBytes, createHash } = require("crypto");
+    var { randomBytes: randomBytes2, createHash } = require("crypto");
     var { Duplex, Readable } = require("stream");
-    var { URL } = require("url");
+    var { URL: URL2 } = require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
     var Receiver2 = require_receiver();
     var Sender2 = require_sender();
@@ -2766,11 +2766,11 @@ var require_websocket = __commonJS({
         );
       }
       let parsedUrl;
-      if (address2 instanceof URL) {
+      if (address2 instanceof URL2) {
         parsedUrl = address2;
       } else {
         try {
-          parsedUrl = new URL(address2);
+          parsedUrl = new URL2(address2);
         } catch {
           throw new SyntaxError(`Invalid URL: ${address2}`);
         }
@@ -2801,7 +2801,7 @@ var require_websocket = __commonJS({
         }
       }
       const defaultPort = isSecure ? 443 : 80;
-      const key = randomBytes(16).toString("base64");
+      const key = randomBytes2(16).toString("base64");
       const request = isSecure ? https.request : http.request;
       const protocolSet = /* @__PURE__ */ new Set();
       let perMessageDeflate;
@@ -2907,7 +2907,7 @@ var require_websocket = __commonJS({
           req.abort();
           let addr;
           try {
-            addr = new URL(location, address2);
+            addr = new URL2(location, address2);
           } catch (e) {
             const err = new SyntaxError(`Invalid URL: ${location}`);
             emitErrorAndClose(websocket, err);
@@ -3694,6 +3694,32 @@ var require_websocket_server = __commonJS({
   }
 });
 
+// ../../src/shared/token-metrics.mjs
+function contextPercent(usage) {
+  if (!usage || typeof usage !== "object") return null;
+  const direct = usage.usedPercent ?? usage.used_percent ?? usage.percentage ?? usage.percent;
+  if (Number.isFinite(direct)) return Math.min(100, Math.max(0, Math.round(direct)));
+  const window = usage.modelContextWindow ?? usage.model_context_window ?? usage.contextWindow ?? usage.context_window;
+  let tokens = usage.contextTokens ?? usage.context_tokens ?? usage.last?.totalTokens ?? usage.last?.total_tokens;
+  if (tokens == null) {
+    const input = usage.last?.inputTokens ?? usage.last?.input_tokens;
+    const output = usage.last?.outputTokens ?? usage.last?.output_tokens;
+    if (Number.isFinite(input) && Number.isFinite(output)) tokens = input + output;
+  }
+  if (!Number.isFinite(window) || window <= 0 || !Number.isFinite(tokens) || tokens < 0) return null;
+  return Math.min(100, Math.max(0, Math.round(tokens / window * 100)));
+}
+
+// ../../src/shared/deck-cards.mjs
+var xml = (value) => String(value ?? "").replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[c]);
+function textCard(title, value, detail = "", connected = true) {
+  const shown = String(connected ? value ?? "Unknown" : "OFFLINE").replace(/\s+/g, " ");
+  const display = shown.length > 32 ? shown.slice(0, 31) + "\u2026" : shown;
+  const fontSize = Math.max(12, Math.min(25, Math.floor(168 / Math.max(1, display.length * 0.58))));
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196"><rect width="196" height="196" rx="24" fill="#0d1117"/><rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="#334155" stroke-width="2"/><text x="98" y="40" text-anchor="middle" font-family="sans-serif" font-size="15" fill="#94a3b8">${xml(title)}</text><text x="98" y="105" text-anchor="middle" font-family="sans-serif" font-size="${fontSize}" fill="#f1f5f9">${xml(display)}</text><text x="98" y="160" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#38bdf8">${xml(detail)}</text></svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+}
+
 // ../../node_modules/ws/wrapper.mjs
 var import_stream = __toESM(require_stream(), 1);
 var import_extension = __toESM(require_extension(), 1);
@@ -3705,24 +3731,132 @@ var import_websocket = __toESM(require_websocket(), 1);
 var import_websocket_server = __toESM(require_websocket_server(), 1);
 var wrapper_default = import_websocket.default;
 
-// plugin/app.js
-var import_node_fs2 = require("node:fs");
-var import_node_path2 = require("node:path");
-
-// plugin/bridge-installer.js
+// ../../src/shared/local-api.mjs
 var import_node_fs = require("node:fs");
-var import_promises = require("node:fs/promises");
-var import_node_child_process = require("node:child_process");
-var import_node_util = require("node:util");
 var import_node_os = require("node:os");
 var import_node_path = require("node:path");
+var import_node_crypto = require("node:crypto");
+function localHeaders(component) {
+  if (!/^[a-z-]+$/.test(component)) throw new Error("Invalid component");
+  const root = process.env.ULANZI_AUTH_DIR || (0, import_node_path.join)((0, import_node_os.homedir)(), ".local/share/ulanzi-bridges");
+  (0, import_node_fs.mkdirSync)(root, { recursive: true, mode: 448 });
+  (0, import_node_fs.chmodSync)(root, 448);
+  const file = (0, import_node_path.join)(root, `${component}.token`);
+  try {
+    (0, import_node_fs.writeFileSync)(file, (0, import_node_crypto.randomBytes)(32).toString("hex"), { flag: "wx", mode: 384 });
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+  }
+  (0, import_node_fs.chmodSync)(file, 384);
+  const token = (0, import_node_fs.readFileSync)(file, "utf8").trim();
+  if (!/^[a-f0-9]{64}$/.test(token)) throw new Error("Invalid local bridge credential; remove the component token file to regenerate it");
+  return { Authorization: `Bearer ${token}` };
+}
+function localClient(component, baseUrl) {
+  const url = new URL(baseUrl);
+  if (url.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname)) throw new Error("Bridge URL must use HTTP loopback");
+  return async (path, options = {}) => {
+    if (!path.startsWith("/") || path.startsWith("//")) throw new Error("Invalid bridge path");
+    const response = await fetch(new URL(path, url), { ...options, redirect: "error", signal: options.signal || AbortSignal.timeout(12e3), headers: { ...options.headers, ...localHeaders(component) } });
+    const payload = await response.json();
+    if (!response.ok || payload.ok === false || payload.result?.ok === false) throw new Error(payload.error || payload.result?.error || `Bridge HTTP ${response.status}`);
+    return payload;
+  };
+}
+
+// ../../src/shared/plugin-runtime.mjs
+function encoderTicks(message) {
+  const named = { left: -1, "hold-left": -1, right: 1, "hold-right": 1 }[message.rotateEvent];
+  if (named !== void 0) return named;
+  const raw = message.param?.ticks ?? message.param?.rotate ?? message.rotate;
+  const n = Number(raw);
+  return Number.isFinite(n) ? Math.max(-20, Math.min(20, Math.trunc(n))) : 0;
+}
+function invalidateDisplays(instances2) {
+  for (const instance of instances2.values()) instance.lastDisplay = null;
+}
+function bridgeFeed({ component, url, poll, onState }) {
+  let socket2, retry, fallback, generation = 0;
+  function stop() {
+    generation++;
+    clearTimeout(retry);
+    clearInterval(fallback);
+    const previous = socket2;
+    socket2 = null;
+    previous?.close();
+  }
+  function start() {
+    stop();
+    const current = generation;
+    const connect2 = () => {
+      if (current !== generation) return;
+      const ws = new wrapper_default(url.replace(/^http/, "ws") + "/events", { headers: localHeaders(component), handshakeTimeout: 4e3 });
+      socket2 = ws;
+      ws.on("message", (raw) => {
+        if (current !== generation || socket2 !== ws) return;
+        try {
+          const state = JSON.parse(String(raw));
+          if (typeof state.connected !== "boolean" || !Array.isArray(state.slots)) throw new Error("Invalid bridge state");
+          onState(state);
+        } catch {
+          void poll();
+        }
+      });
+      ws.on("error", () => ws.close());
+      ws.on("close", () => {
+        if (current !== generation || socket2 !== ws) return;
+        socket2 = null;
+        retry = setTimeout(connect2, 2e3);
+        retry.unref();
+        void poll();
+      });
+    };
+    fallback = setInterval(() => void poll(), 5e3);
+    fallback.unref();
+    connect2();
+  }
+  return { start, stop };
+}
+
+// plugin/app.js
+var import_node_fs3 = require("node:fs");
+var import_node_path4 = require("node:path");
+
+// ../../src/shared/bridge-files.mjs
+var import_promises = require("node:fs/promises");
+var import_node_path2 = require("node:path");
+var bridgeComponents = {
+  codex: { agent: "io.opencodexmicro.bridge.plist", files: ["bridge.mjs", "install.json", "bridge.log", "bridge-error.log", "CodexBridge.iconset", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md"] },
+  antigravity: { agent: "io.openantigravitymicro.bridge.plist", files: ["bridge-antigravity.mjs", "bridge-antigravity.log", "bridge-antigravity-error.log"] },
+  "codex-cli": { agent: "io.opencodexmicro.codexcli.bridge.plist", files: ["bridge-codex-cli.mjs", "bridge-codex-cli.log", "bridge-codex-cli-error.log"] }
+};
+async function removeBridgeFiles(home, component) {
+  const spec = bridgeComponents[component];
+  if (!spec) throw new Error("Unknown bridge component");
+  const root = (0, import_node_path2.join)(home, "Library/Application Support/OpenCodexMicro");
+  await (0, import_promises.rm)((0, import_node_path2.join)(root, component), { recursive: true, force: true });
+  for (const name of spec.files) await (0, import_promises.rm)((0, import_node_path2.join)(root, name), { recursive: true, force: true });
+  try {
+    await (0, import_promises.rmdir)(root);
+  } catch (error) {
+    if (!["ENOENT", "ENOTEMPTY", "EEXIST"].includes(error.code)) throw error;
+  }
+}
+
+// plugin/bridge-installer.js
+var import_node_fs2 = require("node:fs");
+var import_promises2 = require("node:fs/promises");
+var import_node_child_process = require("node:child_process");
+var import_node_util = require("node:util");
+var import_node_os2 = require("node:os");
+var import_node_path3 = require("node:path");
 var execFileAsync = (0, import_node_util.promisify)(import_node_child_process.execFile);
-function xml(value) {
+function xml2(value) {
   return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;");
 }
-async function exists(path, mode = import_node_fs.constants.F_OK) {
+async function exists(path, mode = import_node_fs2.constants.F_OK) {
   try {
-    await (0, import_promises.access)(path, mode);
+    await (0, import_promises2.access)(path, mode);
     return true;
   } catch {
     return false;
@@ -3730,7 +3864,7 @@ async function exists(path, mode = import_node_fs.constants.F_OK) {
 }
 async function readJson(path) {
   try {
-    return JSON.parse(await (0, import_promises.readFile)(path, "utf8"));
+    return JSON.parse(await (0, import_promises2.readFile)(path, "utf8"));
   } catch {
     return null;
   }
@@ -3746,46 +3880,46 @@ async function nodeVersion(executable, execute) {
   }
 }
 async function selectBridgeNodeRuntime({
-  home = (0, import_node_os.homedir)(),
+  home = (0, import_node_os2.homedir)(),
   fallbackNodeExecutable = process.execPath,
   environmentPath = process.env.PATH || "",
   platform = process.platform,
   execute = execFileAsync
 } = {}) {
   const candidates = [];
-  if (platform === "darwin" && await exists("/bin/zsh", import_node_fs.constants.X_OK)) {
+  if (platform === "darwin" && await exists("/bin/zsh", import_node_fs2.constants.X_OK)) {
     try {
       const { stdout = "" } = await execute("/bin/zsh", ["-lic", "node -p process.execPath"]);
       const discovered = String(stdout).split(/\r?\n/).map((line) => line.trim()).find((line) => line.startsWith("/") && line.split("/").at(-1) === "node");
-      if (discovered) candidates.push(await (0, import_promises.realpath)(discovered));
+      if (discovered) candidates.push(await (0, import_promises2.realpath)(discovered));
     } catch {
     }
   }
-  for (const directory of environmentPath.split(import_node_path.delimiter).filter(Boolean)) {
-    candidates.push((0, import_node_path.join)(directory, "node"));
+  for (const directory of environmentPath.split(import_node_path3.delimiter).filter(Boolean)) {
+    candidates.push((0, import_node_path3.join)(directory, "node"));
   }
   candidates.push(
     "/opt/homebrew/bin/node",
     "/usr/local/bin/node",
     "/usr/bin/node",
-    (0, import_node_path.join)(home, ".local", "bin", "node")
+    (0, import_node_path3.join)(home, ".local", "bin", "node")
   );
   let resolvedFallback = fallbackNodeExecutable;
   try {
-    resolvedFallback = await (0, import_promises.realpath)(fallbackNodeExecutable);
+    resolvedFallback = await (0, import_promises2.realpath)(fallbackNodeExecutable);
   } catch {
   }
   for (const executable of [...new Set(candidates)]) {
     if (!executable.startsWith("/")) continue;
-    if (!await exists(executable, import_node_fs.constants.X_OK)) continue;
-    const resolvedExecutable = await (0, import_promises.realpath)(executable);
+    if (!await exists(executable, import_node_fs2.constants.X_OK)) continue;
+    const resolvedExecutable = await (0, import_promises2.realpath)(executable);
     if (resolvedExecutable === resolvedFallback) continue;
     const version = await nodeVersion(resolvedExecutable, execute);
     if (version?.major >= 20) {
       return { executable: resolvedExecutable, version: version.text, source: "system" };
     }
   }
-  if (await exists(resolvedFallback, import_node_fs.constants.X_OK)) {
+  if (await exists(resolvedFallback, import_node_fs2.constants.X_OK)) {
     const version = await nodeVersion(resolvedFallback, execute);
     if (version?.major >= 20) {
       return { executable: resolvedFallback, version: version.text, source: "ulanzi" };
@@ -3797,33 +3931,34 @@ function createBridgeInstaller({
   pluginRoot,
   bridgeUrl,
   version,
-  home = (0, import_node_os.homedir)(),
+  home = (0, import_node_os2.homedir)(),
   uid = process.getuid?.(),
   platform = process.platform,
   nodeExecutable = process.execPath,
   environmentPath = process.env.PATH || "",
   execute = execFileAsync
 }) {
-  const appRoot = (0, import_node_path.join)(home, "Library", "Application Support", "OpenCodexMicro");
-  const userApplications = (0, import_node_path.join)(home, "Applications");
-  const bridgeApp = (0, import_node_path.join)(userApplications, "Codex Bridge.app");
-  const bridgeContents = (0, import_node_path.join)(bridgeApp, "Contents");
-  const bridgeMacOS = (0, import_node_path.join)(bridgeContents, "MacOS");
-  const bridgeResources = (0, import_node_path.join)(bridgeContents, "Resources");
-  const bridgeLicenses = (0, import_node_path.join)(bridgeResources, "licenses");
-  const bridgeExecutable = (0, import_node_path.join)(bridgeMacOS, "Codex Bridge");
-  const bridgeIcon = (0, import_node_path.join)(bridgeResources, "CodexBridge.icns");
-  const bridgeRuntime = (0, import_node_path.join)(appRoot, "bridge.mjs");
-  const installMetadata = (0, import_node_path.join)(appRoot, "install.json");
-  const agentsRoot = (0, import_node_path.join)(home, "Library", "LaunchAgents");
-  const bridgeAgent = (0, import_node_path.join)(agentsRoot, "io.opencodexmicro.bridge.plist");
-  const installerRoot = (0, import_node_path.resolve)(pluginRoot, "installer");
-  const bundledRuntime = (0, import_node_path.join)(installerRoot, "bridge.mjs");
-  const bundledIcon = (0, import_node_path.join)(installerRoot, "CodexBridge.png");
+  const appRoot = (0, import_node_path3.join)(home, "Library", "Application Support", "OpenCodexMicro", "codex");
+  const userApplications = (0, import_node_path3.join)(home, "Applications");
+  const bridgeApp = (0, import_node_path3.join)(userApplications, "Codex Bridge.app");
+  const bridgeContents = (0, import_node_path3.join)(bridgeApp, "Contents");
+  const bridgeMacOS = (0, import_node_path3.join)(bridgeContents, "MacOS");
+  const bridgeResources = (0, import_node_path3.join)(bridgeContents, "Resources");
+  const bridgeLicenses = (0, import_node_path3.join)(bridgeResources, "licenses");
+  const bridgeExecutable = (0, import_node_path3.join)(bridgeMacOS, "Codex Bridge");
+  const bridgeIcon = (0, import_node_path3.join)(bridgeResources, "CodexBridge.icns");
+  const bridgeRuntime = (0, import_node_path3.join)(appRoot, "bridge.mjs");
+  const installMetadata = (0, import_node_path3.join)(appRoot, "install.json");
+  const agentsRoot = (0, import_node_path3.join)(home, "Library", "LaunchAgents");
+  const bridgeAgent = (0, import_node_path3.join)(agentsRoot, "io.opencodexmicro.bridge.plist");
+  const installerRoot = (0, import_node_path3.resolve)(pluginRoot, "installer");
+  const bundledRuntime = (0, import_node_path3.join)(installerRoot, "bridge.mjs");
+  const bundledIcon = (0, import_node_path3.join)(installerRoot, "CodexBridge.png");
   async function probeBridge() {
     try {
       const response = await fetch(`${bridgeUrl}/health`, {
-        signal: AbortSignal.timeout(1200)
+        headers: localHeaders("codex"),
+        signal: AbortSignal.timeout(12e3)
       });
       const payload = await response.json();
       if (!response.ok || payload.ok === false) throw new Error(payload.error || `Bridge HTTP ${response.status}`);
@@ -3834,7 +3969,7 @@ function createBridgeInstaller({
   }
   async function readAppPlistVersion() {
     try {
-      const plistContent = await (0, import_promises.readFile)((0, import_node_path.join)(bridgeContents, "Info.plist"), "utf8");
+      const plistContent = await (0, import_promises2.readFile)((0, import_node_path3.join)(bridgeContents, "Info.plist"), "utf8");
       const match = plistContent.match(/<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/);
       return match?.[1] || null;
     } catch {
@@ -3843,7 +3978,7 @@ function createBridgeInstaller({
   }
   async function status() {
     const [appInstalled, runtimeInstalled, agentInstalled, metadata, probe, plistVersion] = await Promise.all([
-      exists(bridgeExecutable, import_node_fs.constants.X_OK),
+      exists(bridgeExecutable, import_node_fs2.constants.X_OK),
       exists(bridgeRuntime),
       exists(bridgeAgent),
       readJson(installMetadata),
@@ -3868,9 +4003,9 @@ function createBridgeInstaller({
     };
   }
   async function buildIcon() {
-    const iconset = (0, import_node_path.join)(appRoot, "CodexBridge.iconset");
-    await (0, import_promises.rm)(iconset, { recursive: true, force: true });
-    await (0, import_promises.mkdir)(iconset, { recursive: true });
+    const iconset = (0, import_node_path3.join)(appRoot, "CodexBridge.iconset");
+    await (0, import_promises2.rm)(iconset, { recursive: true, force: true });
+    await (0, import_promises2.mkdir)(iconset, { recursive: true });
     try {
       for (const [name, size] of [
         ["icon_16x16.png", 16],
@@ -3890,12 +4025,12 @@ function createBridgeInstaller({
           String(size),
           bundledIcon,
           "--out",
-          (0, import_node_path.join)(iconset, name)
+          (0, import_node_path3.join)(iconset, name)
         ]);
       }
       await execute("/usr/bin/iconutil", ["-c", "icns", iconset, "-o", bridgeIcon]);
     } finally {
-      await (0, import_promises.rm)(iconset, { recursive: true, force: true });
+      await (0, import_promises2.rm)(iconset, { recursive: true, force: true });
     }
   }
   async function install() {
@@ -3912,18 +4047,18 @@ function createBridgeInstaller({
       platform,
       execute
     });
-    await (0, import_promises.mkdir)(appRoot, { recursive: true, mode: 448 });
-    await (0, import_promises.chmod)(appRoot, 448);
-    await (0, import_promises.mkdir)(userApplications, { recursive: true });
-    await (0, import_promises.mkdir)(agentsRoot, { recursive: true });
-    await (0, import_promises.copyFile)(bundledRuntime, bridgeRuntime);
-    await (0, import_promises.rm)(bridgeApp, { recursive: true, force: true });
-    await (0, import_promises.mkdir)(bridgeMacOS, { recursive: true });
-    await (0, import_promises.mkdir)(bridgeLicenses, { recursive: true });
+    await (0, import_promises2.mkdir)(appRoot, { recursive: true, mode: 448 });
+    await (0, import_promises2.chmod)(appRoot, 448);
+    await (0, import_promises2.mkdir)(userApplications, { recursive: true });
+    await (0, import_promises2.mkdir)(agentsRoot, { recursive: true });
+    await (0, import_promises2.copyFile)(bundledRuntime, bridgeRuntime);
+    await (0, import_promises2.rm)(bridgeApp, { recursive: true, force: true });
+    await (0, import_promises2.mkdir)(bridgeMacOS, { recursive: true });
+    await (0, import_promises2.mkdir)(bridgeLicenses, { recursive: true });
     for (const notice of ["LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md"]) {
-      const source = (0, import_node_path.join)(installerRoot, notice);
-      await (0, import_promises.copyFile)(source, (0, import_node_path.join)(bridgeLicenses, notice));
-      await (0, import_promises.copyFile)(source, (0, import_node_path.join)(appRoot, notice));
+      const source = (0, import_node_path3.join)(installerRoot, notice);
+      await (0, import_promises2.copyFile)(source, (0, import_node_path3.join)(bridgeLicenses, notice));
+      await (0, import_promises2.copyFile)(source, (0, import_node_path3.join)(appRoot, notice));
     }
     await buildIcon();
     const info = `<?xml version="1.0" encoding="UTF-8"?>
@@ -3935,14 +4070,14 @@ function createBridgeInstaller({
   <key>CFBundleIdentifier</key><string>io.opencodexmicro.bridge</string>
   <key>CFBundleName</key><string>Codex Bridge</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>${xml(version)}</string>
-  <key>CFBundleVersion</key><string>${xml(version)}</string>
+  <key>CFBundleShortVersionString</key><string>${xml2(version)}</string>
+  <key>CFBundleVersion</key><string>${xml2(version)}</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 `;
-    await (0, import_promises.writeFile)((0, import_node_path.join)(bridgeContents, "Info.plist"), info);
+    await (0, import_promises2.writeFile)((0, import_node_path3.join)(bridgeContents, "Info.plist"), info);
     const launcher = `#!/bin/zsh
 set -u
 unsetopt BG_NICE
@@ -3988,27 +4123,27 @@ done
 /usr/bin/osascript -e 'display alert "Codex Bridge" message "Codex started, but the bridge endpoint is unavailable. Quit Codex and launch Codex Bridge again." as critical'
 exit 1
 `;
-    await (0, import_promises.writeFile)(bridgeExecutable, launcher, { mode: 493 });
-    await (0, import_promises.chmod)(bridgeExecutable, 493);
+    await (0, import_promises2.writeFile)(bridgeExecutable, launcher, { mode: 493 });
+    await (0, import_promises2.chmod)(bridgeExecutable, 493);
     await execute("/usr/bin/codesign", ["--force", "--deep", "--sign", "-", bridgeApp]);
     const plist = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>Label</key><string>io.opencodexmicro.bridge</string>
   <key>ProgramArguments</key><array>
-    <string>${xml(nodeRuntime.executable)}</string>
-    <string>${xml(bridgeRuntime)}</string>
+    <string>${xml2(nodeRuntime.executable)}</string>
+    <string>${xml2(bridgeRuntime)}</string>
   </array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>ProcessType</key><string>Background</string>
   <key>ThrottleInterval</key><integer>2</integer>
-  <key>StandardOutPath</key><string>${xml((0, import_node_path.join)(appRoot, "bridge.log"))}</string>
-  <key>StandardErrorPath</key><string>${xml((0, import_node_path.join)(appRoot, "bridge-error.log"))}</string>
+  <key>StandardOutPath</key><string>${xml2((0, import_node_path3.join)(appRoot, "bridge.log"))}</string>
+  <key>StandardErrorPath</key><string>${xml2((0, import_node_path3.join)(appRoot, "bridge-error.log"))}</string>
 </dict></plist>
 `;
-    await (0, import_promises.writeFile)(bridgeAgent, plist, { mode: 420 });
-    await (0, import_promises.writeFile)(installMetadata, `${JSON.stringify({
+    await (0, import_promises2.writeFile)(bridgeAgent, plist, { mode: 420 });
+    await (0, import_promises2.writeFile)(installMetadata, `${JSON.stringify({
       version,
       nodeExecutable: nodeRuntime.executable,
       nodeVersion: nodeRuntime.version,
@@ -4024,7 +4159,7 @@ exit 1
     return status();
   }
   async function launch() {
-    if (!await exists(bridgeExecutable, import_node_fs.constants.X_OK)) {
+    if (!await exists(bridgeExecutable, import_node_fs2.constants.X_OK)) {
       throw new Error("Codex Bridge.app is not installed.");
     }
     await execute("/usr/bin/open", [bridgeApp]);
@@ -4038,9 +4173,9 @@ exit 1
       await execute("/bin/launchctl", ["bootout", `gui/${uid}`, bridgeAgent]);
     } catch {
     }
-    await (0, import_promises.rm)(bridgeAgent, { force: true });
-    await (0, import_promises.rm)(appRoot, { recursive: true, force: true });
-    await (0, import_promises.rm)(bridgeApp, { recursive: true, force: true });
+    await (0, import_promises2.rm)(bridgeAgent, { force: true });
+    await removeBridgeFiles(home, "codex");
+    await (0, import_promises2.rm)(bridgeApp, { recursive: true, force: true });
     return status();
   }
   return { status, install, launch, uninstall };
@@ -4049,18 +4184,19 @@ exit 1
 // plugin/app.js
 var PLUGIN_UUID = "com.ulanzi.ulanzistudio.codexmicro";
 var BRIDGE_URL = process.env.CODEX_BRIDGE_URL || "http://127.0.0.1:17373";
+var requestLocal = localClient("codex", BRIDGE_URL);
 var [address = "127.0.0.1", port = "3906"] = process.argv.slice(2);
 var HOST_URL = `ws://${address}:${port}`;
 var instances = /* @__PURE__ */ new Map();
-var PLUGIN_ROOT = (0, import_node_path2.resolve)((0, import_node_path2.dirname)((0, import_node_path2.resolve)(process.argv[1])), "..");
-var MANIFEST = JSON.parse((0, import_node_fs2.readFileSync)((0, import_node_path2.resolve)(PLUGIN_ROOT, "manifest.json"), "utf8"));
+var PLUGIN_ROOT = (0, import_node_path4.resolve)((0, import_node_path4.dirname)((0, import_node_path4.resolve)(process.argv[1])), "..");
+var MANIFEST = JSON.parse((0, import_node_fs3.readFileSync)((0, import_node_path4.resolve)(PLUGIN_ROOT, "manifest.json"), "utf8"));
 var bridgeSetup = createBridgeInstaller({
   pluginRoot: PLUGIN_ROOT,
   bridgeUrl: BRIDGE_URL,
   version: MANIFEST.Version
 });
-var USAGE_BASE64 = (0, import_node_fs2.readFileSync)(
-  (0, import_node_path2.resolve)(PLUGIN_ROOT, "assets/icons/usage-base.png")
+var USAGE_BASE64 = (0, import_node_fs3.readFileSync)(
+  (0, import_node_path4.resolve)(PLUGIN_ROOT, "assets/icons/usage-base.png")
 ).toString("base64");
 var ACTION_LABELS = Object.freeze({
   fast: "FAST",
@@ -4076,11 +4212,15 @@ var ACTION_LABELS = Object.freeze({
   submit: "SUBMIT",
   taskmonitor: "MONITOR",
   approve: "APPROVE",
-  reject: "STOP",
+  reject: "REJECT",
+  goal: "GOAL",
+  subagents: "SUBAGENTS",
   attention: "ATTENTION",
   stop: "STOP",
   tokens: "TOKENS",
   reasoning: "THINK",
+  model: "MODEL",
+  plan: "PLAN",
   prompt_test: "TEST",
   prompt_review: "REVIEW",
   prompt_commit: "COMMIT"
@@ -4135,7 +4275,7 @@ function contextOf(message) {
   return String(message.actionid || `${message.uuid}___${message.key}`);
 }
 function taskSlot(uuid) {
-  const match = String(uuid || "").match(/\.task([1-5])$/);
+  const match = String(uuid || "").match(/\.task([1-6])$/);
   return match ? Number(match[1]) - 1 : null;
 }
 function actionName(uuid) {
@@ -4145,7 +4285,7 @@ function actionName(uuid) {
 function extractWindowUsage(usage, kind) {
   const windows = Array.isArray(usage?.windows) ? usage.windows : [];
   const window = windows.find((item) => item?.kind === kind);
-  if (!window) return null;
+  if (!window || window.remainingPercent == null) return null;
   const remaining = Number(window.remainingPercent);
   return Number.isFinite(remaining) ? Math.max(0, Math.min(100, Math.round(remaining))) : null;
 }
@@ -4359,6 +4499,7 @@ function escapeXml(unsafe) {
   return String(unsafe || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
 function sendSvgState(instance, dataUrl) {
+  if (!socket || socket.readyState !== wrapper_default.OPEN) return;
   if (!instance.active || instance.lastDisplay === dataUrl) return;
   instance.lastDisplay = dataUrl;
   send({
@@ -4391,26 +4532,8 @@ function getTaskContextPercent(task) {
   if (typeof task?.ctxPct === "number" && Number.isFinite(task.ctxPct)) {
     return Math.min(100, Math.max(0, Math.round(task.ctxPct)));
   }
-  const tokenUsage = task?.tokenUsage || (task?.selected ? latestState?.tokenUsage : null) || latestState?.tokenUsage;
-  if (!tokenUsage) return 0;
-  if (typeof tokenUsage === "number" && Number.isFinite(tokenUsage)) {
-    return Math.min(100, Math.max(0, Math.round(tokenUsage)));
-  }
-  const directPct = tokenUsage.usedPercent ?? tokenUsage.used_percent ?? tokenUsage.percentage ?? tokenUsage.percent;
-  if (typeof directPct === "number" && Number.isFinite(directPct)) {
-    return Math.min(100, Math.max(0, Math.round(directPct)));
-  }
-  const contextWindow = Number(
-    tokenUsage.modelContextWindow || tokenUsage.model_context_window || tokenUsage.contextWindow || tokenUsage.context_window || 2e5
-  ) || 2e5;
-  const lastTokens = Number(
-    tokenUsage.last?.totalTokens ?? tokenUsage.last?.total_tokens ?? Number(tokenUsage.last?.inputTokens ?? tokenUsage.last?.input_tokens ?? 0) + Number(tokenUsage.last?.outputTokens ?? tokenUsage.last?.output_tokens ?? 0)
-  );
-  const contextTokens = Number(
-    tokenUsage.contextTokens ?? tokenUsage.context_tokens ?? (lastTokens > 0 ? lastTokens : null) ?? tokenUsage.total?.totalTokens ?? tokenUsage.total?.total_tokens ?? tokenUsage.totalTokens ?? tokenUsage.total_tokens ?? 0
-  );
-  if (contextTokens <= 0) return 0;
-  return Math.min(100, Math.max(1, Math.round(contextTokens / contextWindow * 100)));
+  const tokenUsage = task?.tokenUsage || (task?.selected ? latestState?.tokenUsage : null);
+  return contextPercent(tokenUsage);
 }
 function taskCardIconData({
   headerLeft = "CODEX",
@@ -4419,7 +4542,7 @@ function taskCardIconData({
   status = "idle",
   elapsed = "",
   model = "default",
-  ctxPct = 0,
+  ctxPct = null,
   connected = true,
   empty = false
 }) {
@@ -4494,7 +4617,7 @@ function taskCardIconData({
   const titleFontSize = titleDisplay.length > 11 ? "18" : "20";
   const cleanModel = String(model || "default").trim().toLowerCase();
   const modelDisplay = cleanModel.length > 11 ? cleanModel.slice(0, 10) + "\u2026" : cleanModel;
-  const validPct = Math.max(0, Math.min(100, Math.round(Number(ctxPct) || 0)));
+  const validPct = Number.isFinite(ctxPct) ? Math.max(0, Math.min(100, Math.round(ctxPct))) : null;
   const barWidth = Math.max(0, Math.min(172, Math.round(validPct / 100 * 172)));
   const barColor = validPct > 85 ? "#ef4444" : "#f59e0b";
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
@@ -4515,7 +4638,7 @@ function taskCardIconData({
     <text x="98" y="120" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="${subColor}" letter-spacing="0.3">${escapeXml(subText)}</text>
     
     <text x="12" y="162" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#f59e0b" letter-spacing="0.2">${escapeXml(modelDisplay)}</text>
-    <text x="184" y="162" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#94a3b8" letter-spacing="0.2">ctx ${validPct}%</text>
+    <text x="184" y="162" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#94a3b8" letter-spacing="0.2">ctx ${validPct === null ? "\u2014" : `${validPct}%`}</text>
     
     <rect x="12" y="172" width="172" height="7" rx="3.5" fill="#21262d"/>
     ${barWidth > 0 ? `<rect x="12" y="172" width="${barWidth}" height="7" rx="3.5" fill="${barColor}"/>` : ""}
@@ -5081,22 +5204,21 @@ function setApproveDisplay(instance) {
 }
 function setRejectDisplay(instance) {
   const connected = Boolean(latestState?.connected);
-  const isRunning = isAnyTaskRunning();
-  const digest = `reject:${connected}:${isRunning}`;
+  const digest = `reject:${connected}`;
   if (!instance.active || instance.lastDisplay === digest) return;
   instance.lastDisplay = digest;
-  sendSvgState(instance, stopIconData({ connected, isRunning }));
+  sendSvgState(instance, textCard("REJECT", "Approval", "DENY REQUEST", connected));
 }
 function setTokensDisplay(instance) {
   const connected = Boolean(latestState?.connected);
-  const tokenUsage = latestState?.tokenUsage || latestState?.activeTasks?.[0]?.tokenUsage || latestState?.slots?.[0]?.tokenUsage || null;
+  const tokenUsage = latestState?.tokenUsage || null;
   const digest = `tokens:${connected}:${JSON.stringify(tokenUsage)}`;
   if (!instance.active || instance.lastDisplay === digest) return;
   instance.lastDisplay = digest;
   sendSvgState(instance, tokensIconData(tokenUsage, connected));
 }
 function formatTokenCount(num) {
-  if (num === null || num === void 0 || !Number.isFinite(num)) return "0";
+  if (num === null || num === void 0 || !Number.isFinite(num)) return "\u2014";
   if (num >= 1e6) {
     return `${(num / 1e6).toFixed(2)}M`;
   }
@@ -5124,15 +5246,13 @@ function tokensIconData(tokenUsage, connected = true) {
     </svg>`;
     return `data:image/svg+xml;base64,${Buffer.from(svg2).toString("base64")}`;
   }
-  const total = tokenUsage?.total?.totalTokens ?? tokenUsage?.totalTokens ?? 0;
-  const last = tokenUsage?.last?.totalTokens ?? tokenUsage?.last?.inputTokens ?? 0;
-  const contextWindow = Number(tokenUsage?.modelContextWindow || tokenUsage?.contextWindow || 2e5) || 2e5;
-  const currentTurnTokens = (tokenUsage?.last?.totalTokens ?? 0) > 0 ? tokenUsage.last.totalTokens : tokenUsage?.contextTokens ?? (total > 0 && total <= contextWindow ? total : 0);
-  const pct = Math.min(100, Math.max(0, Math.round(currentTurnTokens / contextWindow * 100)));
-  const totalStr = formatTokenCount(total);
-  const lastStr = last > 0 ? `+${formatTokenCount(last)}` : "\u2014";
+  const total = tokenUsage?.total?.totalTokens ?? tokenUsage?.totalTokens ?? null;
+  const last = tokenUsage?.last?.totalTokens ?? null;
+  const pct = contextPercent(tokenUsage);
+  const totalStr = total == null ? "\u2014" : formatTokenCount(total);
+  const lastStr = Number.isFinite(last) && last >= 0 ? `+${formatTokenCount(last)}` : "\u2014";
   const pctColor = pct > 80 ? "#ef4444" : pct > 50 ? "#f59e0b" : "#3b82f6";
-  const barWidth = Math.max(4, Math.round(pct / 100 * 128));
+  const barWidth = pct == null ? 0 : Math.round(pct / 100 * 128);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
     <defs>
       <linearGradient id="bgTokens" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -5156,7 +5276,7 @@ function tokensIconData(tokenUsage, connected = true) {
       <rect x="0" y="0" width="128" height="8" rx="4" fill="#21262d"/>
       <rect x="0" y="0" width="${barWidth}" height="8" rx="4" fill="${pctColor}"/>
     </g>
-    <text x="98" y="168" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="11" font-weight="800" fill="${pctColor}" letter-spacing="0.6">${pct}% CONTEXT</text>
+    <text x="98" y="168" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="11" font-weight="800" fill="${pctColor}" letter-spacing="0.6">${pct == null ? "CONTEXT UNKNOWN" : `${pct}% CONTEXT`}</text>
   </svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
@@ -5216,15 +5336,15 @@ function reasoningIconData(effort, connected = true) {
     </svg>`;
     return `data:image/svg+xml;base64,${Buffer.from(svg2).toString("base64")}`;
   }
-  const effortStr = String(effort || "medium").toLowerCase();
+  const effortStr = String(effort || "unknown").toLowerCase();
   const isHigh = effortStr === "high" || effortStr === "xhigh" || effortStr === "max" || effortStr === "ultra";
   const isMed = effortStr === "medium" || effortStr === "med";
   const isLow = effortStr === "low" || effortStr === "light" || effortStr === "minimal" || effortStr === "none";
-  let levelText = "MEDIUM";
+  let levelText = isMed ? "MEDIUM" : "UNKNOWN";
   let activeCol = "#8b5cf6";
-  let activeLevel = 2;
+  let activeLevel = isMed ? 2 : 0;
   if (effortStr === "ultra" || effortStr === "max") {
-    levelText = "MAX";
+    levelText = effortStr.toUpperCase();
     activeCol = "#ec4899";
     activeLevel = 3;
   } else if (effortStr === "xhigh") {
@@ -5376,9 +5496,23 @@ function setPromptDisplay(instance, type) {
   });
 }
 function renderInstance(instance) {
+  if (!socket || socket.readyState !== wrapper_default.OPEN) return;
   const slot = taskSlot(instance.uuid);
   if (slot === null) {
     const action = actionName(instance.uuid);
+    if (action === "plan") {
+      sendSvgState(instance, textCard("PLAN", latestState?.planAvailable ? "Open plan" : "Unavailable", "Selected task side panel", Boolean(latestState?.connected)));
+      return;
+    }
+    if (action === "model") {
+      sendSvgState(instance, textCard("MODEL", latestState?.model || "Unknown", "Press for next model", Boolean(latestState?.connected)));
+      return;
+    }
+    if (action === "goal" || action === "subagents") {
+      const value = action === "goal" ? latestState?.goalState || "Unavailable" : latestState?.subagentsSummary?.replace(/\s+/g, " ") || "Unknown";
+      sendSvgState(instance, textCard(ACTION_LABELS[action], value, action === "goal" ? "Pause / resume existing goal" : "Open task agents", Boolean(latestState?.connected)));
+      return;
+    }
     if (action === "usage") {
       setUsageDisplay(instance, latestState?.connected ? latestState.usage : null);
       return;
@@ -5504,63 +5638,23 @@ function renderAll() {
   for (const instance of instances.values()) renderInstance(instance);
 }
 async function bridgeRequest(path, method = "GET", body = null) {
-  const options = {
-    method,
-    signal: AbortSignal.timeout(1200)
-  };
-  if (body) {
-    options.headers = { "Content-Type": "application/json" };
-    options.body = JSON.stringify(body);
+  if (method === "POST" && (path.startsWith("/action/") || path === "/prompt" || path.startsWith("/joystick/"))) {
+    body = { threadId: latestState?.activeThreadKey ?? null, ...body };
   }
-  const response = await fetch(`${BRIDGE_URL}${path}`, options);
-  const payload = await response.json();
-  if (!response.ok || payload.ok === false) {
-    throw new Error(payload.error || `Bridge HTTP ${response.status}`);
-  }
-  return payload;
+  return requestLocal(path, { method, ...body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {} });
 }
 async function openTaskSlot(slot) {
   const task = latestState?.slots?.[slot];
   if (!task?.threadKey) throw new Error(`Codex task slot ${slot + 1} is empty`);
   await bridgeRequest(`/thread/${encodeURIComponent(task.threadKey)}/click?slot=${slot}`, "POST");
 }
-var bridgeSocket = null;
-var bridgeWsReconnectTimer = null;
-var bridgeFallbackTimer = null;
+var feed = bridgeFeed({ component: "codex", url: BRIDGE_URL, poll: pollBridge, onState: (state) => {
+  latestState = state;
+  updateTaskRunningTimes(latestState?.slots, latestState?.activeTasks);
+  renderAll();
+} });
 function connectBridgeWs() {
-  clearTimeout(bridgeWsReconnectTimer);
-  try {
-    const wsUrl = BRIDGE_URL.replace(/^http/, "ws") + "/events";
-    bridgeSocket = new wrapper_default(wsUrl);
-    bridgeSocket.on("open", () => {
-      clearInterval(bridgeFallbackTimer);
-      bridgeFallbackTimer = setInterval(() => void pollBridge(), 5e3);
-      bridgeFallbackTimer.unref();
-    });
-    bridgeSocket.on("message", (raw) => {
-      try {
-        const data = JSON.parse(String(raw));
-        latestState = data;
-        updateTaskRunningTimes(latestState?.slots, latestState?.activeTasks);
-        renderAll();
-      } catch {
-      }
-    });
-    bridgeSocket.on("close", () => {
-      bridgeSocket = null;
-      clearInterval(bridgeFallbackTimer);
-      bridgeFallbackTimer = setInterval(() => void pollBridge(), 3e3);
-      bridgeFallbackTimer.unref();
-      bridgeWsReconnectTimer = setTimeout(connectBridgeWs, 2e3);
-      bridgeWsReconnectTimer.unref();
-    });
-    bridgeSocket.on("error", () => {
-      bridgeSocket?.close();
-    });
-  } catch {
-    bridgeWsReconnectTimer = setTimeout(connectBridgeWs, 2e3);
-    bridgeWsReconnectTimer.unref();
-  }
+  feed.start();
 }
 async function pollBridge() {
   if (pollInFlight) return;
@@ -5593,15 +5687,22 @@ async function invoke(instance, pressed) {
       if (pressed) await bridgeRequest("/focus", "POST");
       return;
     }
-    if (action === "reasoning") {
+    if (action === "reasoning" || action === "model") {
       if (pressed) {
-        await bridgeRequest("/action/reasoning/down", "POST");
+        await bridgeRequest(`/action/${action}/down`, "POST");
+        await pollBridge();
+      }
+      return;
+    }
+    if (action === "plan") {
+      if (pressed) {
+        await bridgeRequest(`/action/${action}/down`, "POST");
         await bridgeRequest("/focus", "POST").catch(() => {
         });
       }
       return;
     }
-    if (action === "stop" || action === "reject") {
+    if (action === "stop") {
       if (pressed) {
         await bridgeRequest("/action/stop/down", "POST");
         await bridgeRequest("/focus", "POST").catch(() => {
@@ -5661,8 +5762,8 @@ async function invoke(instance, pressed) {
       await bridgeRequest("/focus", "POST");
       return;
     }
-    if (action === "approve") {
-      await bridgeRequest(`/action/approve/${pressed ? "down" : "up"}`, "POST");
+    if (action === "approve" || action === "reject") {
+      await bridgeRequest(`/action/${action}/${pressed ? "down" : "up"}`, "POST");
       if (pressed) {
         await bridgeRequest("/focus", "POST").catch(() => {
         });
@@ -5682,13 +5783,22 @@ async function invokeEncoder(instance, message) {
       return;
     }
     if (message.cmd !== "dialrotate") return;
-    const keylist = {
-      left: "SCROLL UP",
-      "hold-left": "SCROLL UP",
-      right: "SCROLL DOWN",
-      "hold-right": "SCROLL DOWN"
-    }[message.rotateEvent];
-    if (keylist) send({ cmd: "hotkey", keylist });
+    const ticks = encoderTicks(message);
+    if (!ticks) return;
+    const direction = ticks < 0 ? "up" : "down";
+    const body = { threadId: latestState?.activeThreadKey ?? null };
+    instance.scrollQueue = (instance.scrollQueue || Promise.resolve()).catch(() => {
+    }).then(async () => {
+      for (let i = 0; i < Math.abs(ticks); i++) {
+        try {
+          await bridgeRequest(`/joystick/${direction}/down`, "POST", body);
+          await new Promise((resolve3) => setTimeout(resolve3, 45));
+        } finally {
+          await bridgeRequest(`/joystick/${direction}/up`, "POST", body);
+        }
+      }
+    });
+    await instance.scrollQueue;
   } catch (error) {
     send({ cmd: "logMessage", uuid: instance.uuid, actionid: instance.actionid, key: instance.key, level: "error", message: error.message });
     send({ cmd: "showAlert", uuid: instance.uuid, actionid: instance.actionid, key: instance.key });
@@ -5761,31 +5871,38 @@ function handleMessage(raw) {
 }
 function connect() {
   clearTimeout(reconnectTimer);
-  socket = new wrapper_default(HOST_URL);
-  socket.on("open", () => {
+  const hostSocket = new wrapper_default(HOST_URL);
+  socket = hostSocket;
+  hostSocket.on("open", () => {
+    if (socket !== hostSocket) return;
     send({ code: 0, cmd: "connected", uuid: PLUGIN_UUID });
+    invalidateDisplays(instances);
+    renderAll();
     connectBridgeWs();
     void pollBridge();
   });
-  socket.on("message", handleMessage);
-  socket.on("close", () => {
-    clearInterval(bridgeFallbackTimer);
-    bridgeSocket?.close();
+  hostSocket.on("message", (raw) => {
+    if (socket === hostSocket) handleMessage(raw);
+  });
+  hostSocket.on("close", () => {
+    if (socket !== hostSocket) return;
+    feed.stop();
     reconnectTimer = setTimeout(connect, 1e3);
     reconnectTimer.unref();
   });
-  socket.on("error", (err) => {
+  hostSocket.on("error", (err) => {
     console.error("WS error:", err);
-    socket.close();
+    hostSocket.close();
   });
 }
+var renderTimer = setInterval(renderAll, 1e3);
+renderTimer.unref();
 connect();
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {
     clearTimeout(reconnectTimer);
-    clearTimeout(bridgeWsReconnectTimer);
-    clearInterval(bridgeFallbackTimer);
-    bridgeSocket?.close();
+    clearInterval(renderTimer);
+    feed.stop();
     socket?.close();
     process.exit(0);
   });

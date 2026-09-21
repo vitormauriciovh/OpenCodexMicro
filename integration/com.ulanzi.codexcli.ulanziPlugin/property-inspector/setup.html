@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html data-action="com.ulanzi.ulanzistudio.codexcli.task1" lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -37,7 +37,7 @@
 <body>
   <main>
     <h1 id="title">Codex CLI Deck Setup</h1>
-    <p id="intro" class="intro">Connects Ulanzi Studio directly to your local Codex CLI terminal sessions and app-server daemon.</p>
+    <p id="intro" class="intro">Select and control tasks served by your local Codex app-server. The deck does not type into or focus terminal windows.</p>
     <section class="panel">
       <div class="row"><span>Bridge Service (127.0.0.1:17376)</span><span id="serviceValue" class="value"><i class="dot"></i><span id="serviceText">Checking...</span></span></div>
       <div class="row"><span>Codex App-Server Daemon</span><span id="daemonValue" class="value"><i class="dot"></i><span id="daemonText">Checking...</span></span></div>
@@ -46,12 +46,43 @@
     <div id="message" class="message"></div>
     <div class="actions">
       <button id="refreshBtn" class="primary" onclick="checkStatus()">Refresh Status</button>
-      <button id="focusBtn" onclick="focusTerminal()">Focus Terminal</button>
+      <button disabled title="Select the intended session using its deck button">Select session on deck</button>
     </div>
+    <section style="margin-top:12px">
+      <p class="intro">Selected task: <span id="selectedTask">none</span></p>
+      <p id="taskAccess" class="intro"></p>
+      <p id="settings" class="intro"></p>
+      <p id="subagents" class="intro">Press Subagents on the deck to load direct child tasks.</p>
+      <label for="prompt">Prompt for <span id="draftTask">selected task</span></label>
+      <textarea id="prompt" maxlength="16000" rows="5" style="width:100%;margin-top:6px" placeholder="Save a prompt, then press Submit or Steer on the deck."></textarea>
+      <button onclick="saveDraft()">Save prompt for this task</button>
+      <p class="intro">Drafts are kept until sent or the bridge restarts. Changing the selected task does not move a draft to another task.</p>
+    </section>
+    <section style="margin-top:12px">
+      <label for="objective">Goal for the selected task</label>
+      <p id="goalStatus" class="intro">No goal loaded</p>
+      <textarea id="objective" maxlength="16000" rows="3" style="width:100%" placeholder="Describe the objective to pursue."></textarea>
+      <button id="createGoalBtn" onclick="createGoal()">Create and activate goal</button>
+      <p class="intro">Creating a goal may continue work automatically. The deck Goal button pauses or resumes an existing goal; Stop interrupts only the current turn. Existing unfinished goals are never overwritten.</p>
+    </section>
+    <section style="margin-top:12px">
+      <h1>Task plan</h1>
+      <p class="intro">Read the latest saved plan and live checklist for the selected task. This viewer does not start or change the task.</p>
+      <button id="loadPlanBtn" onclick="loadPlan()">Load saved plan</button>
+      <p id="planStatus" class="intro">Select a task and load its plan.</p>
+      <pre id="planText" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;font:inherit"></pre>
+    </section>
     <div class="version">Codex CLI Deck v0.4.1</div>
   </main>
+  <script src="inspector-api.js"></script>
   <script>
+    let selectedThreadId = null;
+    let draftThreadId = null;
+    let promptDirty = false;
+    let statusVersion = 0;
+    document.getElementById("prompt").addEventListener("input", () => { promptDirty = true; });
     async function checkStatus() {
+      const version = ++statusVersion;
       const msg = document.getElementById("message");
       const serviceValue = document.getElementById("serviceValue");
       const serviceText = document.getElementById("serviceText");
@@ -61,9 +92,28 @@
       const approvalsText = document.getElementById("approvalsText");
 
       try {
-        const res = await fetch("http://127.0.0.1:17376/state");
+        const res = await localFetch("http://127.0.0.1:17376/state");
         if (!res.ok) throw new Error("Bridge returned HTTP " + res.status);
         const data = await res.json();
+        if (version !== statusVersion) return;
+        selectedThreadId = data.selectedThreadId;
+        renderPlan(data.plan, data.connected);
+        document.getElementById("selectedTask").textContent = data.lastTask?.title || "no task selected";
+        if (!promptDirty) {
+          draftThreadId = data.selectedThreadId;
+          document.getElementById("draftTask").textContent = data.lastTask?.title || "no task selected";
+          document.getElementById("prompt").value = data.draft || "";
+        }
+        const source = data.lastTask?.source;
+        document.getElementById("taskAccess").textContent = (data.lastTask?.controllable ? "Available for deck actions" : "History only until this app-server can resume the task") + (typeof source === "string" ? ` · Source: ${source}` : "");
+        const agents = data.subagents;
+        document.getElementById("subagents").textContent = agents?.error || (agents ? `${agents.complete ? agents.count : "Incomplete count of"} direct child tasks: ${agents.agents.map(a => a.title + " (" + a.status + ")").join(", ") || "none reported"}. Press Subagents to refresh.` : "Press Subagents on the deck to load direct child tasks.");
+        const setting = data.nextPromptSettings;
+        document.getElementById("settings").textContent = setting
+          ? `Next deck prompt: ${setting.model}, ${setting.effort}, ${setting.serviceTier === "priority" ? "Fast" : "standard speed"}. Steering keeps the active turn's settings.`
+          : "Model, Reasoning and Fast controls apply to the next prompt sent from this deck.";
+        document.getElementById("goalStatus").textContent = data.goalError || (data.goal ? `${data.goal.status}: ${data.goal.objective}` : "No goal");
+        document.getElementById("createGoalBtn").disabled = !data.connected || Boolean(data.selectedTaskError) || Boolean(data.goalError) || Boolean(data.goal && data.goal.status !== "complete");
 
         serviceValue.className = "value good";
         serviceText.innerText = "Running";
@@ -76,7 +126,7 @@
           daemonText.innerText = "CLI Active";
         } else {
           daemonValue.className = "value";
-          daemonText.innerText = "Standby";
+          daemonText.innerText = "Disconnected";
         }
 
         const count = data.pendingAttentionCount || 0;
@@ -88,9 +138,12 @@
           approvalsText.innerText = "All Clear";
         }
 
-        msg.className = "message success";
-        msg.innerText = "Codex CLI bridge is active and reachable.";
+        msg.className = data.daemonConnected && !data.selectedTaskError ? "message success" : "message error";
+        msg.innerText = data.selectedTaskError ? "Selected task is read-only: " + data.selectedTaskError + ". Select another task or create a new one." : data.daemonConnected ? (promptDirty ? "Unsaved prompt preserved for its original task. Save it before loading another task’s draft." : "Codex CLI bridge is ready.") : data.error || "Start a compatible local Codex app-server.";
       } catch (err) {
+        if (version !== statusVersion) return;
+        document.getElementById("createGoalBtn").disabled = true;
+        renderPlan(null, false);
         serviceValue.className = "value bad";
         serviceText.innerText = "Offline";
         daemonValue.className = "value";
@@ -102,12 +155,79 @@
       }
     }
 
-    async function focusTerminal() {
-      try {
-        await fetch("http://127.0.0.1:17376/focus", { method: "POST" });
-      } catch (err) {
-        console.error(err);
+    function renderPlan(plan, connected) {
+      document.getElementById("loadPlanBtn").disabled = !connected || !selectedThreadId;
+      const parts = [];
+      if (plan?.checklist) {
+        parts.push(`Live checklist · turn ${plan.checklist.turnId}`);
+        if (plan.checklist.explanation) parts.push(plan.checklist.explanation);
+        parts.push(plan.checklist.steps.map(step => `${step.status === "completed" ? "[✓]" : step.status === "inProgress" ? "[→]" : "[ ]"} ${step.step}`).join("\n"));
       }
+      if (plan?.document) parts.push(`Latest saved plan · turn ${plan.document.turnId}\n${plan.document.text}`);
+      document.getElementById("planText").textContent = parts.join("\n\n");
+      document.getElementById("planStatus").textContent = !connected ? "App-server disconnected. Refresh after reconnecting." : plan?.error ? `Could not refresh plan: ${plan.error}. Any displayed plan is the previous result.` : plan?.historyStatus === "partial" ? "History search is incomplete; no saved plan found in the most recent 1,000 items." : plan?.historyStatus === "complete" && !plan.document ? "No saved plan was reported for this task." : parts.length ? "Plan content reported by app-server. Live checklist updates while this inspector is open." : "Press Load saved plan or the Plan deck button.";
+    }
+    async function loadPlan() {
+      const task = selectedThreadId;
+      try {
+        if (!task) throw new Error("Select a task and refresh status first.");
+        document.getElementById("loadPlanBtn").disabled = true;
+        const response = await localFetch("http://127.0.0.1:17376/action/plan", { method: "POST", body: JSON.stringify({ threadId: task }) });
+        if (!response.ok) throw new Error("Could not read task plan");
+        await refreshPlanDisplay();
+      } catch (error) {
+        document.getElementById("planStatus").textContent = error.message;
+        document.getElementById("loadPlanBtn").disabled = !selectedThreadId;
+      }
+    }
+    let planPollInFlight = false;
+    async function refreshPlanDisplay() {
+      if (planPollInFlight || !selectedThreadId) return;
+      planPollInFlight = true;
+      try {
+        const response = await localFetch("http://127.0.0.1:17376/state");
+        if (!response.ok) throw new Error("Bridge unavailable");
+        const state = await response.json();
+        if (state.selectedThreadId !== selectedThreadId) {
+          document.getElementById("planText").textContent = "";
+          document.getElementById("planStatus").textContent = "Task selection changed. Refresh Status to view its plan.";
+          document.getElementById("loadPlanBtn").disabled = true;
+          return;
+        }
+        renderPlan(state.plan, state.connected);
+      } catch {
+        document.getElementById("planText").textContent = "";
+        document.getElementById("planStatus").textContent = "Bridge unavailable. Refresh Status to reconnect.";
+        document.getElementById("loadPlanBtn").disabled = true;
+      } finally { planPollInFlight = false; }
+    }
+    setInterval(refreshPlanDisplay, 2000);
+
+    async function saveDraft() {
+      const msg = document.getElementById("message");
+      try {
+        if (!draftThreadId) throw new Error("Select a task on the deck and refresh status first.");
+        const text = document.getElementById("prompt").value;
+        const task = draftThreadId;
+        await localFetch("http://127.0.0.1:17376/draft", { method: "POST", body: JSON.stringify({ threadId: task, text }) });
+        if (draftThreadId === task && document.getElementById("prompt").value === text) promptDirty = false;
+        msg.className = "message success";
+        msg.textContent = "Prompt saved for this task. Use Submit or Steer on the deck.";
+      } catch (error) { msg.className = "message error"; msg.textContent = error.message; }
+    }
+
+    async function createGoal() {
+      const msg = document.getElementById("message");
+      const button = document.getElementById("createGoalBtn");
+      try {
+        if (!selectedThreadId) throw new Error("Select a task and refresh status first.");
+        const objective = document.getElementById("objective").value;
+        if (!objective.trim()) throw new Error("Enter the goal objective first.");
+        button.disabled = true;
+        await localFetch("http://127.0.0.1:17376/goal", { method: "POST", body: JSON.stringify({ threadId: selectedThreadId, objective }) });
+        document.getElementById("objective").value = "";
+        await checkStatus();
+      } catch (error) { msg.className = "message error"; msg.textContent = error.message; button.disabled = false; }
     }
 
     checkStatus();

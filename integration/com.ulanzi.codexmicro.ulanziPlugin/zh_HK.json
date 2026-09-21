@@ -1,34 +1,132 @@
 {
-  "Name": "Codex Micro",
+  "Name": "Codex App",
   "Overview": "透過 Ulanzi Studio，在 Ulanzi D200 Series 上查看並控制 Codex Desktop。",
-  "Description": "透過 Ulanzi Studio，將 Ulanzi D200 Series 變成 Codex Desktop 專用控制台。\n\n功能\n- 即時顯示最近五個 Codex 任務的狀態，並準確開啟所選任務。\n- 提供 Fast、Usage、Pin、New、Fork、Steer、Mic 和 Submit 操作。\n- 使用 Latest Task & Scroll 旋鈕開啟 task1，並上下捲動 Codex。\n- 透過每個 Action 的設定頁安裝、修復、啟動並檢查 Codex Bridge。\n- 透過 Codex Bridge.app 及僅限迴環位址的介面維持本機通訊。\n\n安裝環境\n- macOS 13 或更新版本\n- Codex Desktop\n- Ulanzi Studio 3.0.1 或更新版本\n- 已在 Ulanzi Studio 中連接 Ulanzi D200 Series\n- 僅使用儲存庫手動設定 Bridge 時需要 Node.js 20 或更新版本\n\nLLM / AGENT 安裝\n在 Agent 中輸入：\n請替我安裝 Ulanzi Studio 外掛程式：https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation\n\n手動安裝\n1. 複製 https://github.com/UlanziTechnology/OpenCodexMicro 並進入儲存庫目錄。\n2. 結束 Ulanzi Studio。\n3. 執行：npm install\n4. 執行：npm run install:plugin\n5. 執行：npm run setup\n6. 重新開啟 Ulanzi Studio，結束 Codex Desktop，再啟動 ~/Applications/Codex Bridge.app。\n7. 在 Ulanzi Studio 中將 Codex Micro actions 加到按鍵。\n8. 選取任意 Action，在 Codex Bridge 設定頁檢查安裝、服務和 CDP 狀態。\n\n注意事項\n使用 Codex Micro 時，必須透過 ~/Applications/Codex Bridge.app 啟動 Codex，請勿直接開啟 Codex Desktop。\n啟動指令： open ~/Applications/Codex\\ Bridge.app",
+  "Description": "透過 Ulanzi Studio，將 Ulanzi D200 Series 變成 Codex Desktop 專用控制台。\n\n功能\n- 即時顯示最近六個 Codex 任務的狀態，並準確開啟所選任務。\n- 提供 Fast、Usage、Pin、New、Fork、Steer、Mic 和 Submit 操作。\n- 使用 Latest Task & Scroll 旋鈕開啟 task1，並上下捲動 Codex。\n- 透過每個 Action 的設定頁安裝、修復、啟動並檢查 Codex Bridge。\n- 透過 Codex Bridge.app 及僅限迴環位址的介面維持本機通訊。\n\n安裝環境\n- macOS 13 或更新版本\n- Codex Desktop\n- Ulanzi Studio 3.0.1 或更新版本\n- 已在 Ulanzi Studio 中連接 Ulanzi D200 Series\n- 僅使用儲存庫手動設定 Bridge 時需要 Node.js 20 或更新版本\n\nLLM / AGENT 安裝\n在 Agent 中輸入：\n請替我安裝 Ulanzi Studio 外掛程式：https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation\n\n手動安裝\n1. 複製 https://github.com/UlanziTechnology/OpenCodexMicro 並進入儲存庫目錄。\n2. 結束 Ulanzi Studio。\n3. 執行：npm install\n4. 執行：npm run install:plugin\n5. 執行：npm run setup\n6. 重新開啟 Ulanzi Studio，結束 Codex Desktop，再啟動 ~/Applications/Codex Bridge.app。\n7. 在 Ulanzi Studio 中將 Codex App actions 加到按鍵。\n8. 選取任意 Action，在 Codex Bridge 設定頁檢查安裝、服務和 CDP 狀態。\n\n注意事項\n使用 Codex App 時，必須透過 ~/Applications/Codex Bridge.app 啟動 Codex，請勿直接開啟 Codex Desktop。\n啟動指令： open ~/Applications/Codex\\ Bridge.app",
   "Actions": [
-    { "Name": "Codex 任務 1", "Tooltip": "開啟最近的 Codex 任務欄位 1，並顯示即時狀態。" },
-    { "Name": "Codex 任務 2", "Tooltip": "開啟最近的 Codex 任務欄位 2，並顯示即時狀態。" },
-    { "Name": "Codex 任務 3", "Tooltip": "開啟最近的 Codex 任務欄位 3，並顯示即時狀態。" },
-    { "Name": "Codex 任務 4", "Tooltip": "開啟最近的 Codex 任務欄位 4，並顯示即時狀態。" },
-    { "Name": "Codex 任務 5", "Tooltip": "開啟最近的 Codex 任務欄位 5，並顯示即時狀態。" },
-    { "Name": "Codex 快速模式", "Tooltip": "切換目前 Codex 任務的快速模式。" },
-    { "Name": "Codex 用量", "Tooltip": "顯示 Codex 剩餘用量，按下時聚焦 Codex。" },
-    { "Name": "Codex 5小時用量", "Tooltip": "顯示 Codex 5小時剩餘用量及重設倒數計時。" },
-    { "Name": "Codex 週用量", "Tooltip": "顯示 Codex 每週剩餘用量及重設倒數計時。" },
-    { "Name": "固定 Codex 任務", "Tooltip": "固定或取消固定目前的 Codex 任務。" },
-    { "Name": "新增 Codex 任務", "Tooltip": "建立新的 Codex 任務。" },
-    { "Name": "最新任務與捲動", "Tooltip": "按下開啟最新的 Codex 任務；向左轉向上捲動，向右轉向下捲動。" },
-    { "Name": "分支 Codex 任務", "Tooltip": "從目前 Codex 任務建立新的分支任務。" },
-    { "Name": "引導 Codex", "Tooltip": "將目前編輯器文字作為引導輸入傳送給執行中的任務。" },
-    { "Name": "Codex 麥克風", "Tooltip": "切換 Codex 麥克風操作。" },
-    { "Name": "提交至 Codex", "Tooltip": "提交或排隊傳送目前的 Codex 編輯器文字。" },
-    { "Name": "Codex 任務監視器", "Tooltip": "顯示活動任務類型（WORK/CODEX）與模型。多個任務執行時自動輪播，閒置時顯示最近任務模型。" },
-    { "Name": "Codex 批准", "Tooltip": "批准或執行待處理的 Codex 工具確認。" },
-    { "Name": "Codex 拒絕", "Tooltip": "拒絕或取消待處理的 Codex 工具確認。" },
-    { "Name": "Codex 關注警報", "Tooltip": "顯示待關注/出錯任務數並跳轉至該任務。" },
-    { "Name": "Codex 停止生成", "Tooltip": "立即中斷或停止 Codex Desktop 的目前生成。" },
-    { "Name": "Codex Token 監視器", "Tooltip": "顯示工作階段 Token 消耗量與上下文視窗百分比。" },
-    { "Name": "Codex 思考深度", "Tooltip": "顯示並循環切換模型思考深度（低/中/高）。" },
-    { "Name": "Codex 快捷指令: 測試與修復", "Tooltip": "指示 Codex 執行專案測試並修復遇到的錯誤。" },
-    { "Name": "Codex 快捷指令: 程式碼審查", "Tooltip": "指示 Codex 審查改動並發現潛在 Bug 與安全風險。" },
-    { "Name": "Codex 快捷指令: 提交訊息", "Tooltip": "指示 Codex 為未暫存或已改動內容產生語意化提交說明。" }
+    {
+      "Name": "Codex 任務 1",
+      "Tooltip": "開啟最近的 Codex 任務欄位 1，並顯示即時狀態。"
+    },
+    {
+      "Name": "Codex 任務 2",
+      "Tooltip": "開啟最近的 Codex 任務欄位 2，並顯示即時狀態。"
+    },
+    {
+      "Name": "Codex 任務 3",
+      "Tooltip": "開啟最近的 Codex 任務欄位 3，並顯示即時狀態。"
+    },
+    {
+      "Name": "Codex 任務 4",
+      "Tooltip": "開啟最近的 Codex 任務欄位 4，並顯示即時狀態。"
+    },
+    {
+      "Name": "Codex 任務 5",
+      "Tooltip": "開啟最近的 Codex 任務欄位 5，並顯示即時狀態。"
+    },
+    {
+      "Name": "Codex 快速模式",
+      "Tooltip": "切換目前 Codex 任務的快速模式。"
+    },
+    {
+      "Name": "Codex 用量",
+      "Tooltip": "顯示 Codex 剩餘用量，按下時聚焦 Codex。"
+    },
+    {
+      "Name": "Codex 5小時用量",
+      "Tooltip": "顯示 Codex 5小時剩餘用量及重設倒數計時。"
+    },
+    {
+      "Name": "Codex 週用量",
+      "Tooltip": "顯示 Codex 每週剩餘用量及重設倒數計時。"
+    },
+    {
+      "Name": "固定 Codex 任務",
+      "Tooltip": "固定或取消固定目前的 Codex 任務。"
+    },
+    {
+      "Name": "新增 Codex 任務",
+      "Tooltip": "建立新的 Codex 任務。"
+    },
+    {
+      "Name": "最新任務與捲動",
+      "Tooltip": "按下開啟最新的 Codex 任務；向左轉向上捲動，向右轉向下捲動。"
+    },
+    {
+      "Name": "分支 Codex 任務",
+      "Tooltip": "從目前 Codex 任務建立新的分支任務。"
+    },
+    {
+      "Name": "引導 Codex",
+      "Tooltip": "將目前編輯器文字作為引導輸入傳送給執行中的任務。"
+    },
+    {
+      "Name": "Codex 麥克風",
+      "Tooltip": "切換 Codex 麥克風操作。"
+    },
+    {
+      "Name": "提交至 Codex",
+      "Tooltip": "提交或排隊傳送目前的 Codex 編輯器文字。"
+    },
+    {
+      "Name": "Codex 任務監視器",
+      "Tooltip": "顯示活動任務類型（WORK/CODEX）與模型。多個任務執行時自動輪播，閒置時顯示最近任務模型。"
+    },
+    {
+      "Name": "Codex 批准",
+      "Tooltip": "批准或執行待處理的 Codex 工具確認。"
+    },
+    {
+      "Name": "Codex 拒絕",
+      "Tooltip": "拒絕或取消待處理的 Codex 工具確認。"
+    },
+    {
+      "Name": "Codex 關注警報",
+      "Tooltip": "顯示待關注/出錯任務數並跳轉至該任務。"
+    },
+    {
+      "Name": "Codex 停止生成",
+      "Tooltip": "立即中斷或停止 Codex Desktop 的目前生成。"
+    },
+    {
+      "Name": "Codex Token 監視器",
+      "Tooltip": "顯示工作階段 Token 消耗量與上下文視窗百分比。"
+    },
+    {
+      "Name": "Codex 思考深度",
+      "Tooltip": "依次切換目前模型支援的推理強度，到最後一級後返回第一級。"
+    },
+    {
+      "Name": "Codex 快捷指令: 測試與修復",
+      "Tooltip": "指示 Codex 執行專案測試並修復遇到的錯誤。"
+    },
+    {
+      "Name": "Codex 快捷指令: 程式碼審查",
+      "Tooltip": "指示 Codex 審查改動並發現潛在 Bug 與安全風險。"
+    },
+    {
+      "Name": "Codex 快捷指令: 提交訊息",
+      "Tooltip": "指示 Codex 為未暫存或已改動內容產生語意化提交說明。"
+    },
+    {
+      "Name": "Codex 任務 6",
+      "Tooltip": "開啟最近任務的第 6 個位置。"
+    },
+    {
+      "Name": "Codex 目標",
+      "Tooltip": "暫停或恢復所選任務的現有目標。"
+    },
+    {
+      "Name": "Codex 子代理",
+      "Tooltip": "顯示子代理摘要並開啟任務代理。"
+    },
+    {
+      "Name": "選擇 Codex 模型",
+      "Tooltip": "切換至所選任務的下一個可用模型，到最後一個後返回第一個。"
+    },
+    {
+      "Name": "查看 Codex 計劃",
+      "Tooltip": "原生控制項可用時，在 Codex 側邊面板中開啟所選任務的現有計劃。"
+    }
   ],
   "Localization": {
     "BridgeSetup": "Codex Bridge 設定",

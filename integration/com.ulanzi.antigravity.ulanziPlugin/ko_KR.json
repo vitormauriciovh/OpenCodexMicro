@@ -1,85 +1,144 @@
 {
-  "Description": "Ulanzi Studio를 통해 Ulanzi D200 Series에서 Antigravity AI Agent를 제어합니다.",
+  "Description": "Antigravity Desktop\uc5d0\uc11c \uc120\ud0dd\ud55c \uc791\uc5c5\uc744 \uc81c\uc5b4\ud569\ub2c8\ub2e4. \ud1a0\ud070\uc740 \ucd94\uc815\uce58\uc774\uba70 \ud655\uc778\ud560 \uc218 \uc5c6\ub294 \uc0ac\uc6a9\ub7c9\uc740 \uc54c \uc218 \uc5c6\uc74c\uc73c\ub85c \ud45c\uc2dc\ud569\ub2c8\ub2e4.",
   "Name": "Antigravity",
   "com.ulanzi.ulanzistudio.antigravity.task1": {
-    "Name": "Antigravity 세션 1",
-    "Tooltip": "최근 Antigravity 세션 1을 열고 실시간 상태를 표시합니다."
+    "Name": "Antigravity \uc138\uc158 1",
+    "Tooltip": "Antigravity Desktop\uc5d0\uc11c \uc774 \uc791\uc5c5\uc744 \uc120\ud0dd\ud558\uace0 \uc0c1\ud0dc\ub97c \ud45c\uc2dc\ud569\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.task2": {
-    "Name": "Antigravity 세션 2",
-    "Tooltip": "최근 Antigravity 세션 2를 열고 실시간 상태를 표시합니다."
+    "Name": "Antigravity \uc138\uc158 2",
+    "Tooltip": "Antigravity Desktop\uc5d0\uc11c \uc774 \uc791\uc5c5\uc744 \uc120\ud0dd\ud558\uace0 \uc0c1\ud0dc\ub97c \ud45c\uc2dc\ud569\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.task3": {
-    "Name": "Antigravity 세션 3",
-    "Tooltip": "최근 Antigravity 세션 3을 열고 실시간 상태를 표시합니다."
+    "Name": "Antigravity \uc138\uc158 3",
+    "Tooltip": "Antigravity Desktop\uc5d0\uc11c \uc774 \uc791\uc5c5\uc744 \uc120\ud0dd\ud558\uace0 \uc0c1\ud0dc\ub97c \ud45c\uc2dc\ud569\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.task4": {
-    "Name": "Antigravity 세션 4",
-    "Tooltip": "최근 Antigravity 세션 4를 열고 실시간 상태를 표시합니다."
+    "Name": "Antigravity \uc138\uc158 4",
+    "Tooltip": "Antigravity Desktop\uc5d0\uc11c \uc774 \uc791\uc5c5\uc744 \uc120\ud0dd\ud558\uace0 \uc0c1\ud0dc\ub97c \ud45c\uc2dc\ud569\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.task5": {
-    "Name": "Antigravity 세션 5",
-    "Tooltip": "최근 Antigravity 세션 5를 열고 실시간 상태를 표시합니다."
+    "Name": "Antigravity \uc138\uc158 5",
+    "Tooltip": "Antigravity Desktop\uc5d0\uc11c \uc774 \uc791\uc5c5\uc744 \uc120\ud0dd\ud558\uace0 \uc0c1\ud0dc\ub97c \ud45c\uc2dc\ud569\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.proceed": {
-    "Name": "Antigravity 승인 / Proceed",
-    "Tooltip": "보류 중인 실행 계획 또는 도구 실행을 승인합니다."
+    "Name": "Antigravity \uc2b9\uc778",
+    "Tooltip": "\uc120\ud0dd\ud55c \uc791\uc5c5\uc5d0 \ud45c\uc2dc\ub41c \ub2e8\uc77c \ub300\uae30 \uc694\uccad\uc744 \uc2b9\uc778\ud569\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.cancel": {
-    "Name": "Antigravity 취소 / 정지",
-    "Tooltip": "실행을 중지하거나 보류 중인 작업을 취소합니다."
+    "Name": "Antigravity \uc911\uc9c0",
+    "Tooltip": "\uc120\ud0dd\ud55c \uc791\uc5c5\uc744 \uc911\uc9c0\ud569\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.attention": {
-    "Name": "Antigravity 확인 알림",
-    "Tooltip": "확인이 필요한 세션 수를 표시하고 해당 세션으로 바로 이동합니다."
+    "Name": "Antigravity \ud655\uc778 \uc54c\ub9bc",
+    "Tooltip": "\ud655\uc778\uc774 \ud544\uc694\ud55c \ub2e4\uc74c \uc791\uc5c5\uc744 \uc120\ud0dd\ud569\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.subagents": {
-    "Name": "Antigravity 서브 에이전트",
-    "Tooltip": "실행 중인 서브 에이전트 수를 표시합니다."
+    "Name": "Antigravity \uc11c\ube0c \uc5d0\uc774\uc804\ud2b8",
+    "Tooltip": "\uae30\ub85d\uc5d0\uc11c \ucd94\uc815\ud55c \ud558\uc704 \uc5d0\uc774\uc804\ud2b8 \ud65c\ub3d9\uc744 \ud45c\uc2dc\ud558\uba70 \uc2e4\uc2dc\uac04 \ud504\ub85c\uc138\uc2a4 \uc218\ub294 \uc544\ub2d9\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.plan": {
-    "Name": "Antigravity 계획 보기",
-    "Tooltip": "VS Code에서 현재 실행 계획을 엽니다."
+    "Name": "Antigravity \uacc4\ud68d \ubcf4\uae30",
+    "Tooltip": "\uc120\ud0dd\ud55c \uc791\uc5c5\uc758 \uacb0\uacfc\ubb3c\uc744 \uc124\uc815\ub41c \ud3b8\uc9d1\uae30\uc5d0\uc11c \uc5fd\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.walkthrough": {
-    "Name": "Antigravity 정리 보기",
-    "Tooltip": "VS Code에서 작업 정리 문서를 엽니다."
+    "Name": "Antigravity \uc815\ub9ac \ubcf4\uae30",
+    "Tooltip": "\uc120\ud0dd\ud55c \uc791\uc5c5\uc758 \uacb0\uacfc\ubb3c\uc744 \uc124\uc815\ub41c \ud3b8\uc9d1\uae30\uc5d0\uc11c \uc5fd\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.usage": {
-    "Name": "Antigravity 사용량 / 할당량",
-    "Tooltip": "컨텍스트 창 및 세션 사용량 잔여량과 리셋 카운트다운을 표시합니다."
+    "Name": "Antigravity \uc0ac\uc6a9\ub7c9 / \ud560\ub2f9\ub7c9",
+    "Tooltip": "\ud655\uc778\ub41c \ud560\ub2f9\ub7c9\ub9cc \ud45c\uc2dc\ud558\uba70 \ub098\uba38\uc9c0 \uac12\uc740 \uc54c \uc218 \uc5c6\uc74c\uc73c\ub85c \ub461\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.usage5h": {
-    "Name": "Antigravity 5시간 사용량",
-    "Tooltip": "Antigravity 5시간 사용량 잔여량과 리셋 카운트다운을 표시합니다."
+    "Name": "Antigravity 5\uc2dc\uac04 \uc0ac\uc6a9\ub7c9",
+    "Tooltip": "\ud655\uc778\ub41c \ud560\ub2f9\ub7c9\ub9cc \ud45c\uc2dc\ud558\uba70 \ub098\uba38\uc9c0 \uac12\uc740 \uc54c \uc218 \uc5c6\uc74c\uc73c\ub85c \ub461\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.usageweekly": {
-    "Name": "Antigravity 주간 사용량",
-    "Tooltip": "Antigravity 주간 사용량 잔여량과 리셋 카운트다운을 표시합니다."
+    "Name": "Antigravity \uc8fc\uac04 \uc0ac\uc6a9\ub7c9",
+    "Tooltip": "\ud655\uc778\ub41c \ud560\ub2f9\ub7c9\ub9cc \ud45c\uc2dc\ud558\uba70 \ub098\uba38\uc9c0 \uac12\uc740 \uc54c \uc218 \uc5c6\uc74c\uc73c\ub85c \ub461\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.new": {
-    "Name": "Antigravity 새 세션",
-    "Tooltip": "VS Code에 포커스를 맞추고 새 Antigravity 대화를 시작합니다."
+    "Name": "Antigravity \uc0c8 \uc138\uc158",
+    "Tooltip": "\ud604\uc7ac \ud504\ub85c\uc81d\ud2b8\uc5d0\uc11c \uc0c8 \ub300\ud654\ub97c \uc5fd\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.navigate": {
-    "Name": "Antigravity 최신 세션 및 스크롤",
-    "Tooltip": "눌러서 최신 세션을 열고, 돌려서 VS Code를 스크롤합니다."
+    "Name": "Antigravity \ucd5c\uc2e0 \uc138\uc158 \ubc0f \uc2a4\ud06c\ub864",
+    "Tooltip": "\ub204\ub974\uba74 \ucd5c\uadfc \uc791\uc5c5\uc744 \uc120\ud0dd\ud558\uace0 \ub3cc\ub9ac\uba74 \uc120\ud0dd\ud55c \ub300\ud654\ub97c \uc2a4\ud06c\ub864\ud569\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.hud": {
-    "Name": "Antigravity 에이전트 HUD",
-    "Tooltip": "에이전트 실시간 상태(PLANNING, EXECUTING, WAITING, IDLE)와 타이머를 표시합니다."
+    "Name": "Antigravity \uc5d0\uc774\uc804\ud2b8 HUD",
+    "Tooltip": "\uc120\ud0dd\ud55c \uc791\uc5c5\uc758 \uad00\uce21\ub41c \uc0c1\ud0dc\ub97c \ud45c\uc2dc\ud569\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.boost": {
     "Name": "Antigravity /boost",
-    "Tooltip": "심층 사고와 엄격한 검증을 위한 /boost 명령어를 주입합니다."
+    "Tooltip": "\uc0ac\uc6a9 \ubd88\uac00: \uc774 \ubc84\uc804\uc5d0\ub294 \ud655\uc778\ub41c \ub3d9\ub4f1 \uae30\ub2a5\uc774 \uc5c6\uc2b5\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.grillme": {
     "Name": "Antigravity /grill-me",
-    "Tooltip": "설계 결정을 맞추기 위한 대화형 인터뷰 /grill-me를 주입합니다."
+    "Tooltip": "\uc0ac\uc6a9 \ubd88\uac00: \uc774 \ubc84\uc804\uc5d0\ub294 \ud655\uc778\ub41c \ub3d9\ub4f1 \uae30\ub2a5\uc774 \uc5c6\uc2b5\ub2c8\ub2e4."
   },
   "com.ulanzi.ulanzistudio.antigravity.goal": {
     "Name": "Antigravity /goal",
-    "Tooltip": "자율적인 장기 작업 실행을 위한 /goal 명령어를 주입합니다."
+    "Tooltip": "\uc0ac\uc6a9 \ubd88\uac00: \uc774 \ubc84\uc804\uc5d0\ub294 \ud655\uc778\ub41c \ub3d9\ub4f1 \uae30\ub2a5\uc774 \uc5c6\uc2b5\ub2c8\ub2e4."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.tokens": {
+    "Name": "Antigravity Tokens",
+    "Tooltip": "\uae30\ub85d\ub41c \ud14d\uc2a4\ud2b8\uc758 \ud1a0\ud070 \ucd94\uc815\uce58\uc774\uba70 \uacfc\uae08\uc774\ub098 \ucee8\ud14d\uc2a4\ud2b8 \uc810\uc720\uc728\uc774 \uc544\ub2d9\ub2c8\ub2e4."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.approve": {
+    "Name": "Antigravity \uc2b9\uc778",
+    "Tooltip": "\uc120\ud0dd\ud55c \uc791\uc5c5\uc5d0 \ud45c\uc2dc\ub41c \ub2e8\uc77c \ub300\uae30 \uc694\uccad\uc744 \uc2b9\uc778\ud569\ub2c8\ub2e4."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.reject": {
+    "Name": "Antigravity \uac70\ubd80",
+    "Tooltip": "\uc120\ud0dd\ud55c \uc791\uc5c5\uc5d0 \ud45c\uc2dc\ub41c \ub2e8\uc77c \ub300\uae30 \uc694\uccad\uc744 \uac70\ubd80\ud569\ub2c8\ub2e4."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.stop": {
+    "Name": "Antigravity \uc911\uc9c0",
+    "Tooltip": "\uc120\ud0dd\ud55c \uc791\uc5c5\uc744 \uc911\uc9c0\ud569\ub2c8\ub2e4."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.pin": {
+    "Name": "Antigravity \uc791\uc5c5 \uace0\uc815",
+    "Tooltip": "\uc120\ud0dd\ud55c \uc791\uc5c5\uc744 \uace0\uc815\ud558\uac70\ub098 \ud574\uc81c\ud569\ub2c8\ub2e4."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.submit": {
+    "Name": "Antigravity \uc804\uc1a1",
+    "Tooltip": "\ud604\uc7ac \ucd08\uc548\uc744 \uc804\uc1a1\ud558\uba70 \uc2e4\ud589 \uc911\uc5d0\ub294 Antigravity\uc758 \uc804\ub2ec \uc124\uc815\uc744 \ub530\ub985\ub2c8\ub2e4."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.mic": {
+    "Name": "Antigravity \ub9c8\uc774\ud06c",
+    "Tooltip": "\uc74c\uc131 \ub179\uc74c\uc744 \uc2dc\uc791\ud558\uac70\ub098 \uc885\ub8cc\ud569\ub2c8\ub2e4."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.model": {
+    "Name": "Antigravity \ubaa8\ub378 \uc120\ud0dd",
+    "Tooltip": "\uc120\ud0dd\ud55c \uc791\uc5c5\uc758 \ubaa8\ub378 \uc635\uc158\uc744 \uc5fd\ub2c8\ub2e4."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.prompt_test": {
+    "Name": "Antigravity \ud14c\uc2a4\ud2b8 \ubc0f \uc218\uc815",
+    "Tooltip": "\ud14c\uc2a4\ud2b8\uc640 \uc218\uc815\uc744 \uc694\uccad\ud558\uba70 \uae30\uc874 \ucd08\uc548\uc744 \ubcf4\uc874\ud569\ub2c8\ub2e4."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.prompt_review": {
+    "Name": "Antigravity \ubcc0\uacbd \uac80\ud1a0",
+    "Tooltip": "\ubcc0\uacbd \uac80\ud1a0\ub97c \uc694\uccad\ud558\uba70 \uae30\uc874 \ucd08\uc548\uc744 \ubcf4\uc874\ud569\ub2c8\ub2e4."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.prompt_commit": {
+    "Name": "Antigravity \ucee4\ubc0b \uba54\uc2dc\uc9c0",
+    "Tooltip": "Conventional Commit \uba54\uc2dc\uc9c0\ub97c \uc694\uccad\ud558\uba70 \ucee4\ubc0b\uc774\ub098 \ud478\uc2dc\ub97c \uc2e4\ud589\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.fork": {
+    "Name": "Antigravity \uc791\uc5c5 \ubd84\uae30",
+    "Tooltip": "\uac00\ub2a5\ud55c \uacbd\uc6b0 \ub9c8\uc9c0\ub9c9 \ud45c\uc2dc \uc751\ub2f5\uc5d0\uc11c \ud604\uc7ac \uc791\uc5c5 \uacf5\uac04\uc73c\ub85c \ubd84\uae30\ud569\ub2c8\ub2e4. \uc2e4\ud589 \uc911\uc9c0 \ubc0f \ucd08\uc548 \uc815\ub9ac\uac00 \ud544\uc694\ud569\ub2c8\ub2e4."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.reasoning": {
+    "Name": "Antigravity \ucd94\ub860 \uc218\uc900",
+    "Tooltip": "\ud604\uc7ac \ubaa8\ub378\uc758 \ucd94\ub860 \uc635\uc158\uc744 \uc21c\ud658\ud558\uba70 \uc635\uc158\uc774 \uc5c6\uc73c\uba74 \uc54c\ub9bd\ub2c8\ub2e4."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task6": {
+    "Name": "Antigravity \uc138\uc158 6",
+    "Tooltip": "Antigravity Desktop\uc5d0\uc11c \uc774 \uc791\uc5c5\uc744 \uc120\ud0dd\ud558\uace0 \uc0c1\ud0dc\ub97c \ud45c\uc2dc\ud569\ub2c8\ub2e4."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.steer": {
+    "Name": "Antigravity \ub300\uae30 \uba54\uc2dc\uc9c0 \uc9c0\uae08 \uc804\uc1a1",
+    "Tooltip": "\uc120\ud0dd\ud55c \uc791\uc5c5\uc758 \ud3bc\uce5c \ub300\uae30\uc5f4\uc5d0 \uc788\ub294 \uc804\uc1a1 \uac00\ub2a5\ud55c \ub2e8\uc77c \uba54\uc2dc\uc9c0\ub97c \uc989\uc2dc \uc804\uc1a1\ud569\ub2c8\ub2e4. \ucd08\uc548\uc740 \ubcf4\uc874\ud569\ub2c8\ub2e4. \uc5ec\ub7ec \uba54\uc2dc\uc9c0\uac00 \uc788\uc73c\uba74 Antigravity\uc5d0\uc11c \uc120\ud0dd\ud558\uc138\uc694."
   }
 }
-

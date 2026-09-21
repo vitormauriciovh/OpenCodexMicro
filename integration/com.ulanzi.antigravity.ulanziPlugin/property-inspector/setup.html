@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html data-action="com.ulanzi.ulanzistudio.antigravity.task1" lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -40,16 +40,18 @@
     <p id="intro" class="intro">Connects Ulanzi Studio directly to your local Antigravity AI Agent sessions.</p>
     <section class="panel">
       <div class="row"><span>Bridge Service (127.0.0.1:17374)</span><span id="serviceValue" class="value"><i class="dot"></i><span id="serviceText">Checking...</span></span></div>
+      <div class="row"><span>Antigravity Desktop</span><span id="desktopValue" class="value"><i class="dot"></i><span id="desktopText">Checking...</span></span></div>
       <div class="row"><span>Active Agent Sessions</span><span id="sessionsValue" class="value"><i class="dot"></i><span id="sessionsText">0</span></span></div>
       <div class="row"><span>Pending Attention / Feedback</span><span id="feedbackValue" class="value"><i class="dot"></i><span id="feedbackText">None</span></span></div>
     </section>
     <div id="message" class="message"></div>
     <div class="actions">
       <button id="refreshBtn" class="primary" onclick="checkStatus()">Refresh Status</button>
-      <button id="focusBtn" onclick="focusEditor()">Focus VS Code</button>
+      <button id="focusBtn" onclick="focusEditor()">Focus Antigravity</button>
     </div>
     <div class="version">Antigravity Deck v0.4.1</div>
   </main>
+  <script src="inspector-api.js"></script>
   <script>
     async function checkStatus() {
       const msg = document.getElementById("message");
@@ -59,13 +61,17 @@
       const sessionsText = document.getElementById("sessionsText");
       const feedbackValue = document.getElementById("feedbackValue");
       const feedbackText = document.getElementById("feedbackText");
+      const desktopValue = document.getElementById("desktopValue");
+      const desktopText = document.getElementById("desktopText");
 
       try {
-        const res = await fetch("http://127.0.0.1:17374/state");
+        const res = await localFetch("http://127.0.0.1:17374/state");
         if (res.ok) {
           const data = await res.json();
           serviceValue.className = "value good";
           serviceText.textContent = "Running";
+          desktopValue.className = "value " + (data.applicationConnected ? "good" : "warn");
+          desktopText.textContent = data.applicationConnected ? "Connected" : "Unavailable";
           
           sessionsValue.className = "value good";
           sessionsText.textContent = String(data.activeTasks?.length || 0);
@@ -77,14 +83,18 @@
             feedbackValue.className = "value good";
             feedbackText.textContent = "Ready";
           }
-          msg.className = "message success";
-          msg.textContent = "Connected to local Antigravity agent bridge.";
+          msg.className = "message " + (data.applicationConnected ? "success" : "error");
+          msg.textContent = data.applicationConnected
+            ? (data.lastTask?.title ? "Selected task: " + data.lastTask.title : "Desktop connected. Select a task to use task controls.")
+            : (data.desktopError || "Start Antigravity Desktop to use task controls. Saved history remains available.");
         } else {
           throw new Error("Bridge returned " + res.status);
         }
       } catch (e) {
         serviceValue.className = "value bad";
         serviceText.textContent = "Offline";
+        desktopValue.className = "value";
+        desktopText.textContent = "-";
         sessionsValue.className = "value";
         sessionsText.textContent = "-";
         feedbackValue.className = "value";
@@ -96,12 +106,16 @@
 
     async function focusEditor() {
       try {
-        await fetch("http://127.0.0.1:17374/focus", { method: "POST" });
-      } catch (e) {}
+        const response = await localFetch("http://127.0.0.1:17374/focus", { method: "POST" });
+        if (!response.ok) throw new Error("Could not focus the editor (" + response.status + ").");
+      } catch (e) {
+        const msg = document.getElementById("message");
+        msg.className = "message error";
+        msg.textContent = e.message;
+      }
     }
 
     checkStatus();
   </script>
 </body>
 </html>
-

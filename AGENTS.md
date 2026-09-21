@@ -33,7 +33,7 @@ installation simply from the presence of this repository.
    ```
 
    Inspect plugin `manifest.json` files and check for the target plugin UUIDs:
-   - **Codex Micro**: `com.ulanzi.ulanzistudio.codexmicro`
+   - **Codex App**: `com.ulanzi.ulanzistudio.codexmicro`
    - **Antigravity**: `com.ulanzi.ulanzistudio.antigravity`
    - **Spotify**: `com.ulanzi.ulanzistudio.spotify`
    - **Codex CLI**: `com.ulanzi.ulanzistudio.codexcli`
@@ -43,7 +43,7 @@ installation simply from the presence of this repository.
 
 2. **Plugin Installation:**
    - To install all plugins: `npm run install:all`
-   - For Codex Micro alone: use `$install-ulanzi-studio-plugin` from `skills/install-ulanzi-studio-plugin/SKILL.md` or run `npm run install:plugin`.
+   - For Codex App alone: use `$install-ulanzi-studio-plugin` from `skills/install-ulanzi-studio-plugin/SKILL.md` or run `npm run install:plugin`.
    - For Antigravity alone: run `npm run install:plugin:antigravity`.
    - For Spotify alone: run `npm run install:plugin:spotify`.
    - For Codex CLI alone: run `npm run install:plugin:codexcli`.
@@ -64,7 +64,7 @@ Python/D200 standalone runtime.
 
 ## Key repository paths
 
-- `integration/com.ulanzi.codexmicro.ulanziPlugin/`: Codex Micro Ulanzi Studio plugin.
+- `integration/com.ulanzi.codexmicro.ulanziPlugin/`: Codex App Ulanzi Studio plugin.
 - `integration/com.ulanzi.antigravity.ulanziPlugin/`: Antigravity AI Agent Ulanzi Studio plugin.
 - `integration/com.ulanzi.spotify.ulanziPlugin/`: Spotify Music Picker Ulanzi Studio plugin.
 - `integration/com.ulanzi.codexcli.ulanziPlugin/`: Codex CLI Ulanzi Studio plugin.

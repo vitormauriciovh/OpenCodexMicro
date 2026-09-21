@@ -1,3 +1,8 @@
+import { AntigravityDesktopClient } from "./desktop-client.mjs";
+import { mergeDesktopState } from "./desktop-state.mjs";
+import { promptShortcuts } from "../shared/prompt-shortcuts.mjs";
+import { secureHandler, allowedRequest, readJson } from "../shared/local-api.mjs";
+import { stateDigest } from "../shared/plugin-runtime.mjs";
 import { createServer } from "node:http";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -11,6 +16,7 @@ const PORT = Number(process.env.ANTIGRAVITY_BRIDGE_PORT || 17374);
 const REFRESH_MS = 500;
 
 const reader = new AntigravityStateReader();
+const desktop = new AntigravityDesktopClient();
 let cached = {
   connected: false,
   slots: Array.from({ length: 6 }, (_, id) => ({
@@ -31,7 +37,7 @@ const wss = new WebSocketServer({ noServer: true });
 const wsClients = new Set();
 
 function broadcastState() {
-  const digest = `${cached.connected}:${cached.error}:${cached.agentStatus}:${cached.pendingAttentionCount}:${cached.tokenUsage?.total?.totalTokens}:${cached.subagentsCount}:${cached.activeTasks?.length}:${cached.slots?.map((s) => `${s.id}-${s.status}-${s.selected}`).join(",")}`;
+  const digest = stateDigest(cached);
   if (digest === lastBroadcastDigest && wsClients.size > 0) return;
   lastBroadcastDigest = digest;
   const payload = JSON.stringify(cached);
@@ -50,57 +56,25 @@ wss.on("connection", (ws) => {
 });
 
 async function focusVSCode() {
-  try {
-    await execFileAsync("/usr/bin/open", ["-a", "Visual Studio Code"], { timeout: 3000 });
-  } catch {
-    try {
-      await execFileAsync("/usr/bin/open", ["-b", "com.microsoft.VSCode"], { timeout: 3000 });
-    } catch {
-      // fallback
-    }
-  }
+  await execFileAsync("/usr/bin/open", ["-a", process.env.ANTIGRAVITY_EDITOR_APP || (cached.applicationConnected ? "Antigravity" : "Visual Studio Code")], { timeout: 3000 });
 }
-
 async function openFileInEditor(filePath) {
-  try {
-    await execFileAsync("/usr/local/bin/code", [filePath], { timeout: 3000 });
-  } catch {
-    await execFileAsync("/usr/bin/open", [filePath], { timeout: 3000 });
-  }
+  const { access } = await import("node:fs/promises");
+  await access(filePath);
+  await execFileAsync("/usr/bin/open", ["-a", process.env.ANTIGRAVITY_EDITOR_APP || "Visual Studio Code", filePath], { timeout: 3000 });
 }
-
-async function sendSlashCommand(cmdName) {
-  await focusVSCode();
-  const textMap = {
-    boost: "/boost",
-    grillme: "/grill-me",
-    goal: "/goal"
-  };
-  const commandText = textMap[cmdName] || `/${cmdName}`;
-  const script = `
-tell application "Visual Studio Code" to activate
-delay 0.15
-tell application "System Events"
-  -- Focus the Antigravity chat input before typing
-  keystroke "l" using {command down}
-  delay 0.25
-  keystroke "${commandText}"
-  delay 0.1
-  key code 36
-end tell
-`;
-  try {
-    await execFileAsync("/usr/bin/osascript", ["-e", script], { timeout: 5000 });
-  } catch (err) {
-    console.error("Failed to execute osascript keystroke:", err);
-  }
+function unavailable() {
+  return { ok: false, error: "This Antigravity version exposes no verified session control. Use the editor for this action." };
 }
 
 async function refresh() {
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
     try {
-      const snapshot = await reader.snapshot();
+      const [history, live] = await Promise.all([
+        reader.snapshot(), desktop.snapshot().then(state => ({ state }), error => ({ error: error.message }))
+      ]);
+      const snapshot = mergeDesktopState(history, live.state, live.error);
       cached = {
         ...snapshot,
         error: null,
@@ -126,18 +100,18 @@ setInterval(refresh, REFRESH_MS).unref();
 function json(response, status, body) {
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "no-store",
-    "Access-Control-Allow-Origin": "*"
+    "Cache-Control": "no-store"
   });
   response.end(`${JSON.stringify(body)}\n`);
 }
 
-export const server = createServer(async (request, response) => {
+export const server = createServer(secureHandler("antigravity", PORT, async (request, response) => {
   const url = new URL(request.url || "/", `http://${HOST}:${PORT}`);
+  const body = request.method === "POST" ? await readJson(request) : {};
 
   if (request.method === "GET" && url.pathname === "/health") {
     await refresh();
-    return json(response, 200, { ok: true, antigravityConnected: cached.connected, updatedAt: cached.updatedAt });
+    return json(response, 200, { ok: true, antigravityConnected: cached.applicationConnected, historyAvailable: cached.connected, updatedAt: cached.updatedAt });
   }
 
   if (request.method === "GET" && url.pathname === "/state") {
@@ -155,7 +129,7 @@ export const server = createServer(async (request, response) => {
 
   if (request.method === "POST" && url.pathname === "/action/plan") {
     try {
-      const latest = cached.activeTasks[0];
+      const latest = cached.activeTasks.find(task => task.threadKey === body.threadId);
       if (latest && latest.fullPath) {
         const planPath = path.join(latest.fullPath, "implementation_plan.md");
         await openFileInEditor(planPath);
@@ -169,7 +143,7 @@ export const server = createServer(async (request, response) => {
 
   if (request.method === "POST" && url.pathname === "/action/walkthrough") {
     try {
-      const latest = cached.activeTasks[0];
+      const latest = cached.activeTasks.find(task => task.threadKey === body.threadId);
       if (latest && latest.fullPath) {
         const wtPath = path.join(latest.fullPath, "walkthrough.md");
         await openFileInEditor(wtPath);
@@ -181,115 +155,47 @@ export const server = createServer(async (request, response) => {
     }
   }
 
-  if (request.method === "POST" && (url.pathname === "/action/proceed" || url.pathname === "/action/approve")) {
-    try {
-      await focusVSCode();
-      // Directly submit the active confirmation modal, dialog or approval prompt
-      const script = `
-tell application "Visual Studio Code" to activate
-delay 0.1
-tell application "System Events"
-  key code 36
-end tell
-`;
-      try {
-        await execFileAsync("/usr/bin/osascript", ["-e", script], { timeout: 3000 });
-      } catch {}
-      return json(response, 200, { ok: true, action: "proceed" });
-    } catch (error) {
-      return json(response, 500, { ok: false, error: error.message });
-    }
+  if (request.method === "POST" && ["/action/boost", "/action/grillme", "/action/goal"].includes(url.pathname)) {
+    return json(response, 409, unavailable());
   }
-
-  if (request.method === "POST" && url.pathname === "/action/tokens") {
-    try {
-      await focusVSCode();
-      return json(response, 200, { ok: true, action: "tokens" });
-    } catch (error) {
-      return json(response, 500, { ok: false, error: error.message });
-    }
-  }
-
-  if (request.method === "POST" && (url.pathname === "/action/cancel" || url.pathname === "/action/stop" || url.pathname === "/action/reject")) {
-    try {
-      await focusVSCode();
-      // Simulate pressing Escape to cancel/stop the current task
-      const script = `
-tell application "Visual Studio Code" to activate
-delay 0.15
-tell application "System Events"
-  key code 53
-end tell
-`;
-      try {
-        await execFileAsync("/usr/bin/osascript", ["-e", script], { timeout: 5000 });
-      } catch {}
-      return json(response, 200, { ok: true, action: "cancel" });
-    } catch (error) {
-      return json(response, 500, { ok: false, error: error.message });
-    }
-  }
-
   if (request.method === "POST" && url.pathname === "/action/attention") {
-    try {
-      await focusVSCode();
-      return json(response, 200, { ok: true, action: "attention" });
-    } catch (error) {
-      return json(response, 500, { ok: false, error: error.message });
-    }
+    const pending = cached.activeTasks.filter(t => t.pendingFeedback || t.status === "attention");
+    if (!pending.length) return json(response, 404, { ok: false, error: "No task needs attention" });
+    const index = pending.findIndex(task => task.threadKey === cached.selectedThreadId);
+    const result = await desktop.select(pending[(index + 1) % pending.length].threadKey);
+    await refresh();
+    return json(response, 200, result);
   }
-
-  const slashMatch = request.method === "POST" && url.pathname.match(/^\/action\/(boost|grillme|goal)$/);
-  if (slashMatch) {
-    try {
-      const slash = slashMatch[1];
-      await sendSlashCommand(slash);
-      return json(response, 200, { ok: true, slash });
-    } catch (error) {
-      return json(response, 500, { ok: false, error: error.message });
-    }
-  }
-
   const matchTask = request.method === "POST" && url.pathname.match(/^\/task\/([0-5])\/click$/);
   if (matchTask) {
-    try {
-      await focusVSCode();
-      const taskIndex = Number(matchTask[1]);
-      const task = cached.activeTasks[taskIndex];
-      if (task && task.fullPath) {
-        const planPath = path.join(task.fullPath, "implementation_plan.md");
-        try {
-          await openFileInEditor(planPath);
-        } catch {}
-      }
-      return json(response, 200, { ok: true });
-    } catch (error) {
-      return json(response, 500, { ok: false, error: error.message });
-    }
+    if (!cached.activeTasks.some(task => task.threadKey === body.threadId)) throw new Error("Unknown Antigravity task");
+    const result = await desktop.select(body.threadId);
+    await refresh();
+    return json(response, 200, result);
   }
-
-  const scrollMatch = request.method === "POST" && url.pathname.match(/^\/scroll\/(up|down)$/);
-  if (scrollMatch) {
-    try {
-      const direction = scrollMatch[1];
-      // key code 116 = Page Up, key code 121 = Page Down
-      const keyCode = direction === "up" ? 116 : 121;
-      const script = `
-tell application "System Events"
-  key code ${keyCode}
-end tell
-`;
-      await execFileAsync("/usr/bin/osascript", ["-e", script], { timeout: 3000 });
-      return json(response, 200, { ok: true, direction });
-    } catch (error) {
-      return json(response, 500, { ok: false, error: error.message });
-    }
+  const action = url.pathname.startsWith("/action/") ? url.pathname.slice(8) : null;
+  if (request.method === "POST" && Object.hasOwn(promptShortcuts, action)) {
+    const result = await desktop.action("prompt", body.threadId, { text: promptShortcuts[action] });
+    await refresh();
+    return json(response, 200, result);
+  }
+  const aliases = { proceed: "approve", cancel: "stop" };
+  if (request.method === "POST" && ["approve", "proceed", "reject", "stop", "cancel", "new", "pin", "submit", "mic", "model", "reasoning", "fork", "steer"].includes(action)) {
+    const result = await desktop.action(aliases[action] || action, body.threadId);
+    await refresh();
+    return json(response, 200, result);
+  }
+  const scroll = request.method === "POST" && url.pathname.match(/^\/scroll\/(up|down)$/);
+  if (scroll) {
+    const result = await desktop.action("scroll", body.threadId, { ticks: scroll[1] === "up" ? -1 : 1 });
+    return json(response, 200, result);
   }
 
   return json(response, 404, { ok: false, error: "Not found" });
-});
+}));
 
 server.on("upgrade", (request, socket, head) => {
+  if (!allowedRequest(request, "antigravity", PORT)) { socket.destroy(); return; }
   const { pathname } = new URL(request.url || "/", `http://${HOST}:${PORT}`);
   if (pathname === "/events" || pathname === "/ws") {
     wss.handleUpgrade(request, socket, head, (ws) => {
@@ -307,3 +213,5 @@ if (process.argv[1] && (process.argv[1].endsWith("server.mjs") || process.argv[1
   });
 }
 
+
+for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => { desktop.close(); wss.close(); server.close(() => process.exit(0)); });

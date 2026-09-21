@@ -1,85 +1,144 @@
 {
-  "Description": "Transforme o Ulanzi D200 Series numa superfície dedicada de controlo do Antigravity AI Agent.",
+  "Description": "Controla a tarefa selecionada no Antigravity Desktop. Os tokens s\u00e3o estimativas; valores de utiliza\u00e7\u00e3o n\u00e3o confirmados permanecem desconhecidos.",
   "Name": "Antigravity",
   "com.ulanzi.ulanzistudio.antigravity.task1": {
-    "Name": "Antigravity Sessão 1",
-    "Tooltip": "Abre a sessão 1 recente do Antigravity e mostra o seu estado em tempo real."
+    "Name": "Antigravity Sess\u00e3o 1",
+    "Tooltip": "Seleciona esta tarefa no Antigravity Desktop e mostra o seu estado."
   },
   "com.ulanzi.ulanzistudio.antigravity.task2": {
-    "Name": "Antigravity Sessão 2",
-    "Tooltip": "Abre a sessão 2 recente do Antigravity e mostra o seu estado em tempo real."
+    "Name": "Antigravity Sess\u00e3o 2",
+    "Tooltip": "Seleciona esta tarefa no Antigravity Desktop e mostra o seu estado."
   },
   "com.ulanzi.ulanzistudio.antigravity.task3": {
-    "Name": "Antigravity Sessão 3",
-    "Tooltip": "Abre a sessão 3 recente do Antigravity e mostra o seu estado em tempo real."
+    "Name": "Antigravity Sess\u00e3o 3",
+    "Tooltip": "Seleciona esta tarefa no Antigravity Desktop e mostra o seu estado."
   },
   "com.ulanzi.ulanzistudio.antigravity.task4": {
-    "Name": "Antigravity Sessão 4",
-    "Tooltip": "Abre a sessão 4 recente do Antigravity e mostra o seu estado em tempo real."
+    "Name": "Antigravity Sess\u00e3o 4",
+    "Tooltip": "Seleciona esta tarefa no Antigravity Desktop e mostra o seu estado."
   },
   "com.ulanzi.ulanzistudio.antigravity.task5": {
-    "Name": "Antigravity Sessão 5",
-    "Tooltip": "Abre a sessão 5 recente do Antigravity e mostra o seu estado em tempo real."
+    "Name": "Antigravity Sess\u00e3o 5",
+    "Tooltip": "Seleciona esta tarefa no Antigravity Desktop e mostra o seu estado."
   },
   "com.ulanzi.ulanzistudio.antigravity.proceed": {
-    "Name": "Antigravity Aprovar / Proceed",
-    "Tooltip": "Aprova o plano de implementação pendente ou ação no Antigravity."
+    "Name": "Antigravity Aprovar",
+    "Tooltip": "Aprova o \u00fanico pedido pendente vis\u00edvel da tarefa selecionada."
   },
   "com.ulanzi.ulanzistudio.antigravity.cancel": {
-    "Name": "Antigravity Cancelar / Stop",
-    "Tooltip": "Interrompe a execução ou cancela a ação pendente no Antigravity."
+    "Name": "Antigravity Parar",
+    "Tooltip": "Para a tarefa selecionada."
   },
   "com.ulanzi.ulanzistudio.antigravity.attention": {
-    "Name": "Antigravity Alerta de Atenção",
-    "Tooltip": "Exibe contagem de sessões pendentes e abre diretamente a sessão ativa."
+    "Name": "Antigravity Alerta de Aten\u00e7\u00e3o",
+    "Tooltip": "Seleciona a pr\u00f3xima tarefa que precisa de aten\u00e7\u00e3o."
   },
   "com.ulanzi.ulanzistudio.antigravity.subagents": {
     "Name": "Antigravity Subagentes",
-    "Tooltip": "Exibe a contagem de subagentes ativos no Antigravity."
+    "Tooltip": "Mostra atividade de subagentes inferida dos registos; n\u00e3o conta processos em tempo real."
   },
   "com.ulanzi.ulanzistudio.antigravity.plan": {
     "Name": "Antigravity Ver Plano",
-    "Tooltip": "Abre o plano de implementação ativo no VS Code."
+    "Tooltip": "Abre o artefacto da tarefa selecionada no editor configurado."
   },
   "com.ulanzi.ulanzistudio.antigravity.walkthrough": {
     "Name": "Antigravity Ver Walkthrough",
-    "Tooltip": "Abre o resumo de walkthrough gerado no VS Code."
+    "Tooltip": "Abre o artefacto da tarefa selecionada no editor configurado."
   },
   "com.ulanzi.ulanzistudio.antigravity.usage": {
     "Name": "Antigravity Uso / Quota",
-    "Tooltip": "Exibe o uso da janela de contexto e limites de sessão com contagem regressiva de reset."
+    "Tooltip": "Mostra limites verificados quando dispon\u00edveis; os restantes valores s\u00e3o desconhecidos."
   },
   "com.ulanzi.ulanzistudio.antigravity.usage5h": {
     "Name": "Antigravity Uso 5 Horas",
-    "Tooltip": "Exibe a quota restante de 5 horas do Antigravity e contagem regressiva de reset."
+    "Tooltip": "Mostra limites verificados quando dispon\u00edveis; os restantes valores s\u00e3o desconhecidos."
   },
   "com.ulanzi.ulanzistudio.antigravity.usageweekly": {
     "Name": "Antigravity Uso Semanal",
-    "Tooltip": "Exibe a quota restante semanal do Antigravity e contagem regressiva de reset."
+    "Tooltip": "Mostra limites verificados quando dispon\u00edveis; os restantes valores s\u00e3o desconhecidos."
   },
   "com.ulanzi.ulanzistudio.antigravity.new": {
-    "Name": "Antigravity Nova Sessão",
-    "Tooltip": "Foca o VS Code para iniciar uma nova conversa no Antigravity."
+    "Name": "Antigravity Nova Sess\u00e3o",
+    "Tooltip": "Abre uma nova conversa no projeto atual."
   },
   "com.ulanzi.ulanzistudio.antigravity.navigate": {
-    "Name": "Antigravity Última Sessão & Scroll",
-    "Tooltip": "Pressione para focar a última sessão; gire para rolar o VS Code."
+    "Name": "Antigravity \u00daltima Sess\u00e3o & Scroll",
+    "Tooltip": "Prima para selecionar a tarefa recente; rode para deslocar a conversa selecionada."
   },
   "com.ulanzi.ulanzistudio.antigravity.hud": {
     "Name": "Antigravity Status HUD",
-    "Tooltip": "Exibe o status do agente em tempo real (PLANNING, EXECUTING, WAITING, IDLE) com título e cronómetro."
+    "Tooltip": "Mostra o estado observado da tarefa selecionada."
   },
   "com.ulanzi.ulanzistudio.antigravity.boost": {
     "Name": "Antigravity /boost",
-    "Tooltip": "Injeta o comando /boost para raciocínio aprofundado e verificação rigorosa."
+    "Tooltip": "Indispon\u00edvel: esta vers\u00e3o n\u00e3o tem um equivalente verificado."
   },
   "com.ulanzi.ulanzistudio.antigravity.grillme": {
     "Name": "Antigravity /grill-me",
-    "Tooltip": "Injeta o comando /grill-me para entrevista arquitetural iterativa."
+    "Tooltip": "Indispon\u00edvel: esta vers\u00e3o n\u00e3o tem um equivalente verificado."
   },
   "com.ulanzi.ulanzistudio.antigravity.goal": {
     "Name": "Antigravity /goal",
-    "Tooltip": "Injeta o comando /goal para execução autónoma de tarefas longas."
+    "Tooltip": "Indispon\u00edvel: esta vers\u00e3o n\u00e3o tem um equivalente verificado."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.tokens": {
+    "Name": "Antigravity Tokens",
+    "Tooltip": "Estimativa de tokens do texto registado; n\u00e3o representa utiliza\u00e7\u00e3o faturada nem ocupa\u00e7\u00e3o do contexto."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.approve": {
+    "Name": "Antigravity Aprovar",
+    "Tooltip": "Aprova o \u00fanico pedido pendente vis\u00edvel da tarefa selecionada."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.reject": {
+    "Name": "Antigravity Rejeitar",
+    "Tooltip": "Rejeita o \u00fanico pedido pendente vis\u00edvel da tarefa selecionada."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.stop": {
+    "Name": "Antigravity Parar",
+    "Tooltip": "Para a tarefa selecionada."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.pin": {
+    "Name": "Antigravity Fixar tarefa",
+    "Tooltip": "Fixa ou desafixa a tarefa selecionada."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.submit": {
+    "Name": "Antigravity Enviar",
+    "Tooltip": "Envia o texto atual; durante a execu\u00e7\u00e3o respeita a op\u00e7\u00e3o de entrega do Antigravity."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.mic": {
+    "Name": "Antigravity Microfone",
+    "Tooltip": "Inicia ou termina a grava\u00e7\u00e3o de voz."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.model": {
+    "Name": "Antigravity Selecionar modelo",
+    "Tooltip": "Abre as op\u00e7\u00f5es de modelo da tarefa selecionada."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.prompt_test": {
+    "Name": "Antigravity Testar e corrigir",
+    "Tooltip": "Pede testes e corre\u00e7\u00f5es; preserva um rascunho existente."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.prompt_review": {
+    "Name": "Antigravity Rever altera\u00e7\u00f5es",
+    "Tooltip": "Pede a revis\u00e3o das altera\u00e7\u00f5es; preserva um rascunho existente."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.prompt_commit": {
+    "Name": "Antigravity Mensagem de commit",
+    "Tooltip": "Pede uma mensagem Conventional Commit; n\u00e3o faz commit nem push."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.fork": {
+    "Name": "Antigravity Bifurcar tarefa",
+    "Tooltip": "Bifurca a partir da \u00faltima resposta vis\u00edvel no espa\u00e7o atual, quando dispon\u00edvel. Requer a tarefa parada e nenhum rascunho."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.reasoning": {
+    "Name": "Antigravity Racioc\u00ednio",
+    "Tooltip": "Percorre as op\u00e7\u00f5es de racioc\u00ednio do modelo atual; informa quando n\u00e3o est\u00e3o dispon\u00edveis."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task6": {
+    "Name": "Antigravity Sess\u00e3o 6",
+    "Tooltip": "Seleciona esta tarefa no Antigravity Desktop e mostra o seu estado."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.steer": {
+    "Name": "Antigravity Enviar Mensagem em Espera Agora",
+    "Tooltip": "Envia imediatamente a \u00fanica mensagem dispon\u00edvel na fila expandida da tarefa selecionada. Preserva o rascunho. Se houver v\u00e1rias mensagens, escolha no Antigravity."
   }
 }
-
