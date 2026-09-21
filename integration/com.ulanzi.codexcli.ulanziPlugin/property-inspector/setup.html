@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Codex CLI Deck Setup</title>
+  <style>
+    :root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    html, body { margin: 0; background: transparent; color: #e8e8e8; font-size: 13px; }
+    * { box-sizing: border-box; }
+    main { padding: 12px 14px 10px; }
+    h1 { margin: 0 0 5px; font-size: 15px; font-weight: 650; }
+    .intro { margin: 0 0 10px; color: #aeb3ba; line-height: 1.35; }
+    .panel { border: 1px solid rgba(255,255,255,.12); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.035); }
+    .row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; min-height: 37px; padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .row:last-child { border-bottom: 0; }
+    .value { display: inline-flex; align-items: center; gap: 6px; color: #aeb3ba; text-align: right; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #72777f; box-shadow: 0 0 0 2px rgba(114,119,127,.15); }
+    .value.good { color: #75d6a3; }
+    .value.good .dot { background: #42c985; box-shadow: 0 0 0 2px rgba(66,201,133,.15); }
+    .value.warn { color: #f0bc68; }
+    .value.warn .dot { background: #e6a84b; box-shadow: 0 0 0 2px rgba(230,168,75,.15); }
+    .value.bad { color: #ef8585; }
+    .value.bad .dot { background: #e45f5f; box-shadow: 0 0 0 2px rgba(228,95,95,.15); }
+    .message { min-height: 18px; margin: 8px 1px 4px; color: #aeb3ba; line-height: 1.35; }
+    .message.error { color: #ef8585; }
+    .message.success { color: #75d6a3; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 8px; }
+    button { min-height: 33px; border: 1px solid rgba(255,255,255,.14); border-radius: 6px; color: #f3f3f3; background: rgba(255,255,255,.08); cursor: pointer; }
+    button:hover:not(:disabled) { background: rgba(255,255,255,.13); }
+    button.primary { border-color: #0284c7; background: #0369a1; }
+    button.primary:hover:not(:disabled) { background: #0284c7; }
+    button:disabled { cursor: default; opacity: .45; }
+    .version { margin-top: 7px; color: #777e87; font-size: 11px; text-align: right; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 id="title">Codex CLI Deck Setup</h1>
+    <p id="intro" class="intro">Connects Ulanzi Studio directly to your local Codex CLI terminal sessions and app-server daemon.</p>
+    <section class="panel">
+      <div class="row"><span>Bridge Service (127.0.0.1:17376)</span><span id="serviceValue" class="value"><i class="dot"></i><span id="serviceText">Checking...</span></span></div>
+      <div class="row"><span>Codex App-Server Daemon</span><span id="daemonValue" class="value"><i class="dot"></i><span id="daemonText">Checking...</span></span></div>
+      <div class="row"><span>Pending Approvals</span><span id="approvalsValue" class="value"><i class="dot"></i><span id="approvalsText">None</span></span></div>
+    </section>
+    <div id="message" class="message"></div>
+    <div class="actions">
+      <button id="refreshBtn" class="primary" onclick="checkStatus()">Refresh Status</button>
+      <button id="focusBtn" onclick="focusTerminal()">Focus Terminal</button>
+    </div>
+    <div class="version">Codex CLI Deck v0.4.1</div>
+  </main>
+  <script>
+    async function checkStatus() {
+      const msg = document.getElementById("message");
+      const serviceValue = document.getElementById("serviceValue");
+      const serviceText = document.getElementById("serviceText");
+      const daemonValue = document.getElementById("daemonValue");
+      const daemonText = document.getElementById("daemonText");
+      const approvalsValue = document.getElementById("approvalsValue");
+      const approvalsText = document.getElementById("approvalsText");
+
+      try {
+        const res = await fetch("http://127.0.0.1:17376/state");
+        if (!res.ok) throw new Error("Bridge returned HTTP " + res.status);
+        const data = await res.json();
+
+        serviceValue.className = "value good";
+        serviceText.innerText = "Running";
+
+        if (data.daemonConnected) {
+          daemonValue.className = "value good";
+          daemonText.innerText = "Connected";
+        } else if (data.isProcessRunning) {
+          daemonValue.className = "value warn";
+          daemonText.innerText = "CLI Active";
+        } else {
+          daemonValue.className = "value";
+          daemonText.innerText = "Standby";
+        }
+
+        const count = data.pendingAttentionCount || 0;
+        if (count > 0) {
+          approvalsValue.className = "value warn";
+          approvalsText.innerText = count + " Required";
+        } else {
+          approvalsValue.className = "value good";
+          approvalsText.innerText = "All Clear";
+        }
+
+        msg.className = "message success";
+        msg.innerText = "Codex CLI bridge is active and reachable.";
+      } catch (err) {
+        serviceValue.className = "value bad";
+        serviceText.innerText = "Offline";
+        daemonValue.className = "value";
+        daemonText.innerText = "Unknown";
+        approvalsValue.className = "value";
+        approvalsText.innerText = "—";
+        msg.className = "message error";
+        msg.innerText = "Could not reach bridge on 127.0.0.1:17376. Run 'npm run setup:codexcli' to start it.";
+      }
+    }
+
+    async function focusTerminal() {
+      try {
+        await fetch("http://127.0.0.1:17376/focus", { method: "POST" });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    checkStatus();
+  </script>
+</body>
+</html>

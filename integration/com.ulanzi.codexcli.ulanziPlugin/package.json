@@ -1,0 +1,16 @@
+{
+  "name": "open-codexcli-ulanzi-plugin",
+  "version": "0.4.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node --check plugin/app.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

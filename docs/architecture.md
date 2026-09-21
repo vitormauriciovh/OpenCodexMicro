@@ -51,14 +51,23 @@ OpenCodexMicro uses Ulanzi Studio as the sole physical device owner, interfacing
 
 ---
 
-## 3. Spotify Music Picker (`integration/com.ulanzi.spotify.ulanziPlugin/`)
+## 3. Codex CLI Bridge (`src/bridge-codex-cli/`)
+
+- Lightweight local Node.js background service via LaunchAgent `io.opencodexmicro.codexcli.bridge` at `http://127.0.0.1:17376` with WebSocket push on port `17377`.
+- Connects directly to the `codex app-server` control socket (`~/.codex/app-server-control/app-server-control.sock`) via JSON-RPC 2.0.
+- Intercepts tool execution and patch approval requests (`item/commandExecution/requestApproval`, `applyPatchApproval`) and maps them to one-touch Approve and Reject actions.
+- Automatically captures token usage and session states across interactive CLI turns.
+
+---
+
+## 4. Spotify Music Picker (`integration/com.ulanzi.spotify.ulanziPlugin/`)
 
 - Direct zero-latency macOS media integration combined with Spotify Web API catalog retrieval.
 - Exposes playback status, track metadata, album artwork, and volume / playlist navigation dials.
 
 ---
 
-## 4. Ulanzi Studio Plugins
+## 5. Ulanzi Studio Plugins
 
 All plugins are Node.js JavaScript plugins using protocol V3.0.0:
 - Each plugin maintains action instances keyed by context.
@@ -68,10 +77,11 @@ All plugins are Node.js JavaScript plugins using protocol V3.0.0:
 
 ---
 
-## 5. Installation Boundaries
+## 6. Installation Boundaries
 
 - `scripts/install.mjs` installs the Codex Bridge sidecar and `~/Applications/Codex Bridge.app`.
 - `scripts/install-antigravity.mjs` installs the Antigravity Bridge sidecar and LaunchAgent.
-- `scripts/install-plugin.mjs`, `scripts/install-antigravity-plugin.mjs`, and `scripts/install-spotify-plugin.mjs` atomically copy prebuilt plugins into `~/Library/Application Support/Ulanzi/UlanziDeck/Plugins/`.
+- `scripts/install-codex-cli.mjs` installs the Codex CLI Bridge sidecar and LaunchAgent.
+- `scripts/install-plugin.mjs`, `scripts/install-antigravity-plugin.mjs`, `scripts/install-spotify-plugin.mjs`, and `scripts/install-codex-cli-plugin.mjs` atomically copy prebuilt plugins into `~/Library/Application Support/Ulanzi/UlanziDeck/Plugins/`.
 - `scripts/uninstall.mjs` safely stops and removes the installed LaunchAgents, bridge files, and plugin directories.
 

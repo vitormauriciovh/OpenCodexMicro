@@ -36,6 +36,7 @@ installation simply from the presence of this repository.
    - **Codex Micro**: `com.ulanzi.ulanzistudio.codexmicro`
    - **Antigravity**: `com.ulanzi.ulanzistudio.antigravity`
    - **Spotify**: `com.ulanzi.ulanzistudio.spotify`
+   - **Codex CLI**: `com.ulanzi.ulanzistudio.codexcli`
 
    Also verify that each manifest's `CodePath` exists in the corresponding plugin
    directory. Do not rely only on the directory name.
@@ -45,11 +46,13 @@ installation simply from the presence of this repository.
    - For Codex Micro alone: use `$install-ulanzi-studio-plugin` from `skills/install-ulanzi-studio-plugin/SKILL.md` or run `npm run install:plugin`.
    - For Antigravity alone: run `npm run install:plugin:antigravity`.
    - For Spotify alone: run `npm run install:plugin:spotify`.
+   - For Codex CLI alone: run `npm run install:plugin:codexcli`.
 
 3. **Bridge Installation & Setup:**
    - To setup all bridges: `npm run setup:all`
    - For Codex Bridge: use `$setup-codex-bridge` from `skills/setup-codex-bridge/SKILL.md` or run `npm run setup`.
    - For Antigravity Bridge: run `npm run setup:antigravity`.
+   - For Codex CLI Bridge: run `npm run setup:codexcli`.
 
 4. Report plugin installation and Bridge verification results separately. Do not
    reinstall a valid plugin unless the user explicitly requests an update or
@@ -64,10 +67,12 @@ Python/D200 standalone runtime.
 - `integration/com.ulanzi.codexmicro.ulanziPlugin/`: Codex Micro Ulanzi Studio plugin.
 - `integration/com.ulanzi.antigravity.ulanziPlugin/`: Antigravity AI Agent Ulanzi Studio plugin.
 - `integration/com.ulanzi.spotify.ulanziPlugin/`: Spotify Music Picker Ulanzi Studio plugin.
+- `integration/com.ulanzi.codexcli.ulanziPlugin/`: Codex CLI Ulanzi Studio plugin.
 - `src/bridge/`: Codex loopback Bridge implementation.
 - `src/bridge-antigravity/`: Antigravity loopback Bridge implementation.
-- `scripts/install.mjs` / `scripts/install-antigravity.mjs`: Bridge installers.
-- `scripts/install-plugin.mjs` / `scripts/install-antigravity-plugin.mjs` / `scripts/install-spotify-plugin.mjs`: atomic plugin installers.
+- `src/bridge-codex-cli/`: Codex CLI loopback Bridge implementation.
+- `scripts/install.mjs` / `scripts/install-antigravity.mjs` / `scripts/install-codex-cli.mjs`: Bridge installers.
+- `scripts/install-plugin.mjs` / `scripts/install-antigravity-plugin.mjs` / `scripts/install-spotify-plugin.mjs` / `scripts/install-codex-cli-plugin.mjs`: atomic plugin installers.
 - `LICENSE`, `NOTICE.md`, and `THIRD_PARTY_NOTICES.md`: centralized licensing,
   attribution, modification, and responsibility information.
 

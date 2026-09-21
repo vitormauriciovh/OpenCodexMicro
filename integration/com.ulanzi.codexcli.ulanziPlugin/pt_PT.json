@@ -1,0 +1,48 @@
+{
+  "Description": "Turn Ulanzi D200 Series into a dedicated Codex CLI control surface through Ulanzi Studio.",
+  "Name": "Codex CLI",
+  "com.ulanzi.ulanzistudio.codexcli.task1": {
+    "Name": "Codex CLI Session 1",
+    "Tooltip": "Open recent Codex CLI session slot 1 and show its live status."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.task2": {
+    "Name": "Codex CLI Session 2",
+    "Tooltip": "Open recent Codex CLI session slot 2 and show its live status."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.task3": {
+    "Name": "Codex CLI Session 3",
+    "Tooltip": "Open recent Codex CLI session slot 3 and show its live status."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.task4": {
+    "Name": "Codex CLI Session 4",
+    "Tooltip": "Open recent Codex CLI session slot 4 and show its live status."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.task5": {
+    "Name": "Codex CLI Session 5",
+    "Tooltip": "Open recent Codex CLI session slot 5 and show its live status."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.approve": {
+    "Name": "Codex CLI Approve",
+    "Tooltip": "Approve the pending command or patch execution in Codex CLI."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.reject": {
+    "Name": "Codex CLI Cancel",
+    "Tooltip": "Reject approval or stop execution in Codex CLI."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.status": {
+    "Name": "Codex CLI Status",
+    "Tooltip": "Real-time Codex CLI agent status HUD (WORKING, ATTENTION, IDLE)."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.tokens": {
+    "Name": "Codex CLI Tokens",
+    "Tooltip": "Monitor token consumption across Codex CLI turns."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.queue": {
+    "Name": "Codex CLI Queue Prompt",
+    "Tooltip": "Queue a prompt to continue or review the current session."
+  },
+  "com.ulanzi.ulanzistudio.codexcli.resume": {
+    "Name": "Codex CLI Resume Last",
+    "Tooltip": "Resume the latest Codex CLI session in terminal."
+  }
+}
