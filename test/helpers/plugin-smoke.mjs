@@ -68,6 +68,21 @@ export async function pluginSmoke(name) {
   sockets[1].open(); await settle();
   for (const action of manifest.Actions) assert.ok(sent.some(m => m.cmd === 'state' && m.param.statelist.some(s => s.uuid === action.UUID)), `${name}: unchanged display not replayed for ${action.UUID}`);
   const host = sockets[1];
+  if (name === 'codexcli') {
+    // Inspect rendered messages, covering both zero and nonzero approval counts.
+    const renderAttention = count => {
+      sent.length = 0;
+      state.pendingAttentionCount = count;
+      vm.runInContext('renderAll()', context);
+      const display = sent.flatMap(m => m.param?.statelist || []).find(s => s.uuid.endsWith('.attention') && s.type === 1);
+      assert.ok(display, 'approval count change must update the deck');
+      return Buffer.from(display.data.split(',')[1], 'base64').toString();
+    };
+    assert.match(renderAttention(1), /Select pending task/);
+    const idle = renderAttention(0);
+    assert.match(idle, /No pending approvals/);
+    assert.doesNotMatch(idle, /Select pending task/);
+  }
   if (name === 'spotify') {
     const expected = { nowplaying: 'playPause', playpause: 'playPause', next: 'next', prev: 'previous', like: 'like', shuffle: 'shuffle', repeat: 'repeat' };
     for (const action of manifest.Actions) {

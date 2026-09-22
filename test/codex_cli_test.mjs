@@ -22,7 +22,7 @@ test("initialization precedes thread enumeration and consumes responses", async 
     send(raw, callback) {
       const request = JSON.parse(raw); this.writes.push(request); callback();
       if (request.id) {
-        const result = request.method === "thread/list" ? { data: [{ id: "a", name: "A", status: { type: "idle" } }] } : request.method === "thread/resume" ? { thread: { id: "a", name: "A", turns: [], status: { type: "idle" } } } : {};
+        const result = request.method === "thread/loaded/list" ? { data: [] } : request.method === "thread/list" ? { data: [{ id: "a", name: "A", status: { type: "idle" } }] } : request.method === "thread/resume" ? { thread: { id: "a", name: "A", turns: [], status: { type: "idle" } } } : {};
         queueMicrotask(() => this.emit("message", Buffer.from(JSON.stringify({ id: request.id, result }))));
       }
     }
@@ -33,7 +33,7 @@ test("initialization precedes thread enumeration and consumes responses", async 
   client.start(); socket.emit("open");
   for (let i = 0; i < 20 && !client.connected; i++) await new Promise(resolve => setImmediate(resolve));
   assert.equal(client.connected, true);
-  assert.deepEqual(socket.writes.map(m => m.method), ["initialize", "initialized", "thread/list", "thread/resume", "account/rateLimits/read", "thread/goal/get"]);
+  assert.deepEqual(socket.writes.map(m => m.method), ["initialize", "initialized", "thread/list", "thread/loaded/list", "thread/resume", "account/rateLimits/read", "thread/goal/get"]);
   assert.deepEqual(socket.writes.find(m => m.method === "thread/list").params.sourceKinds, ["cli", "appServer"]);
   assert.equal((await client.snapshot()).slots[0].title, "A"); client.stop();
 });
@@ -45,6 +45,77 @@ test("current protocol updates per-thread turns, tokens, and completion", async 
   assert.equal((await client.snapshot()).tokenUsage.inputTokens, 0);
   client.handleNotification({ method: "turn/completed", params: { threadId: "thread-a", turn: { id: "turn-1", status: "completed" } } });
   assert.equal((await client.snapshot()).agentStatus, "IDLE");
+});
+test('global IDE notifications do not appear as CLI tasks or running turns', async () => {
+  const client = ready();
+  client.handleNotification({ method: 'thread/started', params: { thread: { id: 'ide', source: 'vscode' } } });
+  client.handleNotification({ method: 'turn/started', params: { threadId: 'ide', turn: { id: 'ide-turn' } } });
+  client.handleNotification({ method: 'thread/started', params: { thread: { id: 'cli', source: 'cli' } } });
+  assert.equal(client.sessions.has('ide'), false);
+  assert.equal(client.turns.has('ide'), false);
+  assert.equal(client.sessions.has('cli'), true);
+});
+test('recent sessions refresh after startup without losing live state or selection', async () => {
+  const client = ready();
+  client.sessions.get('thread-a').status = { type: 'active' };
+  client.turns.set('thread-a', { id: 'live-turn', startedAt: 5000 });
+  client.callRpc = async (method, params) => {
+    if (method === 'thread/loaded/list') return { data: [] };
+    assert.equal(method, 'thread/list');
+    assert.deepEqual(params.sourceKinds, ['cli', 'appServer']);
+    return { data: [
+      { id: 'new-cli', source: 'cli', name: 'New terminal' },
+      { id: 'thread-a', source: 'cli', status: { type: 'idle' }, turns: [{ id: 'stale', status: 'inProgress' }] },
+      { id: 'ide', source: 'vscode' }
+    ] };
+  };
+  await client.refreshSessions();
+  const snapshot = await client.snapshot();
+  assert.equal(snapshot.slots[0].threadKey, 'thread-a');
+  assert.equal(snapshot.selectedThreadId, 'thread-a');
+  assert.equal(snapshot.agentStatus, 'WORKING');
+  assert.equal(client.turns.get('thread-a').id, 'live-turn');
+  assert.equal(snapshot.slots[1].title, 'New terminal');
+  assert.equal(client.sessions.has('ide'), false);
+  assert.equal(client.subscribedThreads.has('new-cli'), false, 'discovery must not take ownership of history');
+});
+test('VS Code terminal sessions loaded in the shared daemon remain discoverable and selectable', async () => {
+  const client = ready(), calls = [];
+  const terminal = { id: 'remote-terminal', name: 'Terminal task', source: 'vscode', status: { type: 'idle' } };
+  client.callRpc = async (method, params) => {
+    calls.push({ method, params });
+    if (method === 'thread/list') return { data: [] };
+    if (method === 'thread/loaded/list') return params.cursor ? { data: ['remote-terminal'], nextCursor: null } : { data: ['thread-a'], nextCursor: 'page-2' };
+    if (method === 'thread/read') return { thread: terminal };
+    if (method === 'thread/resume') return { thread: terminal, model: 'fixture-model', reasoningEffort: 'high' };
+    return {};
+  };
+  await client.refreshSessions();
+  assert.equal(client.sessions.has('remote-terminal'), true);
+  assert.equal(client.selectedThreadId, 'thread-a', 'discovery preserves explicit selection');
+  assert.equal(calls.some(call => call.method === 'thread/resume'), false);
+  await client.selectThread('remote-terminal');
+  const state = await client.snapshot();
+  assert.equal(state.lastTask.controllable, true);
+  assert.equal(state.lastTask.reasoningEffort, 'high');
+  client.handleNotification({ method: 'turn/started', params: { threadId: terminal.id, turn: { id: 'live' } } });
+  assert.equal((await client.snapshot()).agentStatus, 'WORKING');
+  client.handleNotification({ method: 'turn/completed', params: { threadId: terminal.id, turn: { id: 'live', status: 'completed' } } });
+  assert.equal((await client.snapshot()).agentStatus, 'IDLE');
+});
+test('session refresh ignores disconnected responses and reports failures without dropping connection', async () => {
+  const client = ready();
+  client.callRpc = async () => { throw new Error('List unavailable'); };
+  await client.refreshSessions();
+  assert.equal((await client.snapshot()).sessionsError, 'List unavailable');
+  assert.equal(client.connected, true);
+  let release;
+  client.callRpc = () => new Promise(resolve => { release = resolve; });
+  const refresh = client.refreshSessions();
+  client.disconnect();
+  release({ data: [{ id: 'stale-cli', source: 'cli' }] });
+  await refresh;
+  assert.equal(client.sessions.has('stale-cli'), false);
 });
 test("approval responses preserve schema and only act on selected thread", async () => {
   const client = ready(), sent = [];

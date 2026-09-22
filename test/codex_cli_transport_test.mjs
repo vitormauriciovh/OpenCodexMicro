@@ -20,7 +20,7 @@ test('CLI speaks uncompressed WebSocket over a Unix socket, including server app
     ws.on('message', raw => {
       const req = JSON.parse(String(raw)); messages.push(req);
       if (!req.method || req.id === undefined) return;
-      const result = req.method === 'thread/list' ? { data: [{ id: 'fixture', name: 'Only test data', status: { type: 'idle' } }] }
+      const result = req.method === 'thread/loaded/list' ? { data: [] } : req.method === 'thread/list' ? { data: [{ id: 'fixture', name: 'Only test data', status: { type: 'idle' } }] }
         : req.method === 'thread/resume' ? { thread: { id: 'fixture', turns: [], status: { type: 'idle' } }, model: 'fixture-model' }
         : req.method === 'thread/goal/get' ? { goal: null } : {};
       ws.send(JSON.stringify({ id: req.id, result }));

@@ -395,7 +395,8 @@ function renderInstance(instance) {
   } else if (["usage", "usage5h", "usageweekly"].includes(name)) {
     sendSvgState(instance, usageCard(latestState?.usage, name === "usage5h" ? "five-hour" : name === "usageweekly" ? "weekly" : null, Boolean(latestState?.connected)));
   } else if (name === "attention") {
-    sendSvgState(instance, textCard("ATTENTION", latestState?.pendingAttentionCount || 0, "Select pending task", Boolean(latestState?.connected)));
+    const count = latestState?.pendingAttentionCount || 0;
+    sendSvgState(instance, textCard("ATTENTION", count, count ? "Select pending task" : "No pending approvals", Boolean(latestState?.connected)));
   } else if (name === "plan") {
     const plan = latestState?.plan;
     const steps = plan?.checklist?.steps;

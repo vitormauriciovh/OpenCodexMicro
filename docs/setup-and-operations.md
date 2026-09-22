@@ -46,10 +46,14 @@ Antigravity Desktop publishes its own loopback debugging endpoint. The bridge re
 The CLI bridge launcher runs the idempotent `codex app-server daemon start` before starting the bridge. To control the same CLI task from both a terminal and the deck, attach the terminal to that daemon:
 
 ```bash
-codex --remote unix://
+~/.codex/packages/standalone/current/bin/codex --remote unix://
 ```
 
-A task owned by a separate running process can appear in history but refuse writes. The inspector explains this per task; daemon connectivity and other tasks remain usable. Model, reasoning and Fast changes apply to the next prompt sent from the deck and are displayed as pending until submitted.
+Use the explicit standalone path when an npm installation also provides `codex` on your PATH. Select the corresponding session on the deck after opening it. Recent CLI sessions refresh every three seconds without changing the selected task. A plain `codex` terminal uses a separate server; its prompts do not stream to this bridge. A task owned by that separate running process can appear in history but refuse writes with `already has an active writer`. Exit that terminal session normally before resuming the same task through the shared daemon; opening a new shared session does not require closing it.
+
+The inspector explains access errors per task; daemon connectivity and other tasks remain usable. The Attention button counts approval requests, not running tasks, and displays `No pending approvals` at zero. Model, reasoning and Fast changes apply to the next prompt sent from the deck and are displayed as pending until submitted.
+
+A CLI opened in VS Code can be reported with `source: vscode`, even with `--remote unix://`. The bridge therefore includes interactive tasks returned by the shared daemon's `thread/loaded/list`, alongside recent CLI history. The source label alone does not establish which process owns the task. At startup, the bridge prefers the most recently updated loaded task; subsequent discovery preserves the selected task.
 
 ## Diagnostics
 

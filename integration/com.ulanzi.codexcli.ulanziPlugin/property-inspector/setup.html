@@ -38,6 +38,8 @@
   <main>
     <h1 id="title">Codex CLI Deck Setup</h1>
     <p id="intro" class="intro">Select and control tasks served by your local Codex app-server. The deck does not type into or focus terminal windows.</p>
+    <p class="intro">For live terminal updates, open the standalone CLI on the same server, then select its session on the deck:</p>
+    <pre style="white-space:pre-wrap;overflow-wrap:anywhere">~/.codex/packages/standalone/current/bin/codex --remote unix://</pre>
     <section class="panel">
       <div class="row"><span>Bridge Service (127.0.0.1:17376)</span><span id="serviceValue" class="value"><i class="dot"></i><span id="serviceText">Checking...</span></span></div>
       <div class="row"><span>Codex App-Server Daemon</span><span id="daemonValue" class="value"><i class="dot"></i><span id="daemonText">Checking...</span></span></div>
@@ -139,7 +141,7 @@
         }
 
         msg.className = data.daemonConnected && !data.selectedTaskError ? "message success" : "message error";
-        msg.innerText = data.selectedTaskError ? "Selected task is read-only: " + data.selectedTaskError + ". Select another task or create a new one." : data.daemonConnected ? (promptDirty ? "Unsaved prompt preserved for its original task. Save it before loading another task’s draft." : "Codex CLI bridge is ready.") : data.error || "Start a compatible local Codex app-server.";
+        msg.innerText = data.selectedTaskError ? "Selected task is read-only: " + data.selectedTaskError + ". A terminal opened without --remote unix:// uses a separate server. Open the CLI with the command above and select that session on the deck." : data.daemonConnected ? (promptDirty ? "Unsaved prompt preserved for its original task. Save it before loading another task’s draft." : "Codex CLI bridge is ready.") : data.error || "Start a compatible local Codex app-server.";
       } catch (err) {
         if (version !== statusVersion) return;
         document.getElementById("createGoalBtn").disabled = true;

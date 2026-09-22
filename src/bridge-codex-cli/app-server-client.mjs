@@ -47,6 +47,7 @@ export class CodexCliClient {
   }
   disconnect() {
     clearInterval(this.usageTimer);
+    clearInterval(this.sessionsTimer);
     this.rateLimits = null;
     const socket = this.socket;
     this.socket = null;
@@ -90,7 +91,9 @@ export class CodexCliClient {
         this.sessions.clear();
         for (const thread of result.data) this.updateThread(thread);
         this.threadCursor = result.nextCursor || null;
-        if (!this.sessions.has(this.selectedThreadId)) this.selectedThreadId = result.data[0]?.id || null;
+        const loaded = await this.refreshLoadedSessions();
+        if (this.socket !== socket) return;
+        if (!this.sessions.has(this.selectedThreadId)) this.selectedThreadId = loaded.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0]?.id || result.data[0]?.id || null;
         // Resume only the explicitly selected thread to subscribe to its live events.
         if (this.selectedThreadId) {
           await this.attachThread(this.selectedThreadId);
@@ -102,6 +105,8 @@ export class CodexCliClient {
         if (this.selectedThreadId) void this.refreshGoal(this.selectedThreadId);
         this.usageTimer = setInterval(() => void this.refreshUsage(), 60000);
         this.usageTimer.unref?.();
+        this.sessionsTimer = setInterval(() => void this.refreshSessions(), 3000);
+        this.sessionsTimer.unref?.();
       } catch (error) { lost(error); }
     });
     socket.on("message", raw => {
@@ -139,6 +144,55 @@ export class CodexCliClient {
       if (turn.status === "inProgress") this.turns.set(thread.id, { ...turn, startedAt: turn.startedAt ? turn.startedAt * 1000 : prior.startedAt || null });
     }
   }
+  async refreshSessions() {
+    if (!this.connected || this.sessionsInFlight) return;
+    this.sessionsInFlight = true;
+    const socket = this.socket;
+    try {
+      const result = await this.callRpc("thread/list", { limit: 6, sortKey: "updated_at", sourceKinds: ["cli", "appServer"], archived: false });
+      if (this.socket !== socket || !this.connected) return;
+      if (!Array.isArray(result.data)) throw new Error("Invalid thread/list response");
+      // Keep slot positions and the user's selection stable. Only merge metadata:
+      // the list is history, not an authoritative stream of live turn state.
+      for (const thread of result.data) {
+        if (thread.source && !["cli", "appServer"].includes(thread.source)) continue;
+        const prior = this.sessions.get(thread.id);
+        this.updateThread(prior ? { ...thread, status: prior.status, turns: [] } : thread);
+      }
+      await this.refreshLoadedSessions();
+      if (this.socket !== socket || !this.connected) return;
+      this.sessionsError = null;
+    } catch (error) {
+      if (this.socket === socket) this.sessionsError = error.message;
+    } finally { this.sessionsInFlight = false; }
+  }
+  async refreshLoadedSessions() {
+    const socket = this.socket, threads = [], cursors = new Set();
+    let cursor = null;
+    do {
+      const page = await this.callRpc("thread/loaded/list", { limit: 100, ...(cursor ? { cursor } : {}) });
+      if (this.socket !== socket || !this.transportConnected) return [];
+      if (!Array.isArray(page.data) || !page.data.every(id => typeof id === "string")) throw new Error("Invalid thread/loaded/list response");
+      for (const id of page.data) {
+        let thread = this.sessions.get(id);
+        if (!thread) {
+          const result = await this.callRpc("thread/read", { threadId: id });
+          if (this.socket !== socket || !this.transportConnected) return [];
+          thread = result.thread;
+          if (thread?.id !== id) throw new Error("App-server returned a different loaded task");
+          // --remote from a VS Code terminal can carry source=vscode. Trust
+          // membership in this daemon, not that historical origin label.
+          if (!["cli", "appServer", "vscode"].includes(thread.source)) continue;
+          this.updateThread(thread);
+        }
+        threads.push(thread);
+      }
+      cursor = page.nextCursor || null;
+      if (cursor && cursors.has(cursor)) throw new Error("Repeated loaded task cursor");
+      if (cursor) cursors.add(cursor);
+    } while (cursor);
+    return threads;
+  }
   handleMessage(msg) {
     if (msg.id !== undefined && ("result" in msg || "error" in msg)) {
       const pending = this.pendingRpc.get(msg.id);
@@ -160,7 +214,11 @@ export class CodexCliClient {
   }
   handleNotification({ method, params = {} }) {
     const id = params.threadId;
-    if (method === "thread/started") this.updateThread(params.thread);
+    if (method === "thread/started") {
+      // Other origins are admitted only after thread/loaded/list confirms that
+      // this daemon owns them, rather than importing unrelated IDE history.
+      if (["cli", "appServer"].includes(params.thread?.source)) this.updateThread(params.thread);
+    }
     else if (method === "turn/plan/updated" && this.sessions.has(id) && typeof params.turnId === "string") {
       const activeTurn = this.turns.get(id);
       if (activeTurn && activeTurn.id !== params.turnId) return;
@@ -183,8 +241,7 @@ export class CodexCliClient {
       this.goals.set(id, null); this.goalErrors.delete(id);
     }
     else if (method === "thread/name/updated" && this.sessions.has(id)) this.sessions.get(id).name = params.threadName;
-    else if (method === "turn/started" && id && params.turn?.id) {
-      if (!this.sessions.has(id)) this.updateThread({ id, name: "Codex CLI", status: { type: "active" } });
+    else if (method === "turn/started" && this.sessions.has(id) && params.turn?.id) {
       this.turns.set(id, { ...params.turn, startedAt: this.now() });
       const plan = this.plans.get(id);
       if (plan?.checklist && plan.checklist.turnId !== params.turn.id) this.plans.set(id, { ...plan, checklist: null });
@@ -523,7 +580,7 @@ export class CodexCliClient {
     const tokens = tokenReport?.total;
     const controllable = this.connected && this.subscribedThreads.has(this.selectedThreadId);
     return { schemaVersion: 1, connected: this.connected, daemonConnected: this.connected, isProcessRunning: null,
-      error: this.error, selectedThreadId: this.selectedThreadId,
+      error: this.error, sessionsError: this.sessionsError || null, selectedThreadId: this.selectedThreadId,
       navigation: { offset: pageOffset, loaded: all.length, hasMore: Boolean(this.threadCursor) },
       goal: this.connected ? this.goals.get(this.selectedThreadId) ?? null : null,
       goalError: this.goalErrors.get(this.selectedThreadId) || null,
