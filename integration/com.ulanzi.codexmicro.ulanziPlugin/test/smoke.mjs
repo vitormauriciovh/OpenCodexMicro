@@ -4,6 +4,31 @@ import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
+import { hasSelectedApproval } from "../plugin/approval-state.js";
+
+const approvalState = {
+  connected: true,
+  activeThreadKey: "current",
+  attentionCount: 9,
+  slots: [{ threadKey: "local:current", status: "idle" }, { threadKey: "local:other", status: "awaiting-approval" }]
+};
+for (const status of ["idle", "thinking", "error", "input", "attention", "awaiting-response", "unread"]) {
+  assert.equal(hasSelectedApproval({ ...approvalState, slots: [{ ...approvalState.slots[0], status }, approvalState.slots[1]] }), false, `${status} must not enable approval, even with pending attention elsewhere`);
+}
+for (const status of ["approval", "awaiting-approval"]) {
+  const state = { ...approvalState, slots: [{ threadKey: "local:current", status }] };
+  assert.equal(hasSelectedApproval(state), true);
+  assert.equal(hasSelectedApproval({ ...state, activeThreadKey: "local:current" }), true);
+  assert.equal(hasSelectedApproval({ ...state, activeThreadKey: "other" }), false);
+  assert.equal(hasSelectedApproval({ ...state, connected: false }), false);
+  assert.equal(hasSelectedApproval({ ...state, activeThreadKey: null }), false);
+}
+assert.equal(hasSelectedApproval({ ...approvalState, slots: [], activeTasks: [{ threadId: "current", status: "awaiting-approval" }] }), true);
+assert.equal(hasSelectedApproval({ ...approvalState, activeTasks: [{ threadId: "current", status: "awaiting-approval" }] }), false, "Current slot status must take precedence over stale activeTasks");
+const selectedAlias = { threadKey: "local:client-new-thread:temporary", selected: true, status: "awaiting-approval" };
+assert.equal(hasSelectedApproval({ ...approvalState, slots: [selectedAlias] }), true);
+assert.equal(hasSelectedApproval({ ...approvalState, slots: [selectedAlias, { ...selectedAlias, threadKey: "local:client-new-thread:other" }] }), false);
+assert.equal(hasSelectedApproval({ ...approvalState, slots: [{ ...selectedAlias, threadKey: "local:other" }] }), false);
 
 const packageRootUrl = new URL("..", import.meta.url);
 const manifest = JSON.parse(await readFile(new URL("manifest.json", packageRootUrl)));
@@ -120,6 +145,8 @@ for (const locale of [
 }
 
 const bridgeRequests = [];
+let firstTaskStatus = "thinking";
+let activeThreadKey = null;
 const bridge = createServer((request, response) => {
   bridgeRequests.push(`${request.method} ${request.url}`);
   response.setHeader("Content-Type", "application/json");
@@ -130,9 +157,10 @@ const bridge = createServer((request, response) => {
   if (request.url === "/state") {
     response.end(JSON.stringify({
       connected: true,
+      activeThreadKey,
       planAvailable: true,
       slots: [
-        { id: 0, threadKey: "11111111-1111-1111-1111-111111111111", title: "Working task", status: "thinking", tokenUsage: { totalTokens: 987654 } },
+        { id: 0, threadKey: "11111111-1111-1111-1111-111111111111", title: "Working task", status: firstTaskStatus, tokenUsage: { totalTokens: 987654 } },
         { id: 1, threadKey: "22222222-2222-2222-2222-222222222222", title: "Unread task", status: "unread" },
         { id: 2, threadKey: "33333333-3333-3333-3333-333333333333", title: "Input task", status: "input" },
         { id: 3, threadKey: "44444444-4444-4444-4444-444444444444", title: "Failed task", status: "error" },
@@ -400,6 +428,42 @@ try {
     const svg = Buffer.from(item.data.split(',')[1], 'base64').toString();
     assert.match(svg, expected);
     assert.doesNotMatch(svg, /988k|5.6 LUNA/);
+  }
+  // Current Codex native slot states must update both task cards and the badge,
+  // including clearing attention when the task resumes or completes.
+  const latestSvg = uuid => {
+    const item = messages.flatMap(message => message.cmd === "state" ? message.param?.statelist || [] : [])
+      .filter(item => item.uuid === uuid && item.type === 1 && item.data).at(-1);
+    return item ? Buffer.from(item.data.split(",")[1], "base64").toString() : "";
+  };
+  for (const action of ["approve", "reject"]) {
+    assert.match(latestSvg(`com.ulanzi.ulanzistudio.codexmicro.${action}`), />NO PENDING</, "Unrelated input and error tasks must not advertise approval");
+  }
+  activeThreadKey = "local:11111111-1111-1111-1111-111111111111";
+  for (const [status, color, count, label] of [
+    ["awaiting-approval", "#f59e0b", 3, "waiting"],
+    ["thinking", "#22c55e", 2, "thinking"],
+    ["awaiting-response", "#f59e0b", 3, "waiting"],
+    ["unread", "#3b82f6", 2, "done"]
+  ]) {
+    firstTaskStatus = status;
+    const header = `height="38" fill="${color}"`;
+    const deadline = Date.now() + 5000;
+    while (Date.now() < deadline) {
+      if (latestSvg("com.ulanzi.ulanzistudio.codexmicro.task1").includes(header) &&
+          latestSvg(navigateEvent.uuid).includes(header) &&
+          latestSvg(attentionEvent.uuid).includes(`>${count}<`) &&
+          latestSvg("com.ulanzi.ulanzistudio.codexmicro.approve").includes(status === "awaiting-approval" ? ">ACTION READY<" : ">NO PENDING<") &&
+          latestSvg("com.ulanzi.ulanzistudio.codexmicro.reject").includes(status === "awaiting-approval" ? ">DENY REQUEST<" : ">NO PENDING<")) break;
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    for (const uuid of ["com.ulanzi.ulanzistudio.codexmicro.task1", navigateEvent.uuid]) {
+      assert.ok(latestSvg(uuid).includes(header), `${uuid} must render ${status} with ${color}`);
+      assert.match(latestSvg(uuid), new RegExp(`>${label}(?: |<)`));
+    }
+    assert.ok(latestSvg(attentionEvent.uuid).includes(`>${count}<`), `${status} must update the attention count`);
+    assert.ok(latestSvg("com.ulanzi.ulanzistudio.codexmicro.approve").includes(status === "awaiting-approval" ? ">ACTION READY<" : ">NO PENDING<"), `${status} must update Approve`);
+    assert.ok(latestSvg("com.ulanzi.ulanzistudio.codexmicro.reject").includes(status === "awaiting-approval" ? ">DENY REQUEST<" : ">NO PENDING<"), `${status} must update Reject`);
   }
   process.stdout.write("Codex App plugin smoke test passed.\n");
 } finally {

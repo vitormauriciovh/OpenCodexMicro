@@ -3895,6 +3895,61 @@ function localThreadKey(value) {
   return `local:${validateThreadId(value)}`;
 }
 
+// ../../src/bridge/task-attention.mjs
+function readNativeTaskAttention(source, slots) {
+  const threadIds = /* @__PURE__ */ new Map();
+  const asyncQuestionThreads = /* @__PURE__ */ new Set();
+  const nodes = /* @__PURE__ */ new Set([source?.node, ...source?.contextMap?.values?.() ?? []]);
+  const threadKeys = slots.map((slot) => slot?.threadKey).filter((key) => typeof key === "string");
+  for (const node of nodes) {
+    if (!(node?.familyBindings instanceof Map)) continue;
+    const read = (binding) => {
+      const signal = binding?.value;
+      if (typeof signal?.get === "function") return signal.get();
+      if (typeof signal?.resolve === "function" && node.store?.get) {
+        return node.store.get(signal.resolve(node, source.contextMap));
+      }
+      return null;
+    };
+    for (const members of node.familyBindings.values()) {
+      if (!(members instanceof Map)) continue;
+      try {
+        const groups = read(members.get("local"));
+        if (groups instanceof Map) {
+          for (const [threadId, group] of groups) {
+            const key = group?.selectedQuestionKey;
+            if (typeof threadId !== "string" || key?.hostId !== "local" || key.threadId !== threadId || !Array.isArray(group.questionIds) || !group.questionIds.includes(key.itemId)) continue;
+            let item;
+            try {
+              item = JSON.parse(key.itemId);
+            } catch {
+              continue;
+            }
+            if (Array.isArray(item) && item[0] === "request_user_input_async") asyncQuestionThreads.add(threadId);
+          }
+        }
+      } catch {
+      }
+      for (const threadKey of threadKeys) {
+        try {
+          const task = read(members.get(threadKey));
+          if (task?.kind !== "local" || task.key !== threadKey || task.conversation?.hostId !== "local") continue;
+          if (typeof task.conversation.id === "string") threadIds.set(threadKey, task.conversation.id);
+        } catch {
+        }
+      }
+    }
+  }
+  return { threadIds, asyncQuestionThreads };
+}
+function taskAttentionStatus(status, hasAsyncQuestion) {
+  const value = String(status ?? "idle").toLowerCase();
+  if (!hasAsyncQuestion || ["approval", "awaiting-approval", "error", "failed", "failure", "off"].includes(value)) {
+    return status ?? "idle";
+  }
+  return "awaiting-response";
+}
+
 // ../../src/bridge/codex-cdp.mjs
 var execFileAsync = promisify(execFile);
 var USAGE_REFRESH_MS = Math.max(
@@ -4420,9 +4475,11 @@ var SNAPSHOT_EXPRESSION = `(async () => {
   const normalizeThreadKey = (value) => String(value ?? "").replace(/^local:/, "");
 
   const computeCtxPct = ${contextPercent.toString()};
+  const { threadIds, asyncQuestionThreads } = (${readNativeTaskAttention.toString()})(source, found);
+  const attentionStatus = ${taskAttentionStatus.toString()};
 
   const enrichedSlots = found.map((slot) => {
-    const threadId = normalizeThreadKey(slot.threadKey);
+    const threadId = threadIds.get(slot.threadKey) ?? normalizeThreadKey(slot.threadKey);
     const meta = threadId ? conversationsMeta.get(threadId) : null;
     const rawModel = meta?.latestModel || meta?.latestThreadSettings?.model || meta?.previousTurnModel || null;
     const isSlotRunning = ["working", "thinking", "running", "in_progress"].includes(String(slot.status || "").toLowerCase());
@@ -4437,7 +4494,7 @@ var SNAPSHOT_EXPRESSION = `(async () => {
       threadKey: slot.threadKey ?? null,
       threadId: threadId || null,
       title: slot.title ?? slot.thread?.title ?? slot.task?.title ?? meta?.title ?? null,
-      status: slot.status ?? meta?.threadRuntimeStatus?.type ?? "idle",
+      status: attentionStatus(slot.status ?? meta?.threadRuntimeStatus?.type, asyncQuestionThreads.has(threadId)),
       running,
       taskType,
       model,
@@ -4481,7 +4538,7 @@ var SNAPSHOT_EXPRESSION = `(async () => {
           threadId: id,
           slot: null,
           title: meta.title || "Untitled",
-          status: meta.threadRuntimeStatus?.type || "working",
+          status: attentionStatus(meta.threadRuntimeStatus?.type || "working", asyncQuestionThreads.has(id)),
           taskType: isWorkTask(meta) ? "WORK" : "CODEX",
           model: formatModel(rawModel),
           rawModel,
@@ -4505,7 +4562,7 @@ var SNAPSHOT_EXPRESSION = `(async () => {
       threadId: meta.id,
       slot: null,
       title: meta.title,
-      status: meta.threadRuntimeStatus?.type || "idle",
+      status: attentionStatus(meta.threadRuntimeStatus?.type, asyncQuestionThreads.has(meta.id)),
       taskType: isWorkTask(meta) ? "WORK" : "CODEX",
       model: formatModel(rawModel),
       rawModel,

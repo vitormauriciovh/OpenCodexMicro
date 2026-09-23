@@ -4181,6 +4181,24 @@ exit 1
   return { status, install, launch, uninstall };
 }
 
+// plugin/approval-state.js
+function hasSelectedApproval(state) {
+  if (!state?.connected || !state.activeThreadKey) return false;
+  const normalize = (key) => String(key ?? "").replace(/^local:/, "");
+  const activeKey = normalize(state.activeThreadKey);
+  const slots = Array.isArray(state.slots) ? state.slots : [];
+  const activeTasks = Array.isArray(state.activeTasks) ? state.activeTasks : [];
+  const matches = (task2) => [task2?.threadKey, task2?.threadId].some((key) => key != null && normalize(key) === activeKey);
+  let task = slots.find(matches) ?? activeTasks.find(matches);
+  if (!task) {
+    const selected = slots.filter((slot) => slot?.selected);
+    if (selected.length === 1 && normalize(selected[0].threadKey).startsWith("client-new-thread:")) {
+      task = selected[0];
+    }
+  }
+  return ["approval", "awaiting-approval"].includes(String(task?.status ?? "").toLowerCase());
+}
+
 // plugin/app.js
 var PLUGIN_UUID = "com.ulanzi.ulanzistudio.codexmicro";
 var BRIDGE_URL = process.env.CODEX_BRIDGE_URL || "http://127.0.0.1:17373";
@@ -4476,6 +4494,20 @@ async function handleBridgeSetupMessage(message) {
   }
   await sendBridgeSetupStatus(message, { result, error: failure });
 }
+function isAttentionStatus(status) {
+  return [
+    "attention",
+    "notification",
+    "input",
+    "approval",
+    "waiting_input",
+    "needs_input",
+    "waiting",
+    "feedback",
+    "awaiting-approval",
+    "awaiting-response"
+  ].includes(String(status || "").toLowerCase());
+}
 function setDisplay(instance, state, text) {
   const digest = `${state}:${text}`;
   if (!instance.active || instance.lastDisplay === digest) return;
@@ -4589,7 +4621,7 @@ function taskCardIconData({
   }
   const s = String(status || "").toLowerCase();
   const isWorking = s === "working" || s === "running" || s === "thinking" || s === "in_progress" || s === "executing" || s === "planning";
-  const isAttention = s === "attention" || s === "waiting" || s === "feedback" || s === "input" || s === "approval" || s === "waiting_input" || s === "needs_input";
+  const isAttention = isAttentionStatus(s);
   const isError = s === "error" || s === "failed" || s === "failure";
   const isDone = s === "complete" || s === "completed" || s === "done" || s === "unread";
   let headerBg = "#334155";
@@ -4974,7 +5006,7 @@ function getPendingAttentionTasks(slots, activeTasks) {
   const checkItem = (item, slotIndex) => {
     if (!item?.threadKey || seenKeys.has(item.threadKey)) return;
     const st = String(item.status || "").toLowerCase();
-    const isAttention = ["attention", "notification", "input", "approval", "waiting_input", "needs_input", "waiting", "feedback"].includes(st);
+    const isAttention = isAttentionStatus(st);
     const isError = ["error", "failed", "failure"].includes(st);
     if (isAttention || isError) {
       seenKeys.add(item.threadKey);
@@ -5195,8 +5227,7 @@ function isAnyTaskRunning() {
 }
 function setApproveDisplay(instance) {
   const connected = Boolean(latestState?.connected);
-  const pending = getPendingAttentionTasks(latestState?.slots, latestState?.activeTasks);
-  const hasAction = connected && (pending.length > 0 || Number(latestState?.attentionCount) > 0);
+  const hasAction = hasSelectedApproval(latestState);
   const digest = `approve:${connected}:${hasAction}`;
   if (!instance.active || instance.lastDisplay === digest) return;
   instance.lastDisplay = digest;
@@ -5204,10 +5235,11 @@ function setApproveDisplay(instance) {
 }
 function setRejectDisplay(instance) {
   const connected = Boolean(latestState?.connected);
-  const digest = `reject:${connected}`;
+  const hasAction = hasSelectedApproval(latestState);
+  const digest = `reject:${connected}:${hasAction}`;
   if (!instance.active || instance.lastDisplay === digest) return;
   instance.lastDisplay = digest;
-  sendSvgState(instance, textCard("REJECT", "Approval", "DENY REQUEST", connected));
+  sendSvgState(instance, textCard("REJECT", hasAction ? "Approval" : "No approval", connected ? hasAction ? "DENY REQUEST" : "NO PENDING" : "", connected));
 }
 function setTokensDisplay(instance) {
   const connected = Boolean(latestState?.connected);

@@ -6,6 +6,7 @@ import WebSocket from "ws";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { createBridgeInstaller } from "./bridge-installer.js";
+import { hasSelectedApproval } from "./approval-state.js";
 
 const PLUGIN_UUID = "com.ulanzi.ulanzistudio.codexmicro";
 const BRIDGE_URL = process.env.CODEX_BRIDGE_URL || "http://127.0.0.1:17373";
@@ -328,11 +329,18 @@ async function handleBridgeSetupMessage(message) {
   await sendBridgeSetupStatus(message, { result, error: failure });
 }
 
+function isAttentionStatus(status) {
+  return [
+    "attention", "notification", "input", "approval", "waiting_input", "needs_input",
+    "waiting", "feedback", "awaiting-approval", "awaiting-response"
+  ].includes(String(status || "").toLowerCase());
+}
+
 function taskIconPath(status) {
   const value = String(status || "").toLowerCase();
   if (["working", "thinking", "running", "in_progress"].includes(value)) return TASK_ICON_PATHS.working;
   if (["unread", "complete", "completed", "done", "success"].includes(value)) return TASK_ICON_PATHS.complete;
-  if (["attention", "notification", "input", "approval", "waiting_input", "needs_input"].includes(value)) return TASK_ICON_PATHS.attention;
+  if (isAttentionStatus(value)) return TASK_ICON_PATHS.attention;
   if (["error", "failed", "failure"].includes(value)) return TASK_ICON_PATHS.error;
   return TASK_ICON_PATHS.idle;
 }
@@ -466,7 +474,7 @@ function taskCardIconData({
 
   const s = String(status || "").toLowerCase();
   const isWorking = s === "working" || s === "running" || s === "thinking" || s === "in_progress" || s === "executing" || s === "planning";
-  const isAttention = s === "attention" || s === "waiting" || s === "feedback" || s === "input" || s === "approval" || s === "waiting_input" || s === "needs_input";
+  const isAttention = isAttentionStatus(s);
   const isError = s === "error" || s === "failed" || s === "failure";
   const isDone = s === "complete" || s === "completed" || s === "done" || s === "unread";
 
@@ -895,7 +903,7 @@ function getPendingAttentionTasks(slots, activeTasks) {
   const checkItem = (item, slotIndex) => {
     if (!item?.threadKey || seenKeys.has(item.threadKey)) return;
     const st = String(item.status || "").toLowerCase();
-    const isAttention = ["attention", "notification", "input", "approval", "waiting_input", "needs_input", "waiting", "feedback"].includes(st);
+    const isAttention = isAttentionStatus(st);
     const isError = ["error", "failed", "failure"].includes(st);
     if (isAttention || isError) {
       seenKeys.add(item.threadKey);
@@ -1132,8 +1140,7 @@ function isAnyTaskRunning() {
 
 function setApproveDisplay(instance) {
   const connected = Boolean(latestState?.connected);
-  const pending = getPendingAttentionTasks(latestState?.slots, latestState?.activeTasks);
-  const hasAction = connected && (pending.length > 0 || (Number(latestState?.attentionCount) > 0));
+  const hasAction = hasSelectedApproval(latestState);
   const digest = `approve:${connected}:${hasAction}`;
   if (!instance.active || instance.lastDisplay === digest) return;
   instance.lastDisplay = digest;
@@ -1142,10 +1149,11 @@ function setApproveDisplay(instance) {
 
 function setRejectDisplay(instance) {
   const connected = Boolean(latestState?.connected);
-  const digest = `reject:${connected}`;
+  const hasAction = hasSelectedApproval(latestState);
+  const digest = `reject:${connected}:${hasAction}`;
   if (!instance.active || instance.lastDisplay === digest) return;
   instance.lastDisplay = digest;
-  sendSvgState(instance, textCard("REJECT", "Approval", "DENY REQUEST", connected));
+  sendSvgState(instance, textCard("REJECT", hasAction ? "Approval" : "No approval", connected ? (hasAction ? "DENY REQUEST" : "NO PENDING") : "", connected));
 }
 
 function setTokensDisplay(instance) {

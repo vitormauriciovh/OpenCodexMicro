@@ -4,6 +4,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import WebSocket from "ws";
 import { localThreadKey } from "./thread-key.mjs";
+import { readNativeTaskAttention, taskAttentionStatus } from "./task-attention.mjs";
 
 const execFileAsync = promisify(execFile);
 const USAGE_REFRESH_MS = Math.max(
@@ -541,9 +542,11 @@ const SNAPSHOT_EXPRESSION = `(async () => {
   const normalizeThreadKey = (value) => String(value ?? "").replace(/^local:/, "");
 
   const computeCtxPct = ${contextPercent.toString()};
+  const { threadIds, asyncQuestionThreads } = (${readNativeTaskAttention.toString()})(source, found);
+  const attentionStatus = ${taskAttentionStatus.toString()};
 
   const enrichedSlots = found.map((slot) => {
-    const threadId = normalizeThreadKey(slot.threadKey);
+    const threadId = threadIds.get(slot.threadKey) ?? normalizeThreadKey(slot.threadKey);
     const meta = threadId ? conversationsMeta.get(threadId) : null;
     const rawModel = meta?.latestModel || meta?.latestThreadSettings?.model || meta?.previousTurnModel || null;
     const isSlotRunning = ["working", "thinking", "running", "in_progress"].includes(String(slot.status || "").toLowerCase());
@@ -558,7 +561,7 @@ const SNAPSHOT_EXPRESSION = `(async () => {
       threadKey: slot.threadKey ?? null,
       threadId: threadId || null,
       title: slot.title ?? slot.thread?.title ?? slot.task?.title ?? meta?.title ?? null,
-      status: slot.status ?? meta?.threadRuntimeStatus?.type ?? "idle",
+      status: attentionStatus(slot.status ?? meta?.threadRuntimeStatus?.type, asyncQuestionThreads.has(threadId)),
       running,
       taskType,
       model,
@@ -602,7 +605,7 @@ const SNAPSHOT_EXPRESSION = `(async () => {
           threadId: id,
           slot: null,
           title: meta.title || "Untitled",
-          status: meta.threadRuntimeStatus?.type || "working",
+          status: attentionStatus(meta.threadRuntimeStatus?.type || "working", asyncQuestionThreads.has(id)),
           taskType: isWorkTask(meta) ? "WORK" : "CODEX",
           model: formatModel(rawModel),
           rawModel,
@@ -626,7 +629,7 @@ const SNAPSHOT_EXPRESSION = `(async () => {
       threadId: meta.id,
       slot: null,
       title: meta.title,
-      status: meta.threadRuntimeStatus?.type || "idle",
+      status: attentionStatus(meta.threadRuntimeStatus?.type, asyncQuestionThreads.has(meta.id)),
       taskType: isWorkTask(meta) ? "WORK" : "CODEX",
       model: formatModel(rawModel),
       rawModel,
