@@ -18,13 +18,12 @@ Install the official standalone Codex CLI before setting up the CLI bridge. This
 Quit Ulanzi Studio, then run from the repository:
 
 ```bash
-npm install
-npm run check
+npm ci
 npm run install:all
 npm run setup:all
 ```
 
-Reopen Ulanzi Studio afterward. Update plugins and bridges together: authenticated bridge versions require matching authenticated plugin clients. Updating only one side can leave the deck offline. The installer preserves each previous plugin under `~/Library/Application Support/OpenCodexMicro/plugin-backups/`, outside Ulanzi's plugin discovery directory.
+Reopen Ulanzi Studio afterward. Plugin installers build and preflight before replacement; no separate build is needed for repository installation. When changing source code, use the validation guidance in [AGENTS.md](../AGENTS.md) before installing. Update plugins and bridges together: authenticated bridge versions require matching authenticated plugin clients. Updating only one side can leave the deck offline. The installer preserves each previous plugin under `~/Library/Application Support/OpenCodexMicro/plugin-backups/`, outside Ulanzi's plugin discovery directory.
 
 For individual components:
 
@@ -35,7 +34,25 @@ For individual components:
 | Codex CLI | `npm run install:plugin:codexcli` | `npm run setup:codexcli` |
 | Spotify | `npm run install:plugin:spotify` | Runs inside the plugin |
 
-Before an agent quits Ulanzi Studio, it must have your permission. Setup restarts the bridge services; it does not launch the Codex Bridge wrapper or quit Codex Desktop.
+Before an agent quits Ulanzi Studio, it must have your permission. Setup restarts the bridge services; it does not launch the Codex Bridge wrapper or quit Codex Desktop. For agent workflows, inspect installed manifests and CodePath first as described in [AGENTS.md](../AGENTS.md); a valid plugin should not be reinstalled unless update or repair was requested.
+
+## Configure the deck
+
+Use Ulanzi Studio to place the selected plugin's actions on keypad and encoder
+slots. Layouts are managed in Studio; the project does not own the device directly.
+Reopen Studio after replacing a plugin so it loads the new files.
+
+The developer plugins provide six task/session slots. Select the intended task
+before using its controls. Codex App Approve and Reject indicators reflect a
+pending approval in that selected task; attention from a question or error is
+not an approval. Stop is a separate action. Availability differs by application;
+see [capabilities and acceptance](feature-parity.md) before choosing a layout.
+
+Codex App scroll uses native Micro joystick events; Antigravity scroll targets
+the selected conversation viewport. Spotify playback may require macOS Automation
+permission, and its catalog/library features use the optional Web API connection
+configured in its inspector. Check the reported component error before changing
+system permissions.
 
 ## Starting applications
 

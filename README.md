@@ -1,171 +1,55 @@
 # OpenCodexMicro
 
-**Control Codex Desktop, Antigravity AI Agent, and Spotify from Ulanzi D200 Series Keypads through Ulanzi Studio.**
+Control Codex Desktop, Codex CLI, Antigravity Desktop and Spotify from an Ulanzi
+D200 Series keypad through Ulanzi Studio.
 
-[中文说明](README_zh.md)
-
-OpenCodexMicro connects developer tools and media controls to your Ulanzi D200 keypad via native Ulanzi Studio plugins and loopback bridges. It provides dedicated plugins for **Codex Desktop**, **Antigravity AI Agent**, and **Spotify Music Picker**.
+[中文简介](README_zh.md)
 
 ![OpenCodexMicro on an Ulanzi D200 Series](docs/images/ulanzi-deck-showcase.jpg)
 
-## Features Overview
+## Components
 
-<p align="center">
-  <img src="docs/images/ulanzi-agent-keys.jpg" alt="Ulanzi Deck Agent Keys" width="85%" />
-</p>
+Ulanzi Studio owns the physical device. Four native plugins connect to the
+applications through local interfaces:
 
-### Codex Desktop Integration
-| Feature | Behavior |
-| --- | --- |
-| **Six Live Task Cards** | Display Codex recent tasks with model tags (`5.6 TERRA`, `Claude 3.7`), live elapsed timers, state badges (`WORKING`, `COMPLETED`, `ATTENTION`, `IDLE`), and conversation titles. |
-| **Dedicated 5H & Weekly Gauges** | Large circular progress rings showing remaining 5-Hour and Weekly allowances with live countdown to reset (`RESET 2H 15M`, `RESET 5H`, `RESET 7D`). |
-| **Task & Token Monitor** | Monitor active task type, model reasoning effort (Low/Med/High), and token / context window consumption. |
-| **Agent Controls & Approvals** | Instant `APPROVE` / `PROCEED`, `CANCEL` / `DENY`, and Attention alert notification counters. |
-| **Quick Action Prompts** | One-tap prompt triggers for Test & Fix, Code Review, and Conventional Commit message generation. |
-| **Encoder Navigation** | Press to open the latest task; turn left/right to scroll up/down through Ulanzi Studio's hotkey protocol. |
+| Plugin | Connection | Main capabilities |
+| --- | --- | --- |
+| Codex App | Codex Bridge on `127.0.0.1:17373`; Desktop CDP on `127.0.0.1:9222` | Six task keys, status/usage, selected-task controls and native navigation |
+| Codex CLI | CLI bridge on `127.0.0.1:17376`; managed app-server over a Unix WebSocket | Six task keys, approvals, task-bound drafts, next-prompt settings and plans |
+| Antigravity | Desktop bridge on `127.0.0.1:17374` | Six session keys, selected-conversation controls, history and saved artifacts |
+| Spotify | Local API inside the plugin on `127.0.0.1:17375` | Playback, track display, ten music slots, volume and optional Web API catalog/library access |
 
-### Antigravity AI Agent Integration
-| Feature | Behavior |
-| --- | --- |
-| **Six Live Session Cards** | Display active Antigravity sessions, execution states, model indicators, and elapsed timers. |
-| **Agent Status HUD** | Real-time agent status HUD (`PLANNING`, `EXECUTING`, `WAITING`, `IDLE`) with session title and live timer. |
-| **One-Touch Approvals** | One-touch `PROCEED` (Approve Plan / Tool Calls) and `CANCEL` (Stop execution) keys. |
-| **Subagents & Token Monitor** | Live subagent counter, cumulative session token tracker, and context window gauge. |
-| **AI Slash Commands** | Dedicated single-tap buttons for `/boost`, `/grill-me`, and `/goal` autonomous agent workflows. |
-| **Artifact Viewers** | Single-tap keys to immediately focus and open active Implementation Plans and Walkthrough artifacts in VS Code. |
+The three developer bridges serve WebSocket `/events` on their HTTP port.
+Local APIs require private credentials; use the repository's diagnostic helper.
+Similar action names do not guarantee identical behavior across applications.
+See [capabilities and acceptance](docs/feature-parity.md) for supported controls,
+explicitly unavailable features and live verification limits.
 
-### Spotify Music Picker & Controller
-| Feature | Behavior |
-| --- | --- |
-| **Now Playing HUD** | Wide-screen display with track title, artist, album art, and progress bar. |
-| **Music Picker Slots 1–10** | Quick-access playlist, album, and mix slots with live playback status. |
-| **Playback & Volume Controls** | Play/Pause, Skip Next, Previous, Like, Shuffle, Repeat, and Rotary Volume / Playlist Scroll Dials. |
+## Installation and configuration
 
-### Security & Transport
-| Transport | Security Model |
-| --- | --- |
-| **Loopback-only Endpoints** | Codex Bridge (`127.0.0.1:17373` & CDP `127.0.0.1:9222`) and Antigravity Bridge (`127.0.0.1:17374`, including `/events` WebSocket) bind strictly to localhost. |
+Requires macOS 13+, Node.js 20+, Ulanzi Studio 3.0.1+, an Ulanzi D200 Series deck
+and the applications for your selected plugins. CLI integration requires the
+standalone managed app-server installation.
 
----
+Follow [setup and operations](docs/setup-and-operations.md) for installation,
+updates, deck configuration, logs, diagnostics and removal. Install only the
+components you need. Quit Studio before replacing plugins. Launching
+`Codex Bridge.app` quits and relaunches Codex Desktop, so save work first and do
+not open it merely to check installation.
 
-## Installation
+## Development and agent instructions
 
-### Prerequisites
+[AGENTS.md](AGENTS.md) is the repository's operating guide for coding agents. It
+maps canonical source files, runtime contracts, generated artifacts and targeted
+validation commands. Read it before setup or development. The two focused skills
+cover [prebuilt Codex plugin installation](skills/install-ulanzi-studio-plugin/SKILL.md)
+and [Codex Bridge setup](skills/setup-codex-bridge/SKILL.md).
 
-- macOS 13 (Ventura) or later;
-- Codex Desktop and/or Antigravity (VS Code);
-- Ulanzi Studio 3.0.1 or later;
-- Ulanzi D200 Series connected to Ulanzi Studio;
-- Node.js 20 or newer (for repository-based installation and bridge runtime).
+## License and attribution
 
----
-
-### 1. Quick Installation (All Plugins & Bridges)
-
-To install all plugins and build/register both bridges in one go:
-
-```bash
-git clone https://github.com/UlanziTechnology/OpenCodexMicro.git
-cd OpenCodexMicro
-npm install
-npm run install:all
-npm run setup:all
-```
-
-> **Note:** Quit Ulanzi Studio before running `npm run install:all`.
-
----
-
-### 2. Selective Installation
-
-#### Codex App Plugin & Bridge
-```bash
-# Install the Codex App plugin in Ulanzi Studio
-npm run install:plugin
-
-# Build and register the Codex Bridge LaunchAgent (~/Applications/Codex Bridge.app)
-npm run setup
-```
-
-#### Antigravity Plugin & Bridge
-```bash
-# Install the Antigravity plugin in Ulanzi Studio
-npm run install:plugin:antigravity
-
-# Build and register the Antigravity Bridge LaunchAgent
-npm run setup:antigravity
-```
-
-#### Spotify Music Picker Plugin
-```bash
-# Install the Spotify plugin in Ulanzi Studio
-npm run install:plugin:spotify
-```
-
----
-
-### 3. Launching & Verification
-
-#### Codex Desktop
-Always launch Codex Desktop via `Codex Bridge.app` to enable the local CDP debugging port:
-
-```bash
-open ~/Applications/Codex\ Bridge.app
-```
-
-Verify the Codex Bridge health and state:
-```bash
-node scripts/bridge-status.mjs codex health
-node scripts/bridge-status.mjs codex state
-```
-
-#### Antigravity Bridge
-The Antigravity Bridge runs automatically via its LaunchAgent (`io.openantigravitymicro.bridge`). Verify with:
-```bash
-node scripts/bridge-status.mjs antigravity health
-node scripts/bridge-status.mjs antigravity state
-```
-
-#### In Ulanzi Studio
-1. Launch Ulanzi Studio.
-2. In the action list, you will find the **AI** category (with **Codex App** and **Antigravity** actions) and the **Music** category (with **Spotify Music Picker** actions).
-3. Drag the actions onto the desired keys on your Ulanzi D200 canvas.
-
----
-
-### 4. LLM / Agent Installation Workflow
-
-When an LLM or coding agent performs the setup:
-
-1. Read [AGENTS.md](AGENTS.md) and inspect the installed plugin manifests under `~/Library/Application Support/Ulanzi/UlanziDeck/Plugins/`.
-2. Check for the target plugin UUIDs:
-   - Codex App: `com.ulanzi.ulanzistudio.codexmicro`
-   - Antigravity: `com.ulanzi.ulanzistudio.antigravity`
-   - Spotify: `com.ulanzi.ulanzistudio.spotify`
-3. If installing or repairing, follow [`skills/install-ulanzi-studio-plugin/SKILL.md`](skills/install-ulanzi-studio-plugin/SKILL.md) and [`skills/setup-codex-bridge/SKILL.md`](skills/setup-codex-bridge/SKILL.md).
-4. Report plugin installation and bridge connectivity status clearly.
-
----
-
-## Configuration & Layout
-
-The physical layout is managed directly inside Ulanzi Studio.
-
-- **System Accessibility Permission**: Enable Ulanzi Studio in **System Settings > Privacy & Security > Accessibility** so the rotary encoders can send scroll/mouse-wheel events.
-- See [Configuration](docs/configuration.md) for full action documentation and recommended key layouts.
-- See [Setup and operations](docs/setup-and-operations.md) for background service management, logs, and troubleshooting.
-
----
-
-## Documentation
-
-- [Configuration Guide](docs/configuration.md)
-- [Setup and Operations](docs/setup-and-operations.md)
-- [Architecture Overview](docs/architecture.md)
-- [Engineering Constraints](docs/errors.md)
-
----
-
-## License & Attribution
-
-Project-authored code is released under the [MIT License](LICENSE). See [NOTICE.md](NOTICE.md) for upstream attribution, maintainership scope, independence notices, and responsibility boundaries. Dependencies are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Project-authored code is released under the [MIT License](LICENSE).
+[NOTICE.md](NOTICE.md) defines provenance, independence and responsibility;
+Ulanzi's declared maintenance scope is the Codex App plugin directory, not the
+inherited Bridges or CDP. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) records
+dependency licenses. Their copies inside the plugin installer are required
+parts of the distribution.

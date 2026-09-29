@@ -1,59 +1,98 @@
-# Feature parity — 21 September 2026
+# Capabilities and acceptance limits
 
-Codex Micro, Codex CLI and Antigravity now expose a broader common set of controls. The deployed adapters retain explicit capability limits; equal action names do not establish equal behavior. This inventory separates implementation and automated evidence from physical-device acceptance.
+This reference describes the implemented adapters. Matching key names do not
+establish equivalent behavior, and implemented controls do not establish live
+application or physical-device acceptance. Use [AGENTS.md](../AGENTS.md) for
+source routing and [setup and operations](setup-and-operations.md) for setup.
 
-| Feature | Codex Micro | Codex CLI | Antigravity |
+## Developer plugins
+
+| Capability | Codex App | Codex CLI | Antigravity |
 | --- | --- | --- | --- |
-| Six task keys and selection | Present | Present; paginated listing and accumulated dial navigation | Exact sidebar conversation selection |
-| Status/model/task monitor | Live application state | Selected daemon task, ownership diagnostics | Selected desktop task/model plus history |
-| Tokens/context | Measured values only; unknown capacity stays unknown | Protocol metrics; no cumulative-to-context substitution | Transcript tokens explicitly estimated; missing capacity unknown |
-| Five-hour and weekly usage | Application/account state | App-server quota read | Only explicitly labeled, valid quota windows; otherwise unknown |
-| New task | Present | thread/start | Desktop new-conversation control |
-| Fork | Native Micro control | thread/fork | Conditional current-workspace fork control; unavailable if absent |
-| Approve / reject | Single native dispatch | Method-specific, task-bound pending approvals | Unique selected-conversation controls |
-| Dedicated Stop | Exact enabled unique label; recording/dialog controls excluded | Exact turn/interrupt; Reject cannot fall back to Stop | Composer cancel or exact sidebar Stop execution |
-| Attention navigation | Present | Pending approval tasks | Pending conversation selection |
-| Submit prompt | Application composer | Task-bound inspector draft | Selected desktop composer |
-| Steer | Existing composer control | Expected active turn ID and task-bound draft | Send Queued Message Now promotes one eligible message from the expanded selected-task queue; composer is preserved |
-| Test / review / commit-message prompts | Preserve existing draft | Typed turn request | Preserve draft and recheck selected task |
-| Model / reasoning | Model and Reasoning keys cycle native available models and supported effort levels, wrap, and confirm the selected task’s new value | Next deck prompt settings, pending until submitted | Model menu and supported reasoning choices |
-| Fast | Native Micro control | Next deck prompt service tier when supported | No verified equivalent; Boost unavailable |
-| Pin | Present | No verified pin interface | Selected sidebar pin |
-| Dial/scroll | Task-scoped native joystick | Task navigation; no terminal scroll/focus interface | Selected conversation viewport |
-| Microphone | Native Micro control | Deferred: experimental realtime has no atomic session ownership precondition for append/stop | Desktop microphone control |
-| Plan/walkthrough artifacts | Native selected-task plan side panel when its unique control is available | Plan action and read-only inspector show native saved plan text/live checklist; no walkthrough artifact opener | Existing artifact views |
-| Subagents | Visible selected-task summary/open control, otherwise unknown | Exact parentThreadId listing, bounded pagination | Existing history/state summary |
-| Goal | Existing unique Pause/Resume goal control | Explicit objective in inspector; existing active/paused goal toggle | No verified equivalent |
+| Six task keys | Native task identity and selection | Paginated daemon tasks; dial navigation | Exact sidebar conversation selection |
+| Status and model | Native application state | Selected daemon task, including ownership errors | Selected desktop task plus saved history |
+| Tokens and context | Reported metrics; unknown capacity stays unknown | Protocol metrics; cumulative tokens are not context usage | Transcript token estimates; missing capacity stays unknown |
+| Five-hour and weekly usage | Application/account state | App-server quota windows | Only explicitly labeled, valid quota windows |
+| New and Fork | Native task creation and Micro fork control | `thread/start` and `thread/fork` | Desktop controls; fork depends on the latest response and available workspace control |
+| Approve and Reject | One native dispatch for the selected task | Method-specific, task-bound pending request | Unique enabled control in the selected conversation |
+| Stop | Unique enabled native Stop control | Exact active `turn/interrupt` | Composer cancel or selected sidebar Stop execution |
+| Attention navigation | Tasks requiring attention | Tasks with pending approvals | Conversations requiring feedback |
+| Submit | Current application composer | Task-bound inspector draft | Selected desktop composer |
+| Steer | Native Steer action on the current composer | Task-bound draft and expected active turn ID | Promote one eligible message from the expanded selected-task queue using Send Now; preserve the composer |
+| Test, review and commit-message prompts | Preserve existing draft | Typed turn request | Preserve draft and recheck selected conversation |
+| Model and reasoning | Cycle native available options and confirm the selected task's value | Settings for the next prompt sent from the deck | Native model menu and supported reasoning choices |
+| Fast | Native Micro control | Next deck prompt's service tier, when supported | No verified equivalent; Boost is unavailable |
+| Pin | Native task control | No supported pin interface | Selected sidebar pin control |
+| Encoder | Task-scoped native joystick/scroll | Task navigation; no terminal scroll or focus | Selected conversation viewport |
+| Microphone | Native microphone control | Unavailable; no capture adapter | Native desktop microphone control |
+| Plan and walkthrough | Open the selected task's existing native plan side panel; no dedicated walkthrough opener | Read-only inspector for saved native plan text and live checklist; no walkthrough opener | Open existing saved plan/walkthrough artifacts |
+| Subagents | Native selected-task summary/open control, otherwise unknown | Exact parent-thread listing with bounded pagination | History/state summary |
+| Goal | Pause/resume an existing goal | Explicit inspector objective creation and active/paused goal toggle | No verified equivalent |
 | Grill-me | No dedicated action | No dedicated action | Unavailable |
-| Inspector/diagnostics | Installer/status | Ownership, errors, drafts, next-prompt settings and explicit goal input | Bridge/desktop connectivity and selected task errors |
+| Inspector | Bridge installer/status | Ownership, errors, drafts, next-prompt settings, plans and goal input | Bridge/desktop connectivity and task errors |
 
-## Final installed verification
+## Behavioral boundaries
 
-The latest integrated `npm run check` passed **98 tests**, seven builds, syntax checks and all four plugin smoke suites. Independent source review found no remaining blocker in the final additions. All three installed manifests, plugin entry points, inspector pages, eight locale files and bridge bundles match the checked builds: **Micro 31 actions, CLI 32, Antigravity 35**. Counts differ because some application-specific controls and aliases remain; counts alone are not evidence of feature equivalence.
+- Task identity and selection must remain exact. Refuse stale or ambiguous
+  targets, preserve existing drafts, and do not replay a mutation after a timeout
+  or uncertain response. Required native press/release pairs remain paired.
+- Attention includes questions and errors; it is not proof of an approval.
+  Codex App approval indicators describe the selected task. CLI approval requires
+  one matching pending request; Reject must not fall back to Stop.
+- Unknown metrics remain unknown and measured zero remains zero. Do not borrow
+  another task's metadata, derive context usage from cumulative tokens, or infer
+  quotas from activity. Antigravity's unlabeled quota data is not a five-hour window.
+- CLI uses WebSocket framing over the managed app-server's Unix socket. A task
+  owned by another writer remains read-only; the bridge does not take it over.
+  Settings on the deck affect the next deck prompt, not an already running turn.
+  Daemon terminal methods do not identify the user's terminal window or viewport.
+- CLI microphone remains unavailable: thread-only realtime append/stop methods
+  do not provide the session ownership precondition needed to avoid affecting
+  another client's replacement session. Protocol method presence alone does not
+  establish safe capture or account voice availability.
+- Codex App Goal controls an existing goal; create objectives in Codex itself.
+  Antigravity Goal, Boost and Grill-me have no supported equivalent. Permission
+  modes and invented slash commands are not substitutes.
+- Antigravity Steer promotes an existing queued message. It does not send a new
+  composer draft immediately. Missing, collapsed or ambiguous queue controls are
+  unavailable. Fork likewise remains conditional and preserves drafts.
+- Plan viewing is specific to each adapter. Codex App requires its unique enabled
+  native plan control; CLI displays task-bound saved text/live steps and reports
+  incomplete/error states. Delayed history must not replace newer live content.
+  Opening a Codex native plan may cause the application to materialize its Markdown
+  file; it does not choose Implement or submit a prompt.
 
-Studio was reopened after installation. Deck Dock reported Connected; the new Model, Plan and Send Queued Message Now actions were found in Studio. The installed plugin processes had established connections to Studio and their own bridges, and the three bridge health checks reported connected. The Micro Plan installation blocker was resolved after the user manually closed Studio. Eight previous plugin directories are retained outside Studio discovery under `~/Library/Application Support/OpenCodexMicro/plugin-backups/`. The oldest backups predate API authentication; restoring those alone against the newer bridge is not a compatible rollback.
+## Spotify
 
-The fixtures cover task/turn guards, draft preservation, ambiguous/disabled controls, stale approvals, Unix WebSocket transport, ownership failures, quota unknown/zero behavior, reconnection, localization, plan history races and installer backups. Selected-task model/token cards never borrow another recent task's metadata. Context capacity remains unknown unless measured; zero remains zero. No personal prompt, approval, Stop or goal action was executed for validation, and no audio was recorded.
+The Spotify plugin controls local playback, track navigation, shuffle, repeat and
+Spotify volume through macOS automation. Its keys display playback metadata and
+artwork, and its picker opens saved Spotify links. Optional OAuth connects the
+Web API for playlist/library catalog synchronization and saving the current track.
+Manual links remain separate from imported catalog entries; failed synchronization
+must preserve the last usable catalog. Spotify has its own local API inside the
+plugin and does not use the developer bridges.
 
-## Native behavior and remaining differences
+## Live acceptance still required
 
-CLI uses the official standalone 0.154.0 app-server daemon through WebSocket over its Unix socket. Real read-only queries verified task listing, quota methods and saved-plan history. The bridge launcher starts the daemon when its LaunchAgent starts. A task with another active writer remains read-only; the bridge does not take over ownership. Model/reasoning/Fast options apply to the next prompt sent from the deck. The inspector preserves task-bound drafts and displays ownership errors. A terminal intended to share daemon tasks can use `codex --remote unix://`.
+This documentation review did not run tests, install components, operate live
+applications or exercise a physical deck. Fixtures, installed files and service
+connectivity alone do not prove the observations below. Previously reported
+deployments do not establish the current machine's state.
 
-CLI Plan reads native `plan` items through descending `thread/items/list` pages and shows live `turn/plan/updated` steps. Task/turn IDs, bounded pagination, incomplete/error states and plain-text rendering prevent wrong-task or misleading content. Delayed history cannot overwrite a newer live document. The live read-only query found ten items and no saved plan in that particular task. This is an inspector viewer, distinct from Antigravity's artifact window.
+| Area | Required controlled observation |
+| --- | --- |
+| Physical keys and encoders | The intended task opens and the correct viewport or task list moves on actual hardware. |
+| Approve, Reject and Stop | Only the intended request or turn in a disposable task changes, once. |
+| Drafts, Submit and Steer | Existing drafts survive and sent/promoted content belongs to the intended task; verify each adapter's distinct steering behavior. |
+| New and Fork | One new/forked task appears in the intended workspace; unavailable controls fail explicitly. |
+| Model, reasoning and Fast | The correct task or next deck prompt reflects the chosen supported settings. |
+| Plans and subagents | The selected task's available native view or read-only content appears; missing/incomplete data is identified. |
+| Goals | Explicit creation or a supported toggle affects only the intended task; platform limits remain enforced. |
+| Microphone | Deliberate initiation, permission, recording indication, task binding and stop behave correctly on supported applications. CLI remains unavailable. |
+| Spotify | Playback, picker, volume and optional authenticated catalog/Like actions affect the intended player/account; unavailable playback/authentication is reported. |
+| Reconnect and restart | Matching installed versions reconnect and restore displays after application/service restart; reboot persistence requires a separate observation. |
 
-Micro Plan activates the installed desktop's exact localized Open plan in side panel control. It opens an existing native plan and does not choose Implement or submit a prompt. The app may materialize its own plan Markdown file while opening it. Missing, hidden, disabled, inert, modal or ambiguous targets remain unavailable. The key and its rendering are covered by fixtures and installed-source evidence; live activation remains unverified.
-
-Antigravity uses the observed selected conversation and refuses stale targets. New/fork, approval/rejection/Stop, pin, model/reasoning, microphone and scrolling use application controls. Fork availability depends on the task and latest response. Send Queued Message Now follows the installed 2.15.1 frontend's native NEXT_INVOCATION handler: one eligible message in the expanded selected-task queue is promoted, without altering the composer or delivery preferences. It is not equivalent to sending a new composer draft immediately. Unlabeled GetUserStatus data is never treated as a five-hour quota.
-
-## Confirmed capability boundaries
-
-- **CLI pin:** the inspected contract exposes opaque custom-section IDs without a canonical pinned role or pin method. The live section response contains id, name and appearance; the name does not establish a native pin target. No local-bookmark substitute was added.
-- **CLI microphone:** the experimental protocol has realtime methods, and a read-only listVoices call succeeded. However, start replaces a previous session, and append/stop accept only a thread ID without an expected session precondition. A local capture nonce cannot prevent automatic cleanup from stopping another client's replacement session. The incomplete adapter was withdrawn before installation. A safe implementation needs atomic start-if-absent and expected-session guards, or an independently owned transport with conditional closure. Method presence does not prove account voice availability.
-- **CLI terminal controls:** command/exec and background-terminal methods refer to daemon processes; they do not identify the user's terminal window or viewport. Generic foreground keystrokes are not an equivalent task-scoped interface.
-- **Micro goal creation:** the verified UI entry is the native `/goal` composer flow, which changes composer mode and opens the objective editor. No exact Create/Add goal button was verified without manipulating a draft. The deck key pauses/resumes an existing goal; creation remains in Codex itself.
-- **Antigravity Goal, Boost and Grill-me:** no verified equivalent was found in the installed frontend. Autonomous Mode changes permission behavior and is not a goal equivalent. Unavailable keys never send invented slash commands.
-- **Walkthrough:** Antigravity exposes its saved artifact; no equivalent dedicated native walkthrough contract was verified for Micro or CLI. Native plans are supported as described above.
-
-## Completion status
-
-Implementation, builds and installation of the supported additions are complete. Full live acceptance is still unproven: physical task keys/encoder, selected-task effects, approvals/Stop, drafts/submission, new/fork, settings, goals, microphone and plan activation need controlled observations. Service connectivity and passing fixtures do not prove every live UI effect. Machine reboot persistence is configured but has not been verified by rebooting. The detailed evidence and remaining observations are in `parity-acceptance.md`; the goal must not be marked achieved on installation evidence alone.
+Use deliberately selected disposable tasks within the authorized scope. Do not
+approve, reject or stop unrelated work, submit fabricated objectives, or record
+audio merely to satisfy this checklist. Record the installed versions, observed
+result and remaining gaps when live acceptance is actually performed.
