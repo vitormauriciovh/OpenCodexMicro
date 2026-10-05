@@ -68,7 +68,13 @@ The CLI bridge launcher runs the idempotent `codex app-server daemon start` befo
 
 Use the explicit standalone path when an npm installation also provides `codex` on your PATH. Select the corresponding session on the deck after opening it. Recent CLI sessions refresh every three seconds without changing the selected task. A plain `codex` terminal uses a separate server; its prompts do not stream to this bridge. A task owned by that separate running process can appear in history but refuse writes with `already has an active writer`. Exit that terminal session normally before resuming the same task through the shared daemon; opening a new shared session does not require closing it.
 
-The inspector explains access errors per task; daemon connectivity and other tasks remain usable. The Attention button counts approval requests, not running tasks, and displays `No pending approvals` at zero. Model, reasoning and Fast changes apply to the next prompt sent from the deck and are displayed as pending until submitted.
+The inspector explains access errors per task; daemon connectivity and other tasks remain usable. Attention counts unique tasks with pending approvals, protocol-reported questions, or errors, and displays `No tasks need attention` at zero. The inspector reports approval requests separately; questions never enable Approve/Reject. Answer questions in the CLI. Model, reasoning and Fast changes apply to the next prompt sent from the deck and are displayed as pending until submitted.
+
+Filtered session listings allow up to 30 seconds for larger histories. Other requests retain their eight-second deadline; commands are never automatically replayed after a timeout.
+
+Task Monitor rotates through known active tasks and tasks needing attention, including tasks outside the six visible slots. Press it to select the task currently displayed on that monitor. Status continues to show the selected task. Session cards show selection, reported context, and completed/stopped/error outcomes; Stop lights up only when the selected task has a controllable turn with a known ID.
+
+Saved inspector drafts survive bridge restarts in `~/Library/Application Support/OpenCodexMicro/codex-cli/drafts-<socket-hash>.json`, with a private directory and file. Each daemon socket has separate storage, limited to 100 drafts of 16,000 characters each. Save an empty prompt to clear a draft. If delivery times out or the bridge stops during sending, the draft stays marked as uncertain; check the conversation before explicitly saving it again to retry. Unreadable draft files are preserved and reported in the inspector. Removing the CLI bridge also removes its saved drafts.
 
 A CLI opened in VS Code can be reported with `source: vscode`, even with `--remote unix://`. The bridge therefore includes interactive tasks returned by the shared daemon's `thread/loaded/list`, alongside recent CLI history. The source label alone does not establish which process owns the task. At startup, the bridge prefers the most recently updated loaded task; subsequent discovery preserves the selected task.
 
@@ -98,3 +104,5 @@ If the bridge is online but a control is unavailable, inspect application connec
 ## Removal
 
 `npm run uninstall` removes Codex App and its bridge only. `npm run uninstall:all` explicitly removes all project components. The separate official Codex CLI installation is not removed.
+
+CLI session keys use stable active-task slots rather than history pages. Running tasks and tasks needing attention take the lowest free key and keep it while active. Completed/stopped tasks release their key after 30 seconds; active work may reclaim a non-active key sooner when all six keys are occupied. Idle history is shown temporarily only when selected through navigation. Selection remains available in Status and the inspector after a key expires. History navigation and Task Monitor remain available for tasks outside the six keys. Clicking a key verifies its displayed task identity before selecting it.

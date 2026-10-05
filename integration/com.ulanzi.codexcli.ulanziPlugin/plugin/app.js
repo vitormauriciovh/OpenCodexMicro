@@ -46,7 +46,7 @@ function shortTitle(value) {
 }
 
 function formatElapsed(sec) {
-  if (!sec || sec < 0) return "";
+  if (sec == null || sec < 0) return "";
   if (sec < 60) return `${sec}s`;
   const min = Math.floor(sec / 60);
   if (min < 60) return `${min}m`;
@@ -65,82 +65,127 @@ function formatTokenCount(num) {
 function sessionCardIconData({
   headerLeft = "CLI",
   headerRight = "Session",
-  title = "Untitled",
+  title = "No Task",
   status = "idle",
   elapsed = "",
-  model = "Codex CLI",
+  model = "default",
+  contextPercent = null,
+  selected = false,
+  attentionReason = null,
+  error = null,
   connected = true,
   empty = false
 }) {
   if (!connected) {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
-      <rect width="196" height="196" rx="24" fill="#0f1115"/>
-      <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="#22272e" stroke-width="2"/>
-      <g transform="translate(18, 30)">
-        <text x="0" y="0" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="900" fill="#64748b" letter-spacing="1">${escapeXml(headerLeft)}</text>
-        <text x="160" y="0" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#475569">${escapeXml(headerRight)}</text>
+      <defs>
+        <clipPath id="cardClipOff">
+          <rect width="196" height="196" rx="24"/>
+        </clipPath>
+      </defs>
+      <rect width="196" height="196" rx="24" fill="#13161a"/>
+      <g clip-path="url(#cardClipOff)">
+        <rect x="0" y="0" width="196" height="38" fill="#272e39"/>
       </g>
-      <circle cx="98" cy="98" r="28" fill="#1e232a"/>
-      <text x="98" y="106" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="24" font-weight="900" fill="#64748b">—</text>
-      <text x="98" y="162" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="800" fill="#ef4444" letter-spacing="0.8">OFFLINE</text>
+      <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="#262c36" stroke-width="2"/>
+      <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#ffffff" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
+      <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="rgba(255,255,255,0.7)" letter-spacing="0.3">${selected ? "● " : ""}${escapeXml(headerRight)}</text>
+      <text x="98" y="98" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="17" font-weight="800" fill="#8a96a3" letter-spacing="0.5">Bridge Offline</text>
+      <text x="98" y="122" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="#ef4444" letter-spacing="0.4">disconnected</text>
     </svg>`;
     return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
   }
 
   if (empty) {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
-      <rect width="196" height="196" rx="24" fill="#0f1115"/>
-      <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="#22272e" stroke-width="2"/>
-      <g transform="translate(18, 30)">
-        <text x="0" y="0" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="900" fill="#38bdf8" letter-spacing="1">${escapeXml(headerLeft)}</text>
-        <text x="160" y="0" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#64748b">${escapeXml(headerRight)}</text>
+      <defs>
+        <clipPath id="cardClipEmpty">
+          <rect width="196" height="196" rx="24"/>
+        </clipPath>
+      </defs>
+      <rect width="196" height="196" rx="24" fill="#13161a"/>
+      <g clip-path="url(#cardClipEmpty)">
+        <rect x="0" y="0" width="196" height="38" fill="#21262d"/>
       </g>
-      <text x="98" y="106" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="#475569">EMPTY SLOT</text>
+      <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="#262c36" stroke-width="2"/>
+      <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#8a96a3" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
+      <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="#64748b" letter-spacing="0.3">${selected ? "● " : ""}${escapeXml(headerRight)}</text>
+      <text x="98" y="105" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="17" font-weight="800" fill="#64748b" letter-spacing="0.5">No Task</text>
+      <text x="98" y="128" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="600" fill="#475569" letter-spacing="0.4">idle</text>
+      <text x="12" y="162" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#475569">—</text>
+      <text x="184" y="162" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#475569">ctx 0%</text>
+      <rect x="12" y="172" width="172" height="7" rx="3.5" fill="#1e242c"/>
     </svg>`;
     return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
   }
 
-  const st = String(status || "").toUpperCase();
-  const isWorking = st === "WORKING" || st === "RUNNING";
-  const isAttention = st === "ATTENTION" || st === "WAITING";
-  
-  let badgeColor = "#334155";
-  let badgeBg = "#1e293b";
-  let textColor = "#94a3b8";
+  const s = error ? "error" : ["question", "approval"].includes(attentionReason) ? "attention" : String(status || "").toLowerCase();
+  const isWorking = s === "working" || s === "running" || s === "thinking" || s === "in_progress" || s === "executing" || s === "planning";
+  const isAttention = ["attention", "waiting", "question", "approval"].includes(s);
+  const isError = s === "error" || s === "failed" || s === "failure";
+  const isDone = s === "complete" || s === "completed" || s === "done" || s === "unread";
+
+  let headerBg = "#334155";
+  let subColor = "#94a3b8";
+  let subText = "idle";
 
   if (isWorking) {
-    badgeColor = "#38bdf8";
-    badgeBg = "#0c4a6e";
-    textColor = "#38bdf8";
+    headerBg = "#22c55e";
+    subColor = "#22c55e";
+    subText = elapsed ? `${s === "thinking" ? "thinking" : "working"} ${elapsed}` : (s === "thinking" ? "thinking" : "working");
   } else if (isAttention) {
-    badgeColor = "#f59e0b";
-    badgeBg = "#451a03";
-    textColor = "#f59e0b";
-  } else if (st === "COMPLETED") {
-    badgeColor = "#10b981";
-    badgeBg = "#064e3b";
-    textColor = "#34d49a";
+    headerBg = "#f59e0b";
+    subColor = "#f59e0b";
+    subText = elapsed ? `waiting ${elapsed}` : "waiting";
+  } else if (isError) {
+    headerBg = "#ef4444";
+    subColor = "#ef4444";
+    subText = elapsed ? `error ${elapsed}` : "error";
+  } else if (isDone) {
+    headerBg = "#3b82f6";
+    subColor = "#60a5fa";
+    subText = elapsed ? `done ${elapsed}` : "done";
   }
 
+  if (error) subText = "read-only";
+  else if (attentionReason === "question") subText = elapsed ? `question ${elapsed}` : "question";
+  else if (attentionReason === "approval") subText = elapsed ? `approval ${elapsed}` : "approval";
+  else if (s === "stopped") subText = elapsed ? `stopped ${elapsed}` : "stopped";
+  else if (s === "unknown") subText = "unknown";
+
+  const cleanTitle = String(title || "Untitled").trim();
+  const titleDisplay = cleanTitle.length > 14 ? cleanTitle.slice(0, 13) + "…" : cleanTitle;
+  const titleFontSize = titleDisplay.length > 11 ? "18" : "20";
+
+  const cleanModel = String(model || "default").trim().toLowerCase();
+  const modelDisplay = cleanModel.length > 11 ? cleanModel.slice(0, 10) + "…" : cleanModel;
+
+  const validPct = Number.isFinite(contextPercent) ? Math.max(0, Math.min(100, Math.round(contextPercent))) : null;
+  const barWidth = Math.max(0, Math.min(172, Math.round((validPct / 100) * 172)));
+  const barColor = validPct > 85 ? "#ef4444" : "#f59e0b";
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
-    <rect width="196" height="196" rx="24" fill="#0d1117"/>
-    <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="${badgeColor}" stroke-width="2"/>
-    <g transform="translate(18, 30)">
-      <text x="0" y="0" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="900" fill="#38bdf8" letter-spacing="1">${escapeXml(headerLeft)}</text>
-      <text x="160" y="0" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#94a3b8">${escapeXml(headerRight)}</text>
+    <defs>
+      <clipPath id="cardClip">
+        <rect width="196" height="196" rx="24"/>
+      </clipPath>
+    </defs>
+    <rect width="196" height="196" rx="24" fill="#13161a"/>
+    <g clip-path="url(#cardClip)">
+      <rect x="0" y="0" width="196" height="38" fill="${headerBg}"/>
     </g>
-    <!-- Status Pill -->
-    <g transform="translate(18, 52)">
-      <rect x="0" y="0" width="160" height="24" rx="12" fill="${badgeBg}"/>
-      <text x="80" y="16" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="11" font-weight="900" fill="${textColor}" letter-spacing="0.5">${st}${elapsed ? ` • ${elapsed}` : ""}</text>
-    </g>
-    <!-- Title -->
-    <text x="18" y="112" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="15" font-weight="800" fill="#f1f5f9">${escapeXml(shortTitle(title))}</text>
-    <!-- Model Tag -->
-    <g transform="translate(18, 142)">
-      <rect x="0" y="0" width="160" height="22" rx="6" fill="#161b22"/>
-      <text x="80" y="15" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="11" font-weight="700" fill="#64748b">${escapeXml(model)}</text>
-    </g>
+    <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="${isWorking ? '#16a34a' : isAttention ? '#d97706' : isError ? '#ef4444' : '#262c36'}" stroke-width="2"/>
+    <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#ffffff" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
+    <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="rgba(255,255,255,0.95)" letter-spacing="0.3">${selected ? "● " : ""}${escapeXml(headerRight)}</text>
+
+    <text x="98" y="94" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="${titleFontSize}" font-weight="800" fill="#ffffff" letter-spacing="0.4">${escapeXml(titleDisplay)}</text>
+    <text x="98" y="120" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="${subColor}" letter-spacing="0.3">${escapeXml(subText)}</text>
+
+    <text x="12" y="162" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#f59e0b" letter-spacing="0.2">${escapeXml(modelDisplay)}</text>
+    <text x="184" y="162" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#94a3b8" letter-spacing="0.2">ctx ${validPct === null ? "—" : `${validPct}%`}</text>
+
+    <rect x="12" y="172" width="172" height="7" rx="3.5" fill="#21262d"/>
+    ${barWidth > 0 ? `<rect x="12" y="172" width="${barWidth}" height="7" rx="3.5" fill="${barColor}"/>` : ""}
   </svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
@@ -175,11 +220,11 @@ function approveIconData({ connected = true, hasAction = false }) {
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
 
-function rejectIconData({ connected = true, isRunning = false }) {
+function rejectIconData({ connected = true, isRunning = false, label = "REJECT", detail = null }) {
   const bgCol = isRunning ? "#450a0a" : "#0f172a";
   const strokeCol = isRunning ? "#ef4444" : "#1e293b";
   const iconCol = isRunning ? "#ef4444" : "#475569";
-  const subText = !connected ? "OFFLINE" : isRunning ? "READY" : "NO REQUEST";
+  const subText = !connected ? "OFFLINE" : detail || (isRunning ? "READY" : "NO REQUEST");
   const subColor = isRunning ? "#fca5a5" : "#64748b";
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
@@ -187,10 +232,10 @@ function rejectIconData({ connected = true, isRunning = false }) {
     <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="${strokeCol}" stroke-width="2"/>
     <g transform="translate(98, 76)">
       <circle cx="0" cy="0" r="32" fill="${iconCol}"/>
-      <path d="M-8 -8 L8 8 M8 -8 L-8 8" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round"/>
+      ${label === "STOP" ? '<rect x="-10" y="-10" width="20" height="20" rx="2" fill="#ffffff"/>' : '<path d="M-8 -8 L8 8 M8 -8 L-8 8" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round"/>'}
     </g>
-    <text x="98" y="142" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="15" font-weight="900" fill="#ffffff" letter-spacing="1">REJECT</text>
-    <text x="98" y="162" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="800" fill="${subColor}" letter-spacing="0.8">${subText}</text>
+    <text x="98" y="142" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="15" font-weight="900" fill="#ffffff" letter-spacing="1">${escapeXml(label)}</text>
+    <text x="98" y="162" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="800" fill="${subColor}" letter-spacing="0.8">${escapeXml(subText)}</text>
   </svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
@@ -218,16 +263,16 @@ function tokensIconData(tokenUsage, connected = true) {
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
 
-function queueIconData() {
+function queueIconData(ready = false) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="196" height="196" viewBox="0 0 196 196">
-    <rect width="196" height="196" rx="24" fill="#0f172a"/>
-    <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="#3b82f6" stroke-width="2"/>
+    <rect width="196" height="196" rx="24" fill="${ready ? "#0f172a" : "#0f1115"}"/>
+    <rect x="2" y="2" width="192" height="192" rx="22" fill="none" stroke="${ready ? "#3b82f6" : "#262c36"}" stroke-width="2"/>
     <g transform="translate(98, 76)">
-      <circle cx="0" cy="0" r="32" fill="#2563eb"/>
-      <path d="M-6 -10 L10 0 L-6 10 Z" fill="#ffffff"/>
+      <circle cx="0" cy="0" r="32" fill="${ready ? "#2563eb" : "#1e232a"}"/>
+      <path d="M-6 -10 L10 0 L-6 10 Z" fill="${ready ? "#ffffff" : "#64748b"}"/>
     </g>
-    <text x="98" y="142" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="15" font-weight="900" fill="#ffffff" letter-spacing="1">CONTINUE</text>
-    <text x="98" y="162" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="800" fill="#93c5fd" letter-spacing="0.8">SEND PROMPT</text>
+    <text x="98" y="142" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="15" font-weight="900" fill="${ready ? "#ffffff" : "#64748b"}" letter-spacing="1">CONTINUE</text>
+    <text x="98" y="162" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="10" font-weight="800" fill="${ready ? "#93c5fd" : "#475569"}" letter-spacing="0.8">${ready ? "SEND PROMPT" : "UNAVAILABLE"}</text>
   </svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
@@ -250,6 +295,7 @@ let socket;
 let reconnectTimer;
 let pollTimer;
 let pollInFlight = false;
+let continuePending = false;
 let latestState = null;
 
 function send(message) {
@@ -347,7 +393,7 @@ function renderInstance(instance) {
       }));
       return;
     }
-    const task = activeTasks[slot] || slots[slot];
+    const task = slots[slot];
     if (!task?.threadKey) {
       sendSvgState(instance, sessionCardIconData({
         headerLeft: "CLI",
@@ -357,7 +403,7 @@ function renderInstance(instance) {
       }));
       return;
     }
-    const elapsed = task.elapsedSec ? formatElapsed(task.elapsedSec) : "";
+    const elapsed = formatElapsed(task.elapsedSec);
     sendSvgState(instance, sessionCardIconData({
       headerLeft: "CLI",
       headerRight: `Session ${slot + 1}`,
@@ -365,6 +411,10 @@ function renderInstance(instance) {
       status: task.status || "IDLE",
       elapsed,
       model: task.model || "Codex CLI",
+      contextPercent: task.contextPercent,
+      selected: task.selected,
+      attentionReason: task.attentionReason,
+      error: task.error,
       connected: true,
       empty: false
     }));
@@ -377,26 +427,35 @@ function renderInstance(instance) {
   if (name === "approve") {
     sendSvgState(instance, approveIconData({
       connected: Boolean(latestState?.connected),
-      hasAction: (latestState?.lastTask?.pendingApprovalCount || 0) === 1
+      hasAction: Boolean(latestState?.connected && latestState?.lastTask?.controllable && latestState?.lastTask?.pendingApprovalCount === 1)
     }));
   } else if (name === "reject") {
     sendSvgState(instance, rejectIconData({
       connected: Boolean(latestState?.connected),
-      isRunning: (latestState?.lastTask?.pendingApprovalCount || 0) === 1
+      isRunning: Boolean(latestState?.connected && latestState?.lastTask?.controllable && latestState?.lastTask?.pendingApprovalCount === 1),
+      detail: latestState?.lastTask?.pendingApprovalCount > 1 ? "CHOOSE IN CLI" : null
     }));
+  } else if (name === "stop") {
+    const task = latestState?.lastTask;
+    const ready = Boolean(latestState?.connected && task?.controllable && task?.activeTurnId);
+    sendSvgState(instance, rejectIconData({ connected: Boolean(latestState?.connected), isRunning: ready, label: "STOP", detail: ready ? "RUNNING" : task?.error ? "READ-ONLY" : task?.isRunning ? "TURN UNKNOWN" : "NO ACTIVE TURN" }));
   } else if (name === "tokens" && !latestState?.connected) {
     sendSvgState(instance, textCard("CLI TOKENS", "Offline", "Waiting for app-server", false));
+  } else if (name === "tokens" && !latestState?.tokenTask) {
+    sendSvgState(instance, textCard("CLI TOKENS", "—", "No running task", true));
+  } else if (name === "tokens" && !latestState?.tokenUsage) {
+    sendSvgState(instance, textCard("CLI TOKENS", "—", "Waiting for usage", true));
   } else if (name === "tokens") {
     sendSvgState(instance, tokensIconData(latestState?.tokenUsage, Boolean(latestState?.connected)));
   } else if (name === "queue") {
-    sendSvgState(instance, queueIconData());
+    sendSvgState(instance, queueIconData(Boolean(latestState?.connected && latestState?.capabilities?.queue && !continuePending)));
   } else if (name === "resume") {
     sendSvgState(instance, resumeIconData());
   } else if (["usage", "usage5h", "usageweekly"].includes(name)) {
     sendSvgState(instance, usageCard(latestState?.usage, name === "usage5h" ? "five-hour" : name === "usageweekly" ? "weekly" : null, Boolean(latestState?.connected)));
   } else if (name === "attention") {
     const count = latestState?.pendingAttentionCount || 0;
-    sendSvgState(instance, textCard("ATTENTION", count, count ? "Select pending task" : "No pending approvals", Boolean(latestState?.connected)));
+    sendSvgState(instance, textCard("ATTENTION", count, count ? "Select pending task" : "No tasks need attention", Boolean(latestState?.connected)));
   } else if (name === "plan") {
     const plan = latestState?.plan;
     const steps = plan?.checklist?.steps;
@@ -415,17 +474,35 @@ function renderInstance(instance) {
     const current = latestState?.lastTask;
     const value = name === "model" ? (pending?.model || current?.model) : name === "reasoning" ? (pending?.effort || current?.reasoningEffort) : ((pending ? pending.serviceTier : current?.serviceTier) === "priority" ? "Fast" : "Standard");
     sendSvgState(instance, textCard(ACTION_LABELS[name], value || "Unknown", pending ? "Next deck prompt" : "Press to change", Boolean(latestState?.connected)));
-  } else if (["new", "fork", "stop", "submit", "steer", "prompt_test", "prompt_review", "prompt_commit"].includes(name)) {
-    sendSvgState(instance, textCard("CODEX CLI", ACTION_LABELS[name], name === "submit" || name === "steer" ? (latestState?.draft ? "Saved prompt ready" : "Set prompt in inspector") : "Selected task", Boolean(latestState?.connected)));
+  } else if (["new", "fork", "submit", "steer", "prompt_test", "prompt_review", "prompt_commit"].includes(name)) {
+    const draftDetail = latestState?.draftDeliveryUncertain ? "Check previous send" : latestState?.draft ? "Saved prompt ready" : "Set prompt in inspector";
+    const detail = latestState?.selectedTaskError && !["new", "fork"].includes(name) ? "Task is read-only" : name === "submit" || name === "steer" ? draftDetail : "Selected task";
+    sendSvgState(instance, textCard("CODEX CLI", ACTION_LABELS[name], detail, Boolean(latestState?.connected)));
   } else if (name === "status" || name === "taskmonitor") {
-    const last = latestState?.lastTask;
+    let last = latestState?.lastTask;
+    let header = "STATUS";
+    if (name === "taskmonitor") {
+      const tasks = latestState?.connected ? latestState.monitorTasks || [] : [];
+      let index = tasks.findIndex(task => task.threadKey === instance.monitorThreadId);
+      const now = Date.now();
+      if (index < 0) { index = 0; instance.monitorRotatedAt = now; }
+      else if (tasks.length > 1 && now - instance.monitorRotatedAt >= 2500) { index = (index + 1) % tasks.length; instance.monitorRotatedAt = now; }
+      last = tasks[index] || last;
+      instance.monitorThreadId = tasks[index]?.threadKey || null;
+      instance.displayedThreadId = latestState?.connected ? last?.threadKey || null : null;
+      header = tasks.length ? `${index + 1}/${tasks.length}` : "MONITOR";
+    }
     sendSvgState(instance, sessionCardIconData({
       headerLeft: "CLI",
-      headerRight: "STATUS",
-      title: latestState?.selectedTaskError ? "TASK READ-ONLY" : last?.title || "Codex CLI",
-      status: latestState?.agentStatus || "IDLE",
-      elapsed: last?.elapsedSec ? formatElapsed(last.elapsedSec) : "",
+      headerRight: header,
+      title: last?.title || "Codex CLI",
+      status: last?.status || "unknown",
+      elapsed: formatElapsed(last?.elapsedSec),
       model: last?.model || "Codex CLI",
+      contextPercent: last?.contextPercent,
+      selected: last?.selected,
+      attentionReason: last?.attentionReason,
+      error: last?.error,
       connected: Boolean(latestState?.connected),
       empty: !latestState?.connected
     }));
@@ -467,7 +544,29 @@ async function invoke(instance, pressed) {
   const slot = taskSlot(instance.uuid);
   if (slot !== null) return clickSlot(slot);
   const name = actionName(instance.uuid);
-  if (["tokens", "status", "taskmonitor", "usage", "usage5h", "usageweekly"].includes(name)) return;
+  if (["tokens", "status", "usage", "usage5h", "usageweekly"].includes(name)) return;
+  if (name === "queue") {
+    if (!latestState?.connected || !latestState?.capabilities?.queue || continuePending) return;
+    continuePending = true;
+    renderAll();
+    try { await invokeAction(name); }
+    finally { await pollBridgeState(); continuePending = false; renderAll(); }
+    return;
+  }
+  if (name === "taskmonitor") {
+    if (!instance.displayedThreadId) throw new Error("No task displayed on this monitor");
+    return invokeAction("select", { threadId: instance.displayedThreadId });
+  }
+  if (name === "stop") {
+    const task = latestState?.lastTask;
+    if (!task?.controllable || !task.activeTurnId) throw new Error("No controllable turn displayed; refresh the task first");
+    return invokeAction("stop", { threadId: task.threadKey, expectedTurnId: task.activeTurnId });
+  }
+  if (name === "approve" || name === "reject") {
+    const task = latestState?.lastTask;
+    if (!task?.controllable || task.pendingApprovalCount !== 1 || task.pendingApprovalId == null) throw new Error("No unique approval displayed; choose a request in Codex CLI");
+    return invokeAction(name, { threadId: task.threadKey, requestId: task.pendingApprovalId });
+  }
   if (name) await invokeAction(name);
 }
 

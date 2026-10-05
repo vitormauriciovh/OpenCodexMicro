@@ -59,7 +59,7 @@
   },
   "com.ulanzi.ulanzistudio.codexcli.attention": {
     "Name": "Codex CLI 待处理",
-    "Tooltip": "依次选择有待审批请求的任务。"
+    "Tooltip": "依次选择有待审批、待回答问题或错误的任务。"
   },
   "com.ulanzi.ulanzistudio.codexcli.submit": {
     "Name": "Codex CLI 发送输入",
@@ -95,7 +95,7 @@
   },
   "com.ulanzi.ulanzistudio.codexcli.taskmonitor": {
     "Name": "Codex CLI 任务监视器",
-    "Tooltip": "显示所选任务的状态、已用时间和报告的模型。"
+    "Tooltip": "轮流显示运行中或需要处理的任务。按下以选择当前显示的任务。"
   },
   "com.ulanzi.ulanzistudio.codexcli.model": {
     "Name": "Codex CLI 模型",

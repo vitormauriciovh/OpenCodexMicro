@@ -42,6 +42,15 @@ test('CLI inspector creates goals only from an explicit nonempty objective and d
   assert.deepEqual(f.calls.at(-1), { path: '/goal', body: { threadId: 'a', objective: 'Finish tests' } });
 });
 
+test('CLI inspector distinguishes attention from approvals and explains an uncertain draft delivery', async () => {
+  const f = fixture();
+  f.setState({ connected: true, daemonConnected: true, selectedThreadId: 'a', lastTask: { title: 'Task A' }, pendingAttentionCount: 3, pendingApprovalCount: 0, draftDeliveryUncertain: true });
+  await vm.runInContext('checkStatus()', f.context);
+  assert.equal(f.getElementById('attentionText').textContent, '3');
+  assert.equal(f.getElementById('approvalsText').innerText, 'All Clear');
+  assert.match(f.getElementById('draftWarning').textContent, /Check the conversation/);
+});
+
 test('CLI plan viewer renders text literally and clears content when the selected task changes', async () => {
   const f = fixture();
   f.setState({ connected: true, daemonConnected: true, selectedThreadId: 'a', lastTask: { title: 'Task A' }, plan: { historyStatus: 'complete', document: { turnId: 'turn-a', text: '<script>not HTML</script>' }, checklist: { turnId: 'turn-a', steps: [{ step: 'Run tests', status: 'inProgress' }] } } });

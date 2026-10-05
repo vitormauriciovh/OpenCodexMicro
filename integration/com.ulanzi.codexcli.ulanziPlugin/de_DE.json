@@ -59,7 +59,7 @@
   },
   "com.ulanzi.ulanzistudio.codexcli.attention": {
     "Name": "Codex CLI Aufmerksamkeit",
-    "Tooltip": "Zwischen Aufgaben mit ausstehenden Freigaben wechseln."
+    "Tooltip": "Zwischen Aufgaben mit ausstehenden Genehmigungen, Fragen oder Fehlern wechseln."
   },
   "com.ulanzi.ulanzistudio.codexcli.submit": {
     "Name": "Codex CLI Eingabe senden",
@@ -95,7 +95,7 @@
   },
   "com.ulanzi.ulanzistudio.codexcli.taskmonitor": {
     "Name": "Codex CLI Aufgabenmonitor",
-    "Tooltip": "Status, verstrichene Zeit und gemeldetes Modell der ausgewählten Aufgabe anzeigen."
+    "Tooltip": "Aktive Aufgaben und Aufgaben mit Handlungsbedarf abwechselnd anzeigen. Drücken, um die angezeigte Aufgabe auszuwählen."
   },
   "com.ulanzi.ulanzistudio.codexcli.model": {
     "Name": "Codex CLI Modell",

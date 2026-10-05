@@ -59,7 +59,7 @@
   },
   "com.ulanzi.ulanzistudio.codexcli.attention": {
     "Name": "Codex CLI Atenção",
-    "Tooltip": "Percorrer as tarefas com pedidos de aprovação pendentes."
+    "Tooltip": "Percorrer as tarefas com aprovações, perguntas ou erros que requerem atenção."
   },
   "com.ulanzi.ulanzistudio.codexcli.submit": {
     "Name": "Codex CLI Enviar instrução",
@@ -95,7 +95,7 @@
   },
   "com.ulanzi.ulanzistudio.codexcli.taskmonitor": {
     "Name": "Codex CLI Monitor de tarefa",
-    "Tooltip": "Mostrar estado, tempo decorrido e modelo comunicado da tarefa selecionada."
+    "Tooltip": "Alternar entre tarefas ativas e tarefas que requerem atenção. Premir para selecionar a tarefa apresentada."
   },
   "com.ulanzi.ulanzistudio.codexcli.model": {
     "Name": "Codex CLI Modelo",

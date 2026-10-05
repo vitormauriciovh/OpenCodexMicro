@@ -59,7 +59,7 @@
   },
   "com.ulanzi.ulanzistudio.codexcli.attention": {
     "Name": "Codex CLI 주의 필요",
-    "Tooltip": "승인 대기 중인 작업을 차례로 선택합니다."
+    "Tooltip": "승인 대기, 질문 또는 오류로 주의가 필요한 작업을 순서대로 선택합니다."
   },
   "com.ulanzi.ulanzistudio.codexcli.submit": {
     "Name": "Codex CLI 입력 전송",
@@ -95,7 +95,7 @@
   },
   "com.ulanzi.ulanzistudio.codexcli.taskmonitor": {
     "Name": "Codex CLI 작업 모니터",
-    "Tooltip": "선택한 작업의 상태, 경과 시간 및 보고된 모델을 표시합니다."
+    "Tooltip": "실행 중이거나 주의가 필요한 작업을 번갈아 표시합니다. 누르면 표시된 작업을 선택합니다."
   },
   "com.ulanzi.ulanzistudio.codexcli.model": {
     "Name": "Codex CLI 모델",

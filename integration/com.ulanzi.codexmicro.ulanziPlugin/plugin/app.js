@@ -1,3 +1,4 @@
+import { TaskTimers } from "../../../src/shared/task-timer.mjs";
 import { contextPercent } from "../../../src/shared/token-metrics.mjs";
 import { textCard } from "../../../src/shared/deck-cards.mjs";
 import { encoderTicks, invalidateDisplays, reportActionError, bridgeFeed, inspectorReply } from "../../../src/shared/plugin-runtime.mjs";
@@ -70,30 +71,20 @@ let lastTaskMonitorRotation = Date.now();
 let lastKnownTask = null;
 let currentDisplayedTask = null;
 let selectedDialSlot = 0;
-const taskStartTimes = new Map();
+const taskTimers = new TaskTimers();
 
 function updateTaskRunningTimes(slots, activeTasks) {
-  const currentRunningKeys = new Set();
-  const allItems = [...(slots || []), ...(activeTasks || [])];
-  for (const item of allItems) {
-    if (!item?.threadKey) continue;
-    const isRunning = ["working", "thinking", "running", "in_progress"].includes(String(item.status || "").toLowerCase());
-    if (isRunning) {
-      currentRunningKeys.add(item.threadKey);
-      if (!taskStartTimes.has(item.threadKey)) {
-        taskStartTimes.set(item.threadKey, Date.now());
-      }
-    }
+  // Slots are authoritative when also present in the running-task list.
+  const tasks = new Map();
+  for (const task of [...(activeTasks || []), ...(slots || [])]) {
+    if (task?.threadKey) tasks.set(task.threadKey, task);
   }
-  for (const key of taskStartTimes.keys()) {
-    if (!currentRunningKeys.has(key)) {
-      taskStartTimes.delete(key);
-    }
-  }
+  for (const [key, task] of tasks) taskTimers.observe(key, { status: task.status });
+  taskTimers.retain(new Set(tasks.keys()));
 }
 
 function formatElapsed(ms) {
-  if (!ms || ms < 0) return "";
+  if (ms == null || ms < 0) return "";
   const sec = Math.floor(ms / 1000);
   if (sec < 60) return `${sec}s`;
   const min = Math.floor(sec / 60);
@@ -426,6 +417,7 @@ function taskCardIconData({
   elapsed = "",
   model = "default",
   ctxPct = null,
+  selected = false,
   connected = true,
   empty = false
 }) {
@@ -442,7 +434,7 @@ function taskCardIconData({
       </g>
       <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="#262c36" stroke-width="2"/>
       <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#ffffff" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
-      <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="rgba(255,255,255,0.7)" letter-spacing="0.3">${escapeXml(headerRight)}</text>
+      <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="rgba(255,255,255,0.7)" letter-spacing="0.3">${selected ? "● " : ""}${escapeXml(headerRight)}</text>
       <text x="98" y="98" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="17" font-weight="800" fill="#8a96a3" letter-spacing="0.5">Bridge Offline</text>
       <text x="98" y="122" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="#ef4444" letter-spacing="0.4">disconnected</text>
     </svg>`;
@@ -462,7 +454,7 @@ function taskCardIconData({
       </g>
       <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="#262c36" stroke-width="2"/>
       <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#8a96a3" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
-      <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="#64748b" letter-spacing="0.3">${escapeXml(headerRight)}</text>
+      <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="#64748b" letter-spacing="0.3">${selected ? "● " : ""}${escapeXml(headerRight)}</text>
       <text x="98" y="105" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="17" font-weight="800" fill="#64748b" letter-spacing="0.5">No Task</text>
       <text x="98" y="128" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="600" fill="#475569" letter-spacing="0.4">idle</text>
       <text x="12" y="162" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#475569">—</text>
@@ -493,12 +485,14 @@ function taskCardIconData({
   } else if (isError) {
     headerBg = "#ef4444";
     subColor = "#ef4444";
-    subText = "error";
+    subText = elapsed ? `error ${elapsed}` : "error";
   } else if (isDone) {
     headerBg = "#3b82f6";
     subColor = "#60a5fa";
     subText = elapsed ? `done ${elapsed}` : "done";
   }
+
+  if (["stopped", "interrupted"].includes(s)) subText = elapsed ? `stopped ${elapsed}` : "stopped";
 
   const cleanTitle = String(title || "Untitled").trim();
   const titleDisplay = cleanTitle.length > 14 ? cleanTitle.slice(0, 13) + "…" : cleanTitle;
@@ -523,7 +517,7 @@ function taskCardIconData({
     </g>
     <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="${isWorking ? '#16a34a' : isAttention ? '#d97706' : isError ? '#ef4444' : '#262c36'}" stroke-width="2"/>
     <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#ffffff" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
-    <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="rgba(255,255,255,0.95)" letter-spacing="0.3">${escapeXml(headerRight)}</text>
+    <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="rgba(255,255,255,0.95)" letter-spacing="0.3">${selected ? "● " : ""}${escapeXml(headerRight)}</text>
     
     <text x="98" y="94" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="${titleFontSize}" font-weight="800" fill="#ffffff" letter-spacing="0.4">${escapeXml(titleDisplay)}</text>
     <text x="98" y="120" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="${subColor}" letter-spacing="0.3">${escapeXml(subText)}</text>
@@ -856,7 +850,7 @@ function setTaskMonitorDisplay(instance) {
   taskType = targetTask?.taskType || "CODEX";
   model = targetTask?.model || "DEFAULT";
 
-  const elapsed = targetTask?.threadKey ? formatElapsed(Date.now() - (taskStartTimes.get(targetTask.threadKey) || Date.now())) : "";
+  const elapsed = targetTask?.threadKey ? formatElapsed(taskTimers.elapsed(targetTask.threadKey)) : "";
 
   const digest = `monitor:true:${taskType}:${model}:${status}:${currentIndex}:${totalRunning}:${elapsed}`;
   if (!instance.active || instance.lastDisplay === digest) return;
@@ -1541,8 +1535,7 @@ function renderInstance(instance) {
         }));
         return;
       }
-      const startTime = task.threadKey ? taskStartTimes.get(task.threadKey) : null;
-      const elapsed = startTime ? formatElapsed(Date.now() - startTime) : "";
+      const elapsed = formatElapsed(taskTimers.elapsed(task.threadKey));
       const ctxPct = getTaskContextPercent(task);
       const model = task.rawModel || task.model || "default";
       sendSvgState(instance, taskCardIconData({
@@ -1553,6 +1546,7 @@ function renderInstance(instance) {
         elapsed,
         model,
         ctxPct,
+        selected: Boolean(task.selected),
         connected: true,
         empty: false
       }));
@@ -1583,8 +1577,7 @@ function renderInstance(instance) {
     }));
     return;
   }
-  const startTime = task.threadKey ? taskStartTimes.get(task.threadKey) : null;
-  const elapsed = startTime ? formatElapsed(Date.now() - startTime) : "";
+  const elapsed = formatElapsed(taskTimers.elapsed(task.threadKey));
   const ctxPct = getTaskContextPercent(task);
   const model = task.rawModel || task.model || "default";
   sendSvgState(instance, taskCardIconData({
@@ -1595,6 +1588,7 @@ function renderInstance(instance) {
     elapsed,
     model,
     ctxPct,
+    selected: Boolean(task.selected),
     connected: true,
     empty: false
   }));

@@ -59,7 +59,7 @@
   },
   "com.ulanzi.ulanzistudio.codexcli.attention": {
     "Name": "Codex CLI 要対応",
-    "Tooltip": "承認待ちのタスクを順に選択します。"
+    "Tooltip": "承認待ち、質問待ち、またはエラーのあるタスクを順に選択します。"
   },
   "com.ulanzi.ulanzistudio.codexcli.submit": {
     "Name": "Codex CLI 入力を送信",
@@ -95,7 +95,7 @@
   },
   "com.ulanzi.ulanzistudio.codexcli.taskmonitor": {
     "Name": "Codex CLI タスクモニター",
-    "Tooltip": "選択したタスクの状態、経過時間、報告されたモデルを表示します。"
+    "Tooltip": "実行中または対応が必要なタスクを順に表示します。押すと表示中のタスクを選択します。"
   },
   "com.ulanzi.ulanzistudio.codexcli.model": {
     "Name": "Codex CLI モデル",

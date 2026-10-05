@@ -59,7 +59,7 @@
   },
   "com.ulanzi.ulanzistudio.codexcli.attention": {
     "Name": "Codex CLI Attention",
-    "Tooltip": "Cycle through tasks with pending approval requests."
+    "Tooltip": "Cycle through tasks with approvals, questions or errors needing attention."
   },
   "com.ulanzi.ulanzistudio.codexcli.submit": {
     "Name": "Codex CLI Submit Prompt",
@@ -95,7 +95,7 @@
   },
   "com.ulanzi.ulanzistudio.codexcli.taskmonitor": {
     "Name": "Codex CLI Task Monitor",
-    "Tooltip": "Show the selected task’s status, elapsed time, and reported model."
+    "Tooltip": "Rotate through active tasks and tasks needing attention. Press to select the displayed task."
   },
   "com.ulanzi.ulanzistudio.codexcli.model": {
     "Name": "Codex CLI Model",

@@ -4,12 +4,20 @@ import { stateDigest } from "../shared/plugin-runtime.mjs";
 import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
 import { CodexCliClient } from "./app-server-client.mjs";
+import { CliDraftStore } from "./draft-store.mjs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { createHash } from "node:crypto";
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.CODEX_CLI_BRIDGE_PORT || 17376);
 const REFRESH_MS = 500;
 
-const client = new CodexCliClient();
+const client = new CodexCliClient({ createDraftStore: socketPath => {
+  // Keep drafts separate if a custom daemon socket is configured.
+  const scope = createHash("sha256").update(socketPath).digest("hex").slice(0, 16);
+  return new CliDraftStore(join(homedir(), "Library/Application Support/OpenCodexMicro/codex-cli", `drafts-${scope}.json`));
+} });
 
 
 let cached = {
@@ -21,7 +29,8 @@ let cached = {
   })),
   activeTasks: [],
   lastTask: null,
-  tokenUsage: { totalTokens: 0, inputTokens: 0, outputTokens: 0 },
+  tokenTask: null,
+  tokenUsage: null,
   error: "Initializing Codex CLI Bridge...",
   updatedAt: Date.now()
 };
@@ -135,6 +144,8 @@ export const server = createServer(secureHandler("codex-cli", PORT, async (reque
   if (matchTask) {
     try {
       if (typeof body.threadId !== "string") throw new Error("Session ID is required");
+      const current = await client.snapshot();
+      if (current.slots[Number(matchTask[1])]?.threadKey !== body.threadId) throw new Error("Session slot changed; refresh before selecting it");
       const result = await client.selectThread(body.threadId);
       await refresh();
       return json(response, 200, result);

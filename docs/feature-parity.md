@@ -11,13 +11,14 @@ source routing and [setup and operations](setup-and-operations.md) for setup.
 | --- | --- | --- | --- |
 | Six task keys | Native task identity and selection | Paginated daemon tasks; dial navigation | Exact sidebar conversation selection |
 | Status and model | Native application state | Selected daemon task, including ownership errors | Selected desktop task plus saved history |
+| Task monitor | Rotate through active tasks; press to open the displayed task | Rotate through known active/attention tasks across pages; press to select the displayed task | Selected desktop task |
 | Tokens and context | Reported metrics; unknown capacity stays unknown | Protocol metrics; cumulative tokens are not context usage | Transcript token estimates; missing capacity stays unknown |
 | Five-hour and weekly usage | Application/account state | App-server quota windows | Only explicitly labeled, valid quota windows |
 | New and Fork | Native task creation and Micro fork control | `thread/start` and `thread/fork` | Desktop controls; fork depends on the latest response and available workspace control |
 | Approve and Reject | One native dispatch for the selected task | Method-specific, task-bound pending request | Unique enabled control in the selected conversation |
 | Stop | Unique enabled native Stop control | Exact active `turn/interrupt` | Composer cancel or selected sidebar Stop execution |
-| Attention navigation | Tasks requiring attention | Tasks with pending approvals | Conversations requiring feedback |
-| Submit | Current application composer | Task-bound inspector draft | Selected desktop composer |
+| Attention navigation | Tasks requiring attention | Unique tasks with approvals, protocol-reported questions or errors | Conversations requiring feedback |
+| Submit | Current application composer | Task-bound inspector draft, persisted across bridge restarts | Selected desktop composer |
 | Steer | Native Steer action on the current composer | Task-bound draft and expected active turn ID | Promote one eligible message from the expanded selected-task queue using Send Now; preserve the composer |
 | Test, review and commit-message prompts | Preserve existing draft | Typed turn request | Preserve draft and recheck selected conversation |
 | Model and reasoning | Cycle native available options and confirm the selected task's value | Settings for the next prompt sent from the deck | Native model menu and supported reasoning choices |
@@ -46,6 +47,15 @@ source routing and [setup and operations](setup-and-operations.md) for setup.
   owned by another writer remains read-only; the bridge does not take it over.
   Settings on the deck affect the next deck prompt, not an already running turn.
   Daemon terminal methods do not identify the user's terminal window or viewport.
+- CLI cards show reported context per task, selection and distinct completed,
+  stopped and error outcomes. Unknown context remains unknown. The monitor rotates
+  through known active/attention tasks without changing selection; pressing it selects
+  that instance's displayed task. Stop carries the displayed turn ID, and approval
+  buttons carry the selected pending request ID. Questions are answered in the CLI.
+- CLI saves up to 100 task-bound drafts in private local storage. A draft with
+  uncertain delivery is retained but cannot be sent again until explicitly saved
+  after checking the conversation. A disk failure before sending prevents submission;
+  a cleanup failure after sending does not replay the prompt.
 - CLI microphone remains unavailable: thread-only realtime append/stop methods
   do not provide the session ownership precondition needed to avoid affecting
   another client's replacement session. Protocol method presence alone does not
@@ -96,3 +106,7 @@ Use deliberately selected disposable tasks within the authorized scope. Do not
 approve, reject or stop unrelated work, submit fabricated objectives, or record
 audio merely to satisfy this checklist. Record the installed versions, observed
 result and remaining gaps when live acceptance is actually performed.
+
+CLI token monitoring follows a running task independently of the task selected for deck actions. It prefers the selected task when running, otherwise the most recently started running task (falling back to its update time). Counts are cumulative for that task, not combined across tasks or reset per turn. With no running task the display shows “No running task”; missing usage shows “Waiting for usage”, never another task’s count.
+
+Codex App and CLI session cards show a selection dot and execution wall-clock duration, including approval/question waits. Duration freezes after completion/interruption and resets on the next observed execution. CLI uses reported turn start times when available; otherwise timing starts at detection. App timing is observed locally; a restart or a task leaving the tracked list can lose that timing history.

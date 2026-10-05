@@ -44,7 +44,7 @@ test("current protocol updates per-thread turns, tokens, and completion", async 
   client.handleNotification({ method: "thread/tokenUsage/updated", params: { threadId: "thread-a", tokenUsage: { total: { totalTokens: 5, inputTokens: 0, outputTokens: 5 } } } });
   assert.equal((await client.snapshot()).tokenUsage.inputTokens, 0);
   client.handleNotification({ method: "turn/completed", params: { threadId: "thread-a", turn: { id: "turn-1", status: "completed" } } });
-  assert.equal((await client.snapshot()).agentStatus, "IDLE");
+  assert.equal((await client.snapshot()).agentStatus, "COMPLETED");
 });
 test('global IDE notifications do not appear as CLI tasks or running turns', async () => {
   const client = ready();
@@ -75,7 +75,7 @@ test('recent sessions refresh after startup without losing live state or selecti
   assert.equal(snapshot.selectedThreadId, 'thread-a');
   assert.equal(snapshot.agentStatus, 'WORKING');
   assert.equal(client.turns.get('thread-a').id, 'live-turn');
-  assert.equal(snapshot.slots[1].title, 'New terminal');
+  assert.equal(snapshot.slots[1].threadKey, null, 'idle history must not occupy a session key');
   assert.equal(client.sessions.has('ide'), false);
   assert.equal(client.subscribedThreads.has('new-cli'), false, 'discovery must not take ownership of history');
 });
@@ -101,7 +101,7 @@ test('VS Code terminal sessions loaded in the shared daemon remain discoverable 
   client.handleNotification({ method: 'turn/started', params: { threadId: terminal.id, turn: { id: 'live' } } });
   assert.equal((await client.snapshot()).agentStatus, 'WORKING');
   client.handleNotification({ method: 'turn/completed', params: { threadId: terminal.id, turn: { id: 'live', status: 'completed' } } });
-  assert.equal((await client.snapshot()).agentStatus, 'IDLE');
+  assert.equal((await client.snapshot()).agentStatus, 'COMPLETED');
 });
 test('session refresh ignores disconnected responses and reports failures without dropping connection', async () => {
   const client = ready();
@@ -288,6 +288,7 @@ test('model changes reset incompatible effort and speed; newer choices survive a
 });
 test('context uses last reported turn usage and model window, not cumulative token count', async () => {
   const client = ready();
+  client.handleNotification({ method: 'turn/started', params: { threadId: 'thread-a', turn: { id: 'turn-context' } } });
   client.handleNotification({ method: 'thread/tokenUsage/updated', params: { threadId: 'thread-a', tokenUsage: { total: { totalTokens: 100000 }, last: { totalTokens: 250 }, modelContextWindow: 1000 } } });
   const { tokenUsage } = await client.snapshot();
   assert.equal(tokenUsage.totalTokens, 100000); assert.equal(tokenUsage.contextTokens, 250); assert.equal(tokenUsage.modelContextWindow, 1000);
@@ -478,4 +479,66 @@ test('plan history absence, incomplete search, and failure remain distinguishabl
   client.callRpc = async () => { throw new Error('History unavailable'); };
   await assert.rejects(client.refreshPlan('thread-a'), /History unavailable/);
   assert.equal((await client.snapshot()).plan.historyStatus, 'error');
+});
+
+
+test('tokens follow running tasks across pages without changing the action selection', async () => {
+  const client = ready();
+  client.sessions.get('thread-a').tokenUsage = { total: { totalTokens: 999 } };
+  for (let i = 0; i < 7; i++) client.updateThread({ id: `idle-${i}`, status: { type: 'idle' } });
+  client.updateThread({ id: 'running', name: 'Running task', status: { type: 'active' } });
+  let state = await client.snapshot();
+  assert.equal(state.tokenTask.threadKey, 'running');
+  assert.equal(state.tokenUsage, null, 'never substitute another task when usage is unknown');
+  client.handleNotification({ method: 'thread/tokenUsage/updated', params: { threadId: 'running', tokenUsage: { total: { totalTokens: 0, inputTokens: 0 } } } });
+  state = await client.snapshot();
+  assert.equal(state.tokenUsage.totalTokens, 0);
+  assert.equal(state.selectedThreadId, 'thread-a');
+  assert.equal(state.lastTask.threadKey, 'thread-a');
+  client.handleNotification({ method: 'turn/started', params: { threadId: 'thread-a', turn: { id: 'selected-turn' } } });
+  assert.equal((await client.snapshot()).tokenUsage.totalTokens, 999, 'selected running task wins');
+  client.handleNotification({ method: 'turn/completed', params: { threadId: 'thread-a', turn: { id: 'selected-turn', status: 'completed' } } });
+  assert.equal((await client.snapshot()).tokenTask.threadKey, 'running');
+  client.handleNotification({ method: 'thread/status/changed', params: { threadId: 'running', status: { type: 'idle' } } });
+  state = await client.snapshot();
+  assert.equal(state.tokenTask, null);
+  assert.equal(state.tokenUsage, null);
+  client.sessions.get('running').status = { type: 'active' };
+  client.connected = false;
+  assert.equal((await client.snapshot()).tokenUsage, null);
+});
+
+test('Continue readiness blocks active, attention, unknown and read-only tasks and duplicate sends', async () => {
+  const client = ready();
+  assert.equal((await client.snapshot()).capabilities.queue, true);
+  for (const status of [{ type: 'active' }, { type: 'active', activeFlags: ['waitingOnUserInput'] }, { type: 'systemError' }, { type: 'notLoaded' }]) {
+    client.sessions.get('thread-a').status = status;
+    assert.equal(client.canContinue(), false);
+    await assert.rejects(client.continueTask(), /unavailable/);
+  }
+  client.sessions.get('thread-a').status = { type: 'idle' };
+  client.pendingApprovals.set(1, { threadId: 'thread-a' });
+  assert.equal(client.canContinue(), false);
+  client.pendingApprovals.clear();
+  client.subscribedThreads.clear();
+  assert.equal(client.canContinue(), false);
+  client.subscribedThreads.add('thread-a');
+  let resolveStart, sends = 0;
+  client.callRpc = async (method, params) => {
+    sends++;
+    assert.equal(method, 'turn/start');
+    assert.equal(params.input[0].text, 'continue');
+    return new Promise(resolve => { resolveStart = resolve; });
+  };
+  const sending = client.continueTask();
+  assert.equal(client.canContinue(), false);
+  await assert.rejects(client.continueTask(), /unavailable/);
+  resolveStart({ turn: { id: 'continue-turn', status: 'inProgress' } });
+  await sending;
+  assert.equal(sends, 1);
+  assert.equal(client.canContinue(), false);
+  client.handleNotification({ method: 'turn/completed', params: { threadId: 'thread-a', turn: { id: 'continue-turn', status: 'completed' } } });
+  assert.equal(client.canContinue(), true);
+  client.connected = false;
+  assert.equal(client.canContinue(), false);
 });

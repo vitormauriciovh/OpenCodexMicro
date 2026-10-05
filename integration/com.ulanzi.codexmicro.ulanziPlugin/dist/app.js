@@ -3694,6 +3694,39 @@ var require_websocket_server = __commonJS({
   }
 });
 
+// ../../src/shared/task-timer.mjs
+var TaskTimers = class {
+  constructor() {
+    this.entries = /* @__PURE__ */ new Map();
+  }
+  observe(key, { status, startedAt = null, runId = null, elapsedSec = null }, now = Date.now()) {
+    const running = ["active", "working", "thinking", "running", "in_progress", "executing", "planning", "attention", "notification", "input", "approval", "waiting_input", "needs_input", "waiting", "feedback", "awaiting-approval", "awaiting-response"].includes(String(status).toLowerCase());
+    let entry = this.entries.get(key);
+    if (running) {
+      if (!entry || entry.endedAt != null || runId && entry.runId && runId !== entry.runId) {
+        entry = { startedAt: Number.isFinite(startedAt) ? startedAt : now, endedAt: null, runId };
+        this.entries.set(key, entry);
+      } else {
+        if (Number.isFinite(startedAt)) entry.startedAt = startedAt;
+        if (runId) entry.runId = runId;
+      }
+    } else if (entry && entry.endedAt == null) {
+      entry.endedAt = Number.isFinite(elapsedSec) ? entry.startedAt + elapsedSec * 1e3 : now;
+    }
+    return this.elapsed(key, now);
+  }
+  elapsed(key, now = Date.now()) {
+    const entry = this.entries.get(key);
+    return entry ? Math.max(0, (entry.endedAt ?? now) - entry.startedAt) : null;
+  }
+  retain(keys) {
+    for (const key of this.entries.keys()) if (!keys.has(key)) this.entries.delete(key);
+  }
+  clear() {
+    this.entries.clear();
+  }
+};
+
 // ../../src/shared/token-metrics.mjs
 function contextPercent(usage) {
   if (!usage || typeof usage !== "object") return null;
@@ -4259,28 +4292,17 @@ var taskMonitorIndex = 0;
 var lastTaskMonitorRotation = Date.now();
 var lastKnownTask = null;
 var currentDisplayedTask = null;
-var taskStartTimes = /* @__PURE__ */ new Map();
+var taskTimers = new TaskTimers();
 function updateTaskRunningTimes(slots, activeTasks) {
-  const currentRunningKeys = /* @__PURE__ */ new Set();
-  const allItems = [...slots || [], ...activeTasks || []];
-  for (const item of allItems) {
-    if (!item?.threadKey) continue;
-    const isRunning = ["working", "thinking", "running", "in_progress"].includes(String(item.status || "").toLowerCase());
-    if (isRunning) {
-      currentRunningKeys.add(item.threadKey);
-      if (!taskStartTimes.has(item.threadKey)) {
-        taskStartTimes.set(item.threadKey, Date.now());
-      }
-    }
+  const tasks = /* @__PURE__ */ new Map();
+  for (const task of [...activeTasks || [], ...slots || []]) {
+    if (task?.threadKey) tasks.set(task.threadKey, task);
   }
-  for (const key of taskStartTimes.keys()) {
-    if (!currentRunningKeys.has(key)) {
-      taskStartTimes.delete(key);
-    }
-  }
+  for (const [key, task] of tasks) taskTimers.observe(key, { status: task.status });
+  taskTimers.retain(new Set(tasks.keys()));
 }
 function formatElapsed(ms) {
-  if (!ms || ms < 0) return "";
+  if (ms == null || ms < 0) return "";
   const sec = Math.floor(ms / 1e3);
   if (sec < 60) return `${sec}s`;
   const min = Math.floor(sec / 60);
@@ -4575,6 +4597,7 @@ function taskCardIconData({
   elapsed = "",
   model = "default",
   ctxPct = null,
+  selected = false,
   connected = true,
   empty = false
 }) {
@@ -4591,7 +4614,7 @@ function taskCardIconData({
       </g>
       <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="#262c36" stroke-width="2"/>
       <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#ffffff" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
-      <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="rgba(255,255,255,0.7)" letter-spacing="0.3">${escapeXml(headerRight)}</text>
+      <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="rgba(255,255,255,0.7)" letter-spacing="0.3">${selected ? "\u25CF " : ""}${escapeXml(headerRight)}</text>
       <text x="98" y="98" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="17" font-weight="800" fill="#8a96a3" letter-spacing="0.5">Bridge Offline</text>
       <text x="98" y="122" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="#ef4444" letter-spacing="0.4">disconnected</text>
     </svg>`;
@@ -4610,7 +4633,7 @@ function taskCardIconData({
       </g>
       <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="#262c36" stroke-width="2"/>
       <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#8a96a3" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
-      <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="#64748b" letter-spacing="0.3">${escapeXml(headerRight)}</text>
+      <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="#64748b" letter-spacing="0.3">${selected ? "\u25CF " : ""}${escapeXml(headerRight)}</text>
       <text x="98" y="105" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="17" font-weight="800" fill="#64748b" letter-spacing="0.5">No Task</text>
       <text x="98" y="128" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="600" fill="#475569" letter-spacing="0.4">idle</text>
       <text x="12" y="162" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#475569">\u2014</text>
@@ -4638,12 +4661,13 @@ function taskCardIconData({
   } else if (isError) {
     headerBg = "#ef4444";
     subColor = "#ef4444";
-    subText = "error";
+    subText = elapsed ? `error ${elapsed}` : "error";
   } else if (isDone) {
     headerBg = "#3b82f6";
     subColor = "#60a5fa";
     subText = elapsed ? `done ${elapsed}` : "done";
   }
+  if (["stopped", "interrupted"].includes(s)) subText = elapsed ? `stopped ${elapsed}` : "stopped";
   const cleanTitle = String(title || "Untitled").trim();
   const titleDisplay = cleanTitle.length > 14 ? cleanTitle.slice(0, 13) + "\u2026" : cleanTitle;
   const titleFontSize = titleDisplay.length > 11 ? "18" : "20";
@@ -4664,7 +4688,7 @@ function taskCardIconData({
     </g>
     <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="${isWorking ? "#16a34a" : isAttention ? "#d97706" : isError ? "#ef4444" : "#262c36"}" stroke-width="2"/>
     <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#ffffff" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
-    <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="rgba(255,255,255,0.95)" letter-spacing="0.3">${escapeXml(headerRight)}</text>
+    <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="rgba(255,255,255,0.95)" letter-spacing="0.3">${selected ? "\u25CF " : ""}${escapeXml(headerRight)}</text>
     
     <text x="98" y="94" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="${titleFontSize}" font-weight="800" fill="#ffffff" letter-spacing="0.4">${escapeXml(titleDisplay)}</text>
     <text x="98" y="120" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="${subColor}" letter-spacing="0.3">${escapeXml(subText)}</text>
@@ -4962,7 +4986,7 @@ function setTaskMonitorDisplay(instance) {
   currentDisplayedTask = targetTask;
   taskType = targetTask?.taskType || "CODEX";
   model = targetTask?.model || "DEFAULT";
-  const elapsed = targetTask?.threadKey ? formatElapsed(Date.now() - (taskStartTimes.get(targetTask.threadKey) || Date.now())) : "";
+  const elapsed = targetTask?.threadKey ? formatElapsed(taskTimers.elapsed(targetTask.threadKey)) : "";
   const digest = `monitor:true:${taskType}:${model}:${status}:${currentIndex}:${totalRunning}:${elapsed}`;
   if (!instance.active || instance.lastDisplay === digest) return;
   instance.lastDisplay = digest;
@@ -5608,8 +5632,7 @@ function renderInstance(instance) {
         }));
         return;
       }
-      const startTime2 = task2.threadKey ? taskStartTimes.get(task2.threadKey) : null;
-      const elapsed2 = startTime2 ? formatElapsed(Date.now() - startTime2) : "";
+      const elapsed2 = formatElapsed(taskTimers.elapsed(task2.threadKey));
       const ctxPct2 = getTaskContextPercent(task2);
       const model2 = task2.rawModel || task2.model || "default";
       sendSvgState(instance, taskCardIconData({
@@ -5620,6 +5643,7 @@ function renderInstance(instance) {
         elapsed: elapsed2,
         model: model2,
         ctxPct: ctxPct2,
+        selected: Boolean(task2.selected),
         connected: true,
         empty: false
       }));
@@ -5650,8 +5674,7 @@ function renderInstance(instance) {
     }));
     return;
   }
-  const startTime = task.threadKey ? taskStartTimes.get(task.threadKey) : null;
-  const elapsed = startTime ? formatElapsed(Date.now() - startTime) : "";
+  const elapsed = formatElapsed(taskTimers.elapsed(task.threadKey));
   const ctxPct = getTaskContextPercent(task);
   const model = task.rawModel || task.model || "default";
   sendSvgState(instance, taskCardIconData({
@@ -5662,6 +5685,7 @@ function renderInstance(instance) {
     elapsed,
     model,
     ctxPct,
+    selected: Boolean(task.selected),
     connected: true,
     empty: false
   }));

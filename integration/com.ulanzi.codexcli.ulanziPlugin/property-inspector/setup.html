@@ -44,6 +44,7 @@
       <div class="row"><span>Bridge Service (127.0.0.1:17376)</span><span id="serviceValue" class="value"><i class="dot"></i><span id="serviceText">Checking...</span></span></div>
       <div class="row"><span>Codex App-Server Daemon</span><span id="daemonValue" class="value"><i class="dot"></i><span id="daemonText">Checking...</span></span></div>
       <div class="row"><span>Pending Approvals</span><span id="approvalsValue" class="value"><i class="dot"></i><span id="approvalsText">None</span></span></div>
+      <div class="row"><span>Tasks Needing Attention</span><span id="attentionText">None</span></div>
     </section>
     <div id="message" class="message"></div>
     <div class="actions">
@@ -58,7 +59,8 @@
       <label for="prompt">Prompt for <span id="draftTask">selected task</span></label>
       <textarea id="prompt" maxlength="16000" rows="5" style="width:100%;margin-top:6px" placeholder="Save a prompt, then press Submit or Steer on the deck."></textarea>
       <button onclick="saveDraft()">Save prompt for this task</button>
-      <p class="intro">Drafts are kept until sent or the bridge restarts. Changing the selected task does not move a draft to another task.</p>
+      <p class="intro">Saved drafts survive bridge restarts and remain bound to their task. Save an empty prompt to clear one.</p>
+      <p id="draftWarning" class="message error"></p>
     </section>
     <section style="margin-top:12px">
       <label for="objective">Goal for the selected task</label>
@@ -99,6 +101,8 @@
         const data = await res.json();
         if (version !== statusVersion) return;
         selectedThreadId = data.selectedThreadId;
+        document.getElementById("attentionText").textContent = data.connected ? String(data.pendingAttentionCount || 0) : "—";
+        document.getElementById("draftWarning").textContent = data.draftStorageError || (data.draftDeliveryUncertain ? "The previous send may have reached this task. Check the conversation before saving this prompt again to retry." : "");
         renderPlan(data.plan, data.connected);
         document.getElementById("selectedTask").textContent = data.lastTask?.title || "no task selected";
         if (!promptDirty) {
@@ -131,7 +135,7 @@
           daemonText.innerText = "Disconnected";
         }
 
-        const count = data.pendingAttentionCount || 0;
+        const count = data.pendingApprovalCount || 0;
         if (count > 0) {
           approvalsValue.className = "value warn";
           approvalsText.innerText = count + " Required";

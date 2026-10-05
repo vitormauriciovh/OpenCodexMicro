@@ -268,7 +268,7 @@
       "Icon": "assets/icons/attention.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexcli.attention",
-      "Tooltip": "Cycle through tasks with pending approval requests.",
+      "Tooltip": "Cycle through tasks with approvals, questions or errors needing attention.",
       "Controllers": [
         "Keypad"
       ],
@@ -421,7 +421,7 @@
       "Icon": "assets/icons/task-working.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexcli.taskmonitor",
-      "Tooltip": "Show the selected task’s status, elapsed time, and reported model.",
+      "Tooltip": "Rotate through active tasks and tasks needing attention. Press to select the displayed task.",
       "Controllers": [
         "Keypad"
       ],
