@@ -1,6 +1,6 @@
 ---
 name: install-ulanzi-studio-plugin
-description: Install, update, verify, or diagnose the repository's prebuilt Codex Micro .ulanziPlugin directory in Ulanzi Studio on macOS. Use for local Ulanzi Studio plugin installation, not plugin development or Codex Bridge.app setup.
+description: Install, update, verify, or diagnose the repository's prebuilt Codex App .ulanziPlugin directory in Ulanzi Studio on macOS. Use for local Ulanzi Studio plugin installation, not plugin development or Codex Bridge.app setup.
 ---
 
 # Install the Ulanzi Studio Plugin
@@ -11,36 +11,52 @@ Resolve the project root as two directories above this file. Require
 
 ## Workflow
 
-1. Inspect `git status --short`, the plugin `manifest.json`, and its committed
-   `CodePath`. Preserve unrelated worktree changes.
+1. Inspect `git status --short` and the source and installed plugin manifests.
+   Preserve unrelated worktree changes.
+   Under `~/Library/Application Support/Ulanzi/UlanziDeck/Plugins/`, identify the
+   installed plugin by UUID `com.ulanzi.ulanzistudio.codexmicro` and verify its
+   `CodePath` exists. A checkout alone does not establish installation. Do not
+   replace a valid installation unless the user requests an update or repair.
 2. Verify macOS, Node.js 20+, and `/Applications/Ulanzi Studio.app`.
-3. If Ulanzi Studio is running, ask the user to quit it before replacing the
-   loaded plugin. Do not terminate the app without permission.
-4. From the project root, run:
+3. From the project root, verify the source UUID and `CodePath: dist/app.js`,
+   `dist/package.json`, and the complete prebuilt package:
 
    ```bash
-   npm run install:plugin
+   node --input-type=module -e 'import { preflightPlugin } from "./src/shared/plugin-installer.mjs"; await preflightPlugin("integration/com.ulanzi.codexmicro.ulanziPlugin", "codexmicro");'
+   test -f integration/com.ulanzi.codexmicro.ulanziPlugin/dist/package.json
    ```
 
-   The installer validates the prebuilt manifest entry point, then atomically
-   replaces the installed directory. It must not rebuild the plugin during
-   installation.
-5. Verify:
+   The preflight checks the entry point, action inspectors, icons directory,
+   all eight locales, and bundled Bridge resources including notices. If resources are
+   missing or stale relative to requested changes, report that the prebuilt
+   package needs rebuilding; do not build as part of this installation skill.
+4. If Ulanzi Studio is running, have the user quit it before replacing the loaded
+   plugin. Do not terminate it without permission; honor existing authorization.
+   Install from the project root:
 
    ```bash
-   plugin="$HOME/Library/Application Support/Ulanzi/UlanziDeck/Plugins/com.ulanzi.codexmicro.ulanziPlugin"
-   test -f "$plugin/manifest.json"
-   test -f "$plugin/dist/app.js"
-   test -f "$plugin/dist/package.json"
-   for locale in en zh_CN zh_HK ja_JP de_DE ko_KR pt_PT es_ES; do
-     test -f "$plugin/$locale.json"
-   done
+   ULANZI_PREBUILT=1 npm run install:plugin
    ```
 
-6. Ask the user to reopen Ulanzi Studio and confirm that the **Codex Micro**
+   The flag skips the default rebuild. Without it, `npm run install:plugin`
+   builds from source and rewrites generated files. The installer validates and
+   stages the package before replacing the installed directory, retaining the previous
+   package under `~/Library/Application Support/OpenCodexMicro/plugin-backups/`.
+5. Verify the installed manifest UUID, its `CodePath`, and the complete package:
+
+   ```bash
+   node --input-type=module -e 'import { homedir } from "node:os"; import { join } from "node:path"; import { preflightPlugin } from "./src/shared/plugin-installer.mjs"; await preflightPlugin(join(homedir(), "Library/Application Support/Ulanzi/UlanziDeck/Plugins/com.ulanzi.codexmicro.ulanziPlugin"), "codexmicro");'
+   test -f "$HOME/Library/Application Support/Ulanzi/UlanziDeck/Plugins/com.ulanzi.codexmicro.ulanziPlugin/dist/package.json"
+   ```
+
+6. Ask the user to reopen Ulanzi Studio and confirm that the **Codex App**
    category and actions appear. If actions show offline, verify the Bridge with
-   `curl --fail http://127.0.0.1:17373/state` and use the
-   `$setup-codex-bridge` skill if Bridge repair is requested.
+   `node scripts/bridge-status.mjs codex health` and
+   `node scripts/bridge-status.mjs codex state`. These helpers use local Bearer
+   credentials and can initialize their token files; never print those tokens.
+   Report plugin installation separately from Bridge availability and Codex
+   connection. Use [setup-codex-bridge](../setup-codex-bridge/SKILL.md) if Bridge
+   repair is requested.
 
 ## Boundaries
 

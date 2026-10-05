@@ -1,0 +1,51 @@
+{
+  "Description": "Spotify Music Picker and player controller for Ulanzi D200 Series in Ulanzi Studio.",
+  "Name": "Spotify Music Picker",
+  "com.ulanzi.ulanzistudio.spotify.nowplaying": {
+    "Name": "Spotify Now Playing",
+    "Tooltip": "Display current playing track, artist, album art and progress on wide screen."
+  },
+  "com.ulanzi.ulanzistudio.spotify.playpause": {
+    "Name": "Spotify Play / Pause",
+    "Tooltip": "Toggle Spotify playback."
+  },
+  "com.ulanzi.ulanzistudio.spotify.next": {
+    "Name": "Spotify Next Track",
+    "Tooltip": "Skip to next Spotify track."
+  },
+  "com.ulanzi.ulanzistudio.spotify.prev": {
+    "Name": "Spotify Previous Track",
+    "Tooltip": "Return to previous Spotify track."
+  },
+  "com.ulanzi.ulanzistudio.spotify.like": {
+    "Name": "Spotify Like",
+    "Tooltip": "Save/Like current track in your Spotify library."
+  },
+  "com.ulanzi.ulanzistudio.spotify.shuffle": {
+    "Name": "Spotify Shuffle",
+    "Tooltip": "Toggle Spotify shuffle mode."
+  },
+  "com.ulanzi.ulanzistudio.spotify.repeat": {
+    "Name": "Spotify Repeat",
+    "Tooltip": "Toggle Spotify repeat mode."
+  },
+  "com.ulanzi.ulanzistudio.spotify.item1": { "Name": "Music Picker Slot 1", "Tooltip": "Playlist / Album Slot 1" },
+  "com.ulanzi.ulanzistudio.spotify.item2": { "Name": "Music Picker Slot 2", "Tooltip": "Playlist / Album Slot 2" },
+  "com.ulanzi.ulanzistudio.spotify.item3": { "Name": "Music Picker Slot 3", "Tooltip": "Playlist / Album Slot 3" },
+  "com.ulanzi.ulanzistudio.spotify.item4": { "Name": "Music Picker Slot 4", "Tooltip": "Playlist / Album Slot 4" },
+  "com.ulanzi.ulanzistudio.spotify.item5": { "Name": "Music Picker Slot 5", "Tooltip": "Playlist / Album Slot 5" },
+  "com.ulanzi.ulanzistudio.spotify.item6": { "Name": "Music Picker Slot 6", "Tooltip": "Playlist / Album Slot 6" },
+  "com.ulanzi.ulanzistudio.spotify.item7": { "Name": "Music Picker Slot 7", "Tooltip": "Playlist / Album Slot 7" },
+  "com.ulanzi.ulanzistudio.spotify.item8": { "Name": "Music Picker Slot 8", "Tooltip": "Playlist / Album Slot 8" },
+  "com.ulanzi.ulanzistudio.spotify.item9": { "Name": "Music Picker Slot 9", "Tooltip": "Playlist / Album Slot 9" },
+  "com.ulanzi.ulanzistudio.spotify.item10": { "Name": "Music Picker Slot 10", "Tooltip": "Playlist / Album Slot 10" },
+  "com.ulanzi.ulanzistudio.spotify.volume": {
+    "Name": "Spotify Volume Dial",
+    "Tooltip": "Control Spotify volume with knob rotation."
+  },
+  "com.ulanzi.ulanzistudio.spotify.scroll": {
+    "Name": "Spotify Playlist Scroll Dial",
+    "Tooltip": "Scroll through playlists with knob rotation."
+  }
+}
+

@@ -1,6 +1,9 @@
+import { secureHandler, allowedRequest, readJson } from "../shared/local-api.mjs";
+import { stateDigest } from "../shared/plugin-runtime.mjs";
 import { createServer } from "node:http";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { WebSocketServer } from "ws";
 import { CodexCdpClient } from "./codex-cdp.mjs";
 import { decodeThreadPathSegment } from "./thread-key.mjs";
 
@@ -17,11 +20,37 @@ let cached = {
   slots: Array.from({ length: 6 }, (_, id) => ({
     id, threadKey: null, title: null, status: "off", selected: false
   })),
+  activeTasks: [],
+  lastTask: null,
   error: "Waiting for Codex",
   updatedAt: Date.now()
 };
+let rememberedLastTask = null;
 let refreshPromise = null;
 let nextReconnectAt = 0;
+let lastBroadcastDigest = "";
+
+const wss = new WebSocketServer({ noServer: true });
+const wsClients = new Set();
+
+function broadcastState() {
+  const digest = stateDigest(cached);
+  if (digest === lastBroadcastDigest && wsClients.size > 0) return;
+  lastBroadcastDigest = digest;
+  const payload = JSON.stringify(cached);
+  for (const ws of wsClients) {
+    if (ws.readyState === 1) { // WebSocket.OPEN
+      try { ws.send(payload); } catch {}
+    }
+  }
+}
+
+wss.on("connection", (ws) => {
+  wsClients.add(ws);
+  try { ws.send(JSON.stringify(cached)); } catch {}
+  ws.on("close", () => wsClients.delete(ws));
+  ws.on("error", () => wsClients.delete(ws));
+});
 
 async function focusCodex() {
   await execFileAsync("/usr/bin/open", ["-b", "com.openai.codex"], {
@@ -35,10 +64,25 @@ async function refresh(force = false) {
   refreshPromise = (async () => {
     try {
       const snapshot = await client.snapshot();
-      cached = { connected: true, ...snapshot, error: null, updatedAt: Date.now() };
+      if (Array.isArray(snapshot.activeTasks) && snapshot.activeTasks.length > 0) {
+        rememberedLastTask = snapshot.activeTasks[0];
+      } else if (snapshot.lastTask) {
+        rememberedLastTask = snapshot.lastTask;
+      }
+      cached = {
+        connected: true,
+        ...snapshot,
+        lastTask: rememberedLastTask || snapshot.lastTask || null,
+        error: null,
+        updatedAt: Date.now()
+      };
       nextReconnectAt = 0;
+      broadcastState();
     } catch (error) {
-      cached = { ...cached, connected: false, error: error.message, updatedAt: Date.now() };
+      if (cached.connected !== false || cached.error !== error.message) {
+        cached = { ...cached, connected: false, error: error.message, updatedAt: Date.now() };
+        broadcastState();
+      }
       nextReconnectAt = Date.now() + 2000;
     }
   })();
@@ -52,14 +96,14 @@ async function refresh(force = false) {
 function json(response, status, body) {
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "no-store",
-    "Access-Control-Allow-Origin": "http://127.0.0.1"
+    "Cache-Control": "no-store"
   });
   response.end(`${JSON.stringify(body)}\n`);
 }
 
-const server = createServer(async (request, response) => {
+const server = createServer(secureHandler("codex", PORT, async (request, response) => {
   const url = new URL(request.url || "/", `http://${HOST}:${PORT}`);
+  const body = request.method === "POST" ? await readJson(request) : {};
   if (request.method === "GET" && url.pathname === "/health") {
     await refresh(true);
     return json(response, 200, { ok: true, codexConnected: cached.connected, updatedAt: cached.updatedAt });
@@ -111,21 +155,32 @@ const server = createServer(async (request, response) => {
     }
   }
   const action = request.method === "POST" && url.pathname.match(
-    /^\/action\/(fast|approve|reject|pin|new|fork|mic|steer|submit)\/(down|up)$/
+    /^\/action\/(fast|approve|reject|pin|new|fork|mic|steer|submit|stop|model|reasoning|goal|subagents|plan)\/(down|up)$/
   );
   if (action) {
     try {
       if (action[1] === "steer") {
         if (action[2] === "down") {
           await focusCodex();
-          await client.dispatchComposerSteer();
+          await client.dispatchComposerSteer(body.threadId ?? null);
         }
         return json(response, 200, { ok: true });
       }
-      await client.dispatchNamedAction(action[1], action[2] === "down");
+      await client.dispatchNamedAction(action[1], action[2] === "down", body.threadId ?? null);
       return json(response, 200, { ok: true, bridge: true });
     } catch (error) {
       return json(response, 503, { ok: false, error: error.message });
+    }
+  }
+  if (request.method === "POST" && url.pathname === "/prompt") {
+    try {
+      const { text } = body;
+      if (typeof text !== "string" || !text.trim() || text.length > 16000) throw new Error("Prompt must contain 1–16000 characters");
+      await focusCodex();
+      await client.submitPrompt(text, body.threadId ?? null);
+      return json(response, 200, { ok: true });
+    } catch (error) {
+      return json(response, 500, { ok: false, error: error.message });
     }
   }
   const joystick = request.method === "POST" && url.pathname.match(
@@ -133,13 +188,25 @@ const server = createServer(async (request, response) => {
   );
   if (joystick) {
     try {
-      await client.dispatchJoystick(joystick[1], joystick[2] === "down" ? 1 : 0);
+      await client.dispatchJoystick(joystick[1], joystick[2] === "down" ? 1 : 0, body.threadId ?? null);
       return json(response, 200, { ok: true });
     } catch (error) {
       return json(response, 503, { ok: false, error: error.message });
     }
   }
   return json(response, 404, { ok: false, error: "Not found" });
+}));
+
+server.on("upgrade", (request, socket, head) => {
+  if (!allowedRequest(request, "codex", PORT)) { socket.destroy(); return; }
+  const { pathname } = new URL(request.url || "/", `http://${HOST}:${PORT}`);
+  if (pathname === "/events" || pathname === "/ws") {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit("connection", ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
 });
 
 server.listen(PORT, HOST, () => {

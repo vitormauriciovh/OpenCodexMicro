@@ -308,7 +308,7 @@ var require_permessage_deflate = __commonJS({
       acceptAsServer(offers) {
         const opts = this._options;
         const accepted = offers.find((params) => {
-          if (opts.serverNoContextTakeover === false && params.server_no_context_takeover || params.server_max_window_bits && (opts.serverMaxWindowBits === false || typeof opts.serverMaxWindowBits === "number" && opts.serverMaxWindowBits > params.server_max_window_bits) || typeof opts.clientMaxWindowBits === "number" && (typeof params.client_max_window_bits === "number" ? opts.clientMaxWindowBits > params.client_max_window_bits : !params.client_max_window_bits)) {
+          if (opts.serverNoContextTakeover === false && params.server_no_context_takeover || params.server_max_window_bits && (opts.serverMaxWindowBits === false || typeof opts.serverMaxWindowBits === "number" && opts.serverMaxWindowBits > params.server_max_window_bits) || typeof opts.clientMaxWindowBits === "number" && !params.client_max_window_bits) {
             return false;
           }
           return true;
@@ -2270,7 +2270,7 @@ var require_websocket = __commonJS({
     var http = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes, createHash } = __require("crypto");
+    var { randomBytes: randomBytes2, createHash } = __require("crypto");
     var { Duplex, Readable } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -2808,7 +2808,7 @@ var require_websocket = __commonJS({
         }
       }
       const defaultPort = isSecure ? 443 : 80;
-      const key = randomBytes(16).toString("base64");
+      const key = randomBytes2(16).toString("base64");
       const request = isSecure ? https.request : http.request;
       const protocolSet = /* @__PURE__ */ new Set();
       let perMessageDeflate;
@@ -3701,14 +3701,66 @@ var require_websocket_server = __commonJS({
   }
 });
 
-// ../../src/bridge/server.mjs
-import { createServer } from "node:http";
-import { execFile as execFile2 } from "node:child_process";
-import { promisify as promisify2 } from "node:util";
-
-// ../../src/bridge/codex-cdp.mjs
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+// ../../src/shared/local-api.mjs
+import { mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { randomBytes, timingSafeEqual } from "node:crypto";
+function localHeaders(component) {
+  if (!/^[a-z-]+$/.test(component)) throw new Error("Invalid component");
+  const root = process.env.ULANZI_AUTH_DIR || join(homedir(), ".local/share/ulanzi-bridges");
+  mkdirSync(root, { recursive: true, mode: 448 });
+  chmodSync(root, 448);
+  const file = join(root, `${component}.token`);
+  try {
+    writeFileSync(file, randomBytes(32).toString("hex"), { flag: "wx", mode: 384 });
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+  }
+  chmodSync(file, 384);
+  const token = readFileSync(file, "utf8").trim();
+  if (!/^[a-f0-9]{64}$/.test(token)) throw new Error("Invalid local bridge credential; remove the component token file to regenerate it");
+  return { Authorization: `Bearer ${token}` };
+}
+function allowedRequest(request, component, port, { oauthCallback = false } = {}) {
+  if (![`127.0.0.1:${port}`, `localhost:${port}`, `[::1]:${port}`].includes(request.headers.host)) return false;
+  if (oauthCallback && request.method === "GET" && new URL(request.url, "http://localhost").pathname === "/callback") return true;
+  if (request.headers.origin || request.headers["sec-fetch-site"] && request.headers["sec-fetch-site"] !== "none") return false;
+  const actual = Buffer.from(request.headers.authorization || "");
+  const expected = Buffer.from(localHeaders(component).Authorization);
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+function json(response, status, payload) {
+  response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+  response.end(JSON.stringify(payload));
+}
+function secureHandler(component, port, handler, options = {}) {
+  return async (request, response) => {
+    try {
+      if (!allowedRequest(request, component, port, options)) return json(response, 403, { ok: false, error: "Unauthorized local client" });
+      await handler(request, response);
+    } catch (error) {
+      if (!response.headersSent) json(response, error.status || 500, { ok: false, error: error.message });
+      else response.end();
+    }
+  };
+}
+async function readJson(request, limit = 65536) {
+  let size = 0;
+  const chunks = [];
+  for await (const chunk of request) {
+    size += Buffer.byteLength(chunk);
+    if (size > limit) throw Object.assign(new Error("Request body too large"), { status: 413 });
+    chunks.push(Buffer.from(chunk));
+  }
+  try {
+    const value = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error();
+    return value;
+  } catch {
+    throw Object.assign(new Error("Expected a JSON object"), { status: 400 });
+  }
+}
 
 // ../../node_modules/ws/wrapper.mjs
 var import_stream = __toESM(require_stream(), 1);
@@ -3720,6 +3772,102 @@ var import_subprotocol = __toESM(require_subprotocol(), 1);
 var import_websocket = __toESM(require_websocket(), 1);
 var import_websocket_server = __toESM(require_websocket_server(), 1);
 var wrapper_default = import_websocket.default;
+
+// ../../src/shared/plugin-runtime.mjs
+function stateDigest(state) {
+  const { updatedAt, bridgeSnapshot, ...publicState } = state;
+  return JSON.stringify(publicState, (key, value) => key === "observedAt" ? void 0 : value);
+}
+
+// ../../src/bridge/server.mjs
+import { createServer } from "node:http";
+import { execFile as execFile2 } from "node:child_process";
+import { promisify as promisify2 } from "node:util";
+
+// ../../src/shared/token-metrics.mjs
+function contextPercent(usage) {
+  if (!usage || typeof usage !== "object") return null;
+  const direct = usage.usedPercent ?? usage.used_percent ?? usage.percentage ?? usage.percent;
+  if (Number.isFinite(direct)) return Math.min(100, Math.max(0, Math.round(direct)));
+  const window = usage.modelContextWindow ?? usage.model_context_window ?? usage.contextWindow ?? usage.context_window;
+  let tokens = usage.contextTokens ?? usage.context_tokens ?? usage.last?.totalTokens ?? usage.last?.total_tokens;
+  if (tokens == null) {
+    const input = usage.last?.inputTokens ?? usage.last?.input_tokens;
+    const output = usage.last?.outputTokens ?? usage.last?.output_tokens;
+    if (Number.isFinite(input) && Number.isFinite(output)) tokens = input + output;
+  }
+  if (!Number.isFinite(window) || window <= 0 || !Number.isFinite(tokens) || tokens < 0) return null;
+  return Math.min(100, Math.max(0, Math.round(tokens / window * 100)));
+}
+
+// ../../src/bridge/model-picker.mjs
+function readNativeModelPicker(document) {
+  const triggers = [...document.querySelectorAll("button[data-codex-intelligence-trigger]")].filter((button) => button.offsetParent !== null && !button.closest('[inert], [hidden], [aria-hidden="true"], [role="dialog"], [aria-modal="true"]'));
+  if (triggers.length !== 1) throw new Error("No unique model selector is available for this task");
+  const trigger = triggers[0];
+  const key = Object.getOwnPropertyNames(trigger).find((key2) => key2.startsWith("__reactFiber$"));
+  let root = key && trigger[key];
+  while (root?.return) root = root.return;
+  const queue = [root?.stateNode?.current];
+  const seen = /* @__PURE__ */ new Set();
+  let mounted = null;
+  while (queue.length) {
+    const node = queue.pop();
+    if (!node || seen.has(node)) continue;
+    seen.add(node);
+    if (node.stateNode === trigger) {
+      mounted = node;
+      break;
+    }
+    queue.push(node.child, node.sibling);
+  }
+  for (let node = mounted; node; node = node.return) {
+    const props = node.memoizedProps;
+    if (Array.isArray(props?.models) && Array.isArray(props?.modelOptions) && typeof props.onSelectModel === "function" && typeof props.onSelectReasoningEffort === "function") {
+      return { trigger, props };
+    }
+  }
+  throw new Error("Native model picker is unavailable in this Codex version");
+}
+function cycleNativeModelPicker(picker, action) {
+  const { trigger, props } = picker;
+  if (trigger.disabled || trigger.getAttribute("aria-disabled") === "true" || props.disabled || props.daybreak?.disabled || props.daybreak?.isSaving) {
+    throw new Error("Model settings are currently disabled");
+  }
+  const effortIds = /* @__PURE__ */ new Set(["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]);
+  const effortsFor = (model) => [...new Set((model?.supportedReasoningEfforts || []).map((option) => option.reasoningEffort).filter((effort2) => effortIds.has(effort2)))];
+  if (action === "model") {
+    if (props.modelOptionsDisabled || props.modelLabelOnly) throw new Error("Model selection is locked");
+    const models = props.modelOptions.filter((option) => option.disabledReason == null && option.model?.model !== props.lockedModelSlug && typeof option.model?.model === "string");
+    const index2 = models.findIndex((option) => option.model.model === props.model);
+    if (index2 < 0) throw new Error("The current model is not in the available model list");
+    if (models.length < 2) throw new Error("No other model is available");
+    const next = models[(index2 + 1) % models.length].model;
+    const efforts2 = effortsFor(next);
+    const effort2 = efforts2.includes(props.reasoningEffort) ? props.reasoningEffort : next.defaultReasoningEffort;
+    if (!efforts2.includes(effort2)) throw new Error("The next model has no supported reasoning effort");
+    if (props.onBeforeSelectModel?.(next.model) === false) throw new Error("Codex did not allow this model selection");
+    props.onSelectModel(next.model, effort2);
+    props.onSelectModelOption?.();
+    return { model: next.model, reasoningEffort: effort2 };
+  }
+  if (action !== "reasoning") throw new Error("Unsupported model picker action");
+  if (props.reasoningEffortDisabled || props.showReasoningEffortControls === false) {
+    throw new Error("Reasoning effort selection is disabled");
+  }
+  const current = props.models.find((model) => model.model === props.model);
+  const efforts = effortsFor(current);
+  const index = efforts.indexOf(props.reasoningEffort);
+  if (index < 0) throw new Error("The current reasoning effort is unavailable");
+  if (efforts.length < 2) throw new Error("No other reasoning effort is available");
+  const effort = efforts[(index + 1) % efforts.length];
+  props.onSelectReasoningEffort(effort);
+  return { model: props.model, reasoningEffort: effort };
+}
+
+// ../../src/bridge/codex-cdp.mjs
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
 // ../../src/bridge/thread-key.mjs
 var UUID_PATTERN = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
@@ -3747,6 +3895,61 @@ function localThreadKey(value) {
   return `local:${validateThreadId(value)}`;
 }
 
+// ../../src/bridge/task-attention.mjs
+function readNativeTaskAttention(source, slots) {
+  const threadIds = /* @__PURE__ */ new Map();
+  const asyncQuestionThreads = /* @__PURE__ */ new Set();
+  const nodes = /* @__PURE__ */ new Set([source?.node, ...source?.contextMap?.values?.() ?? []]);
+  const threadKeys = slots.map((slot) => slot?.threadKey).filter((key) => typeof key === "string");
+  for (const node of nodes) {
+    if (!(node?.familyBindings instanceof Map)) continue;
+    const read = (binding) => {
+      const signal = binding?.value;
+      if (typeof signal?.get === "function") return signal.get();
+      if (typeof signal?.resolve === "function" && node.store?.get) {
+        return node.store.get(signal.resolve(node, source.contextMap));
+      }
+      return null;
+    };
+    for (const members of node.familyBindings.values()) {
+      if (!(members instanceof Map)) continue;
+      try {
+        const groups = read(members.get("local"));
+        if (groups instanceof Map) {
+          for (const [threadId, group] of groups) {
+            const key = group?.selectedQuestionKey;
+            if (typeof threadId !== "string" || key?.hostId !== "local" || key.threadId !== threadId || !Array.isArray(group.questionIds) || !group.questionIds.includes(key.itemId)) continue;
+            let item;
+            try {
+              item = JSON.parse(key.itemId);
+            } catch {
+              continue;
+            }
+            if (Array.isArray(item) && item[0] === "request_user_input_async") asyncQuestionThreads.add(threadId);
+          }
+        }
+      } catch {
+      }
+      for (const threadKey of threadKeys) {
+        try {
+          const task = read(members.get(threadKey));
+          if (task?.kind !== "local" || task.key !== threadKey || task.conversation?.hostId !== "local") continue;
+          if (typeof task.conversation.id === "string") threadIds.set(threadKey, task.conversation.id);
+        } catch {
+        }
+      }
+    }
+  }
+  return { threadIds, asyncQuestionThreads };
+}
+function taskAttentionStatus(status, hasAsyncQuestion) {
+  const value = String(status ?? "idle").toLowerCase();
+  if (!hasAsyncQuestion || ["approval", "awaiting-approval", "error", "failed", "failure", "off"].includes(value)) {
+    return status ?? "idle";
+  }
+  return "awaiting-response";
+}
+
 // ../../src/bridge/codex-cdp.mjs
 var execFileAsync = promisify(execFile);
 var USAGE_REFRESH_MS = Math.max(
@@ -3765,7 +3968,7 @@ var MICRO_ACTION_KEYS = Object.freeze({
   mic: "ACT10",
   submit: "ACT12"
 });
-var RENDERER_ACTIONS = /* @__PURE__ */ new Set(["pin", "new"]);
+var RENDERER_ACTIONS = /* @__PURE__ */ new Set(["pin", "new", "approve", "reject", "stop", "model", "reasoning", "goal", "subagents", "plan"]);
 var PIN_ACTION_LABELS = Object.freeze([
   "Pin chat",
   "Unpin chat",
@@ -3791,8 +3994,103 @@ var STEER_ACTION_LABELS = Object.freeze([
   "\u8ABF\u6574\u65B9\u5411",
   "\u5F15\u5C0E"
 ]);
-function rendererActionExpression(action) {
+var APPROVE_ACTION_LABELS = Object.freeze([
+  "Approve",
+  "Allow",
+  "Run",
+  "Accept",
+  "Confirm",
+  "Yes",
+  "Proceed",
+  "Aprovar",
+  "Permitir",
+  "Executar",
+  "Aceitar",
+  "Confirmar",
+  "Sim",
+  "Prosseguir",
+  "\u6279\u51C6",
+  "\u5141\u8BB8",
+  "\u8FD0\u884C",
+  "\u63A5\u53D7",
+  "\u786E\u8BA4",
+  "\u662F",
+  "\u7EE7\u7EED",
+  "\u627F\u8A8D",
+  "\u8A31\u53EF",
+  "\u5B9F\u884C",
+  "\u540C\u610F",
+  "\u78BA\u8A8D",
+  "\u306F\u3044",
+  "\u7D9A\u884C",
+  "Genehmigen",
+  "Zulassen",
+  "Ausf\xFChren",
+  "Best\xE4tigen"
+]);
+var REJECT_ACTION_LABELS = Object.freeze([
+  "Reject",
+  "Deny",
+  "Cancel",
+  "Decline",
+  "No",
+  "Dismiss",
+  "Stop",
+  "Rejeitar",
+  "Negar",
+  "Cancelar",
+  "Recusar",
+  "N\xE3o",
+  "Dispensar",
+  "Parar",
+  "\u62D2\u7EDD",
+  "\u5426\u8BA4",
+  "\u53D6\u6D88",
+  "\u5426",
+  "\u5173\u95ED",
+  "\u505C\u6B62",
+  "\u62D2\u5426",
+  "\u5374\u4E0B",
+  "\u30AD\u30E3\u30F3\u30BB\u30EB",
+  "\u8F9E\u9000",
+  "\u3044\u3044\u3048",
+  "\u9589\u3058\u308B",
+  "Ablehnen",
+  "Verweigern",
+  "Abbrechen"
+]);
+function threadGuardExpression(threadId) {
+  return `const expectedThread = ${JSON.stringify(threadId)};
+    if (expectedThread !== undefined) {
+      const actualThread = document.querySelector('[data-above-composer-conversation-id]')?.getAttribute('data-above-composer-conversation-id')
+        ?? document.querySelector('[data-app-action-sidebar-thread-id][data-app-action-sidebar-thread-active=true]')?.getAttribute('data-app-action-sidebar-thread-id') ?? null;
+      const normalizeThread = value => value == null ? null : String(value).replace(/^local:/, '');
+      if (normalizeThread(actualThread) !== normalizeThread(expectedThread)) throw new Error('Codex task changed; refresh the deck and try again');
+    }`;
+}
+function findNativePlanControl(document) {
+  const labels = /* @__PURE__ */ new Set(["Open plan in side panel", "Abrir plano no painel lateral", "Plan im Seitenbereich \xF6ffnen", "Abrir plan en el panel lateral", "\u30B5\u30A4\u30C9\u30D1\u30CD\u30EB\u3067\u30D7\u30E9\u30F3\u3092\u958B\u304F", "\uC0AC\uC774\uB4DC \uD328\uB110\uC5D0\uC11C \uACC4\uD68D \uC5F4\uAE30", "\u5728\u4FA7\u8FB9\u9762\u677F\u4E2D\u6253\u5F00\u5957\u9910", "\u5728\u5074\u908A\u9762\u677F\u4E2D\u958B\u555F\u8A08\u5283", "\u5728\u5074\u908A\u9762\u677F\u958B\u555F\u65B9\u6848"]);
+  const matches = [...document.querySelectorAll("button[aria-label]")].filter((button) => button.offsetParent !== null && !button.disabled && button.getAttribute("aria-disabled") !== "true" && !button.closest?.('[role="dialog"], [aria-modal="true"], [inert], [aria-hidden="true"]') && labels.has(button.getAttribute("aria-label")));
+  return matches.length === 1 ? matches[0] : null;
+}
+function rendererActionExpression(action, threadId) {
+  if (action === "model" || action === "reasoning") {
+    return `(async () => {
+      const guard = () => { ${threadGuardExpression(threadId)} };
+      const readPicker = () => (${readNativeModelPicker.toString()})(document);
+      guard();
+      const expected = (${cycleNativeModelPicker.toString()})(readPicker(), ${JSON.stringify(action)});
+      for (let attempt = 0; attempt < 40; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        guard();
+        const { props } = readPicker();
+        if (props.model === expected.model && props.reasoningEffort === expected.reasoningEffort) return true;
+      }
+      throw new Error('Codex did not confirm the model settings change');
+    })()`;
+  }
   return `(() => {
+    ${threadGuardExpression(threadId)}
     const action = ${JSON.stringify(action)};
     const visible = (element) => element && element.offsetParent !== null;
     let target = null;
@@ -3827,14 +4125,55 @@ function rendererActionExpression(action) {
           (button.innerText || "").trim()
         ].some((label) => labels.has(label)));
       }
+    } else if (action === "approve") {
+      const labels = new Set(${JSON.stringify(APPROVE_ACTION_LABELS)});
+      const buttons = [...document.querySelectorAll("button, [role=button]")].filter(visible);
+      target = buttons.find((button) => [
+        button.getAttribute("aria-label"),
+        button.getAttribute("title"),
+        (button.innerText || "").trim()
+      ].some((label) => labels.has(label))) ?? buttons.find((button) =>
+        button.matches?.('[data-testid*="approve"],[data-testid*="allow"],[data-testid*="run"]')
+      );
+    } else if (action === "reject") {
+      const stopLabels = ["Stop", "Stop generating", "Cancel", "Parar", "Cancelar", "Interromper", "\u505C\u6B62", "\u505C\u6B62\u751F\u6210", "\u53D6\u6D88", "\u4E2D\u6B62", "Abbrechen", "Stoppen"];
+      const rejectLabels = new Set(${JSON.stringify(REJECT_ACTION_LABELS)});
+      const buttons = [...document.querySelectorAll("button, [role=button]")].filter(visible);
+      target = buttons.find((button) => {
+        const aria = button.getAttribute("aria-label") || "";
+        const title = button.getAttribute("title") || "";
+        const text = (button.innerText || "").trim();
+        return stopLabels.some((l) => aria.includes(l) || title.includes(l) || text.includes(l)) ||
+               rejectLabels.has(aria) || rejectLabels.has(title) || rejectLabels.has(text);
+      }) ?? buttons.find((button) =>
+        button.matches?.('[data-testid*="stop"],[data-testid*="cancel"],[data-testid*="reject"],[data-testid*="deny"]')
+      );
+    } else if (action === "stop") {
+      const labels = new Set(["Stop", "Stop generating", "Parar", "Interromper", "\u505C\u6B62", "\u505C\u6B62\u751F\u6210", "\u4E2D\u6B62", "Stoppen"]);
+      const matches = [...document.querySelectorAll("button, [role=button]")].filter(button =>
+        visible(button) && !button.disabled && button.getAttribute("aria-disabled") !== "true" &&
+        !button.closest?.('[role="dialog"], [aria-modal="true"]') &&
+        [button.getAttribute("aria-label"), button.getAttribute("title"), (button.innerText || "").trim()].some(label => labels.has(label))
+      );
+      if (matches.length !== 1) throw new Error("No unique stop control is available for this task");
+      target = matches[0];
+    } else if (action === "plan") {
+      target = (${findNativePlanControl.toString()})(document);
+      if (!target) throw new Error("No unique plan control is available for this task");
+    } else if (action === "goal" || action === "subagents") {
+      const labels = action === "goal" ? ["Pause goal", "Resume goal", "Pausar objetivo", "Retomar objetivo"] : ["Open subagents", "Abrir subagentes"];
+      const matches = [...document.querySelectorAll("button")].filter(button => visible(button) && !button.disabled && labels.includes(button.getAttribute("aria-label")));
+      if (matches.length !== 1) throw new Error("No unique " + action + " control is available for this task");
+      target = matches[0];
     }
     if (!target) return false;
     target.click();
     return true;
   })()`;
 }
-function composerSteerExpression() {
+function composerSteerExpression(threadId) {
   return `(() => {
+    ${threadGuardExpression(threadId)}
     const editor = [...document.querySelectorAll('[contenteditable="true"][role="textbox"]')]
       .find((element) => element.offsetParent !== null);
     if (!editor) throw new Error("Codex composer is not available");
@@ -3850,6 +4189,18 @@ function composerSteerExpression() {
       );
     if (!steer) return false;
     steer.click();
+    return true;
+  })()`;
+}
+function composerPromptExpression(text, threadId) {
+  return `(() => {
+    ${threadGuardExpression(threadId)}
+    const editor = [...document.querySelectorAll('[contenteditable="true"][role="textbox"]')]
+      .find((element) => element.offsetParent !== null);
+    if (!editor) throw new Error("Codex composer is not available");
+    if (editor.textContent?.trim()) throw new Error("Composer already contains a draft; send or clear it in Codex first");
+    editor.focus();
+    if (!document.execCommand("insertText", false, ${JSON.stringify(text)})) throw new Error("Could not insert prompt");
     return true;
   })()`;
 }
@@ -4024,6 +4375,26 @@ var SNAPSHOT_EXPRESSION = `(async () => {
       const data = query?.state?.data;
       const rateLimit = data?.rate_limit;
       if (!rateLimit || typeof rateLimit !== "object") continue;
+      const parseResetTimestamp = (win, nowTime) => {
+        if (!win || typeof win !== "object") return null;
+        const raw = win.reset_at ?? win.resets_at ?? win.reset_time ?? win.resetAt ?? win.resetsAt;
+        if (raw != null) {
+          if (typeof raw === "number" && Number.isFinite(raw)) {
+            return raw > 1e11 ? raw : raw * 1000;
+          }
+          if (typeof raw === "string") {
+            const parsed = Date.parse(raw);
+            if (Number.isFinite(parsed)) return parsed;
+            const num = Number(raw);
+            if (Number.isFinite(num)) return num > 1e11 ? num : num * 1000;
+          }
+        }
+        const relSec = Number(win.reset_after_seconds ?? win.reset_in_seconds ?? win.resets_in ?? win.reset_in ?? win.reset_after);
+        if (Number.isFinite(relSec) && relSec > 0) {
+          return nowTime + relSec * 1000;
+        }
+        return null;
+      };
       const normalizeWindow = (window, role) => {
         if (!window || typeof window !== "object") return null;
         const usedPercent = Number(window.used_percent);
@@ -4034,12 +4405,15 @@ var SNAPSHOT_EXPRESSION = `(async () => {
           : minutes != null && Math.abs(minutes - 10080) <= 1 ? "weekly"
             : "other";
         const used = Math.min(100, Math.max(0, usedPercent));
+        const parsedReset = parseResetTimestamp(window, now);
+        const defaultWindowMs = kind === "weekly" ? 7 * 86400 * 1000 : 5 * 3600 * 1000;
+        const fallbackReset = (updatedAt || now) + defaultWindowMs;
         return {
           id: kind === "other" ? role : kind,
           kind,
           usedPercent: used,
           remainingPercent: 100 - used,
-          resetsAt: Number(window.reset_at) || null
+          resetsAt: parsedReset || fallbackReset
         };
       };
       usage = {
@@ -4052,6 +4426,46 @@ var SNAPSHOT_EXPRESSION = `(async () => {
       break;
     } catch {}
   }
+  const conversationsMeta = new Map();
+  for (const queryClient of queryClients) {
+    try {
+      const queries = queryClient.getQueryCache().getAll();
+      for (const query of queries) {
+        if (JSON.stringify(query.queryKey).includes("recent-conversations-meta")) {
+          const items = query.state?.data?.items || query.state?.data || [];
+          const list = Array.isArray(items) ? items : (items.conversations || []);
+          for (const item of list) {
+            if (item && item.id && !conversationsMeta.has(item.id)) {
+              conversationsMeta.set(item.id, item);
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  const isWorkTask = (item) => {
+    if (!item) return false;
+    const originator = String(item.originator || "").toLowerCase();
+    const serviceName = String(item.serviceName || "").toLowerCase();
+    return originator.includes("work") || serviceName.includes("work");
+  };
+
+  const formatModel = (raw) => {
+    if (!raw) return "DEFAULT";
+    const str = String(raw).trim();
+    if (/luna/i.test(str)) return /5.6/i.test(str) ? "5.6 LUNA" : "LUNA";
+    if (/terra/i.test(str)) return /5.6/i.test(str) ? "5.6 TERRA" : "TERRA";
+    if (/daybreak/i.test(str)) return "DAYBREAK";
+    if (/gpt-5.5/i.test(str)) return "GPT-5.5";
+    if (/gpt-5/i.test(str)) return "GPT-5";
+    if (/gpt-4o/i.test(str)) return "GPT-4o";
+    if (/o1/i.test(str)) return "o1";
+    if (/o3/i.test(str)) return "o3";
+    if (/claude/i.test(str)) return "CLAUDE";
+    return str.replace(/^gpt-/i, "").replace(/-latest$/i, "").toUpperCase();
+  };
+
   const active = document.querySelector("[data-app-action-sidebar-thread-id][data-app-action-sidebar-thread-active=true]")
     ?? document.querySelector("[data-app-action-sidebar-thread-id][aria-current=page]");
   const activeThreadKey = document.querySelector("[data-above-composer-conversation-id]")
@@ -4059,17 +4473,136 @@ var SNAPSHOT_EXPRESSION = `(async () => {
     ?? active?.getAttribute("data-app-action-sidebar-thread-id")
     ?? null;
   const normalizeThreadKey = (value) => String(value ?? "").replace(/^local:/, "");
-  return {
-    activeThreadKey,
-    slots: found.map((slot) => ({
+
+  const computeCtxPct = ${contextPercent.toString()};
+  const { threadIds, asyncQuestionThreads } = (${readNativeTaskAttention.toString()})(source, found);
+  const attentionStatus = ${taskAttentionStatus.toString()};
+
+  const enrichedSlots = found.map((slot) => {
+    const threadId = threadIds.get(slot.threadKey) ?? normalizeThreadKey(slot.threadKey);
+    const meta = threadId ? conversationsMeta.get(threadId) : null;
+    const rawModel = meta?.latestModel || meta?.latestThreadSettings?.model || meta?.previousTurnModel || null;
+    const isSlotRunning = ["working", "thinking", "running", "in_progress"].includes(String(slot.status || "").toLowerCase());
+    const isMetaRunning = ["working", "thinking", "running", "in_progress"].includes(String(meta?.threadRuntimeStatus?.type || "").toLowerCase());
+    const running = isSlotRunning || isMetaRunning;
+    const taskType = isWorkTask(meta) ? "WORK" : "CODEX";
+    const model = formatModel(rawModel);
+    const tokenUsage = meta?.latestTokenUsageInfo || meta?.tokenUsageInfo || meta?.tokenUsage || null;
+    const ctxPct = computeCtxPct(tokenUsage);
+    return {
       id: slot.id,
       threadKey: slot.threadKey ?? null,
-      title: slot.title ?? slot.thread?.title ?? slot.task?.title ?? null,
-      status: slot.status ?? "idle",
+      threadId: threadId || null,
+      title: slot.title ?? slot.thread?.title ?? slot.task?.title ?? meta?.title ?? null,
+      status: attentionStatus(slot.status ?? meta?.threadRuntimeStatus?.type, asyncQuestionThreads.has(threadId)),
+      running,
+      taskType,
+      model,
+      rawModel,
+      tokenUsage,
+      ctxPct,
       selected: Boolean(slot.selected) || Boolean(
-        activeThreadKey && normalizeThreadKey(slot.threadKey) === normalizeThreadKey(activeThreadKey)
+        activeThreadKey && threadId === normalizeThreadKey(activeThreadKey)
       )
-    })),
+    };
+  });
+
+  const activeTasks = [];
+  const seenRunningKeys = new Set();
+  for (const slot of enrichedSlots) {
+    if (slot.running && slot.threadKey) {
+      activeTasks.push({
+        threadKey: slot.threadKey,
+        threadId: slot.threadId,
+        slot: slot.id,
+        title: slot.title,
+        status: slot.status,
+        taskType: slot.taskType,
+        model: slot.model,
+        rawModel: slot.rawModel,
+        tokenUsage: slot.tokenUsage,
+        ctxPct: slot.ctxPct
+      });
+      seenRunningKeys.add(slot.threadId);
+    }
+  }
+
+  for (const [id, meta] of conversationsMeta.entries()) {
+    if (!seenRunningKeys.has(id)) {
+      const isMetaRunning = ["working", "thinking", "running", "in_progress"].includes(String(meta?.threadRuntimeStatus?.type || "").toLowerCase());
+      if (isMetaRunning) {
+        const rawModel = meta?.latestModel || meta?.latestThreadSettings?.model || meta?.previousTurnModel || null;
+        const tokenUsage = meta?.latestTokenUsageInfo || meta?.tokenUsageInfo || meta?.tokenUsage || null;
+        activeTasks.push({
+          threadKey: "local:" + id,
+          threadId: id,
+          slot: null,
+          title: meta.title || "Untitled",
+          status: attentionStatus(meta.threadRuntimeStatus?.type || "working", asyncQuestionThreads.has(id)),
+          taskType: isWorkTask(meta) ? "WORK" : "CODEX",
+          model: formatModel(rawModel),
+          rawModel,
+          tokenUsage,
+          ctxPct: computeCtxPct(tokenUsage)
+        });
+        seenRunningKeys.add(id);
+      }
+    }
+  }
+
+  let lastTask = null;
+  if (activeTasks.length > 0) {
+    lastTask = activeTasks[0];
+  } else if (activeThreadKey && conversationsMeta.has(normalizeThreadKey(activeThreadKey))) {
+    const meta = conversationsMeta.get(normalizeThreadKey(activeThreadKey));
+    const rawModel = meta?.latestModel || meta?.latestThreadSettings?.model || meta?.previousTurnModel || null;
+    const tokenUsage = meta?.latestTokenUsageInfo || meta?.tokenUsageInfo || meta?.tokenUsage || null;
+    lastTask = {
+      threadKey: "local:" + meta.id,
+      threadId: meta.id,
+      slot: null,
+      title: meta.title,
+      status: attentionStatus(meta.threadRuntimeStatus?.type, asyncQuestionThreads.has(meta.id)),
+      taskType: isWorkTask(meta) ? "WORK" : "CODEX",
+      model: formatModel(rawModel),
+      rawModel,
+      tokenUsage,
+      ctxPct: computeCtxPct(tokenUsage)
+    };
+  } else if (enrichedSlots[0]?.threadKey) {
+    lastTask = enrichedSlots[0];
+  }
+
+  const activeMeta = (activeThreadKey && conversationsMeta.get(normalizeThreadKey(activeThreadKey))) || null;
+  const tokenUsage = activeMeta?.latestTokenUsageInfo || activeMeta?.tokenUsageInfo || activeMeta?.tokenUsage || null;
+  let modelPicker = null;
+  try { modelPicker = (${readNativeModelPicker.toString()})(document).props; } catch {}
+  
+  const detectLiveReasoningEffort = () => {
+    if (modelPicker?.reasoningEffort) return modelPicker.reasoningEffort;
+    const srEffort = document.querySelector("[class*='ModelPickerTriggerEffortLabel'] .sr-only")?.textContent?.trim()?.toLowerCase();
+    if (srEffort) return srEffort;
+    const activeEffortEl = document.querySelector("[data-reasoning-effort][style*='opacity: 1']")
+      ?? document.querySelector("[data-reasoning-effort]:not([style*='opacity: 0'])");
+    if (activeEffortEl) {
+      return activeEffortEl.getAttribute("data-reasoning-effort") || activeEffortEl.textContent?.trim()?.toLowerCase();
+    }
+    return activeMeta?.latestReasoningEffort || activeMeta?.reasoningEffort || null;
+  };
+  const reasoningEffort = detectLiveReasoningEffort();
+
+  return {
+    activeThreadKey,
+    planAvailable: Boolean((${findNativePlanControl.toString()})(document)),
+    model: modelPicker?.model || activeMeta?.latestModel || activeMeta?.latestThreadSettings?.model || activeMeta?.previousTurnModel || null,
+    goalState: [...document.querySelectorAll('button')].some(b => b.offsetParent !== null && ['Pause goal', 'Pausar objetivo'].includes(b.getAttribute('aria-label'))) ? 'active'
+      : [...document.querySelectorAll('button')].some(b => b.offsetParent !== null && ['Resume goal', 'Retomar objetivo'].includes(b.getAttribute('aria-label'))) ? 'paused' : null,
+    subagentsSummary: [...document.querySelectorAll('button')].find(b => b.offsetParent !== null && ['Open subagents', 'Abrir subagentes'].includes(b.getAttribute('aria-label')))?.innerText?.trim() || null,
+    slots: enrichedSlots,
+    activeTasks,
+    lastTask,
+    tokenUsage,
+    reasoningEffort,
     usage,
     bridgeSnapshot: {
       source: cacheHit ? "cache" : "discovery",
@@ -4113,6 +4646,7 @@ var CodexCdpClient = class {
   nextId = 0;
   pending = /* @__PURE__ */ new Map();
   lastSnapshot = null;
+  modelActionQueue = Promise.resolve();
   async connect() {
     if (this.socket?.readyState === wrapper_default.OPEN) return;
     const port = await discoverDebugPort();
@@ -4173,41 +4707,58 @@ var CodexCdpClient = class {
       event: { key: `AG0${slot}`, act, slot, threadKey }
     }, "codex-micro-hid-event");
   }
-  async dispatchAction(key, act) {
+  async dispatchAction(key, act, threadId) {
     return this.dispatchMicroMessage({
       type: "codex-micro-hid-event",
       event: { key, act, slot: null, threadKey: null }
-    }, "codex-micro-hid-event");
+    }, "codex-micro-hid-event", act === 1 ? threadId : void 0);
   }
-  async dispatchNamedAction(action, pressed) {
+  async dispatchNamedAction(action, pressed, threadId) {
     const key = MICRO_ACTION_KEYS[action];
-    if (key) return this.dispatchAction(key, pressed ? 1 : 0);
+    if (key) {
+      return this.dispatchAction(key, pressed ? 1 : 0, threadId);
+    }
     if (!RENDERER_ACTIONS.has(action)) {
       throw new Error(`Unsupported Codex bridge action: ${action}`);
     }
     if (!pressed) return true;
-    return this.dispatchRendererAction(action);
+    if (action === "model" || action === "reasoning") {
+      const pending = this.modelActionQueue.catch(() => {
+      }).then(() => this.dispatchRendererAction(action, threadId));
+      this.modelActionQueue = pending;
+      return pending;
+    }
+    return this.dispatchRendererAction(action, threadId);
   }
-  async dispatchRendererAction(action) {
+  async dispatchRendererAction(action, threadId) {
     await this.connect();
-    const invoked = await this.evaluate(rendererActionExpression(action));
+    const invoked = await this.evaluate(rendererActionExpression(action, threadId));
     if (!invoked) throw new Error(`Codex ${action} action is not available`);
     return true;
   }
-  async dispatchComposerSteer() {
+  async dispatchComposerSteer(threadId) {
     await this.connect();
-    const clicked = await this.evaluate(composerSteerExpression());
+    const clicked = await this.evaluate(composerSteerExpression(threadId));
     if (!clicked) throw new Error("Codex Steer action is not available");
   }
-  async dispatchJoystick(direction, distance) {
+  async submitPrompt(text, threadId) {
+    await this.connect();
+    await this.evaluate(composerPromptExpression(text, threadId));
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    await this.dispatchAction(MICRO_ACTION_KEYS.submit, 1, threadId);
+    await new Promise((resolve) => setTimeout(resolve, 35));
+    await this.dispatchAction(MICRO_ACTION_KEYS.submit, 0);
+    return true;
+  }
+  async dispatchJoystick(direction, distance, threadId) {
     const angle = { up: 0.75, right: 0, down: 0.25, left: 0.5 }[direction];
     if (angle === void 0) throw new Error(`Unknown joystick direction: ${direction}`);
     return this.dispatchMicroMessage({
       type: "codex-micro-joystick-event",
       event: { angle, distance }
-    }, "codex-micro-joystick-event");
+    }, "codex-micro-joystick-event", distance ? threadId : void 0);
   }
-  async dispatchMicroMessage(message, requiredHandler) {
+  async dispatchMicroMessage(message, requiredHandler, threadId) {
     return this.evaluate(`(async () => {
       const cacheKey = Symbol.for("codex-keyboard-micro-bus");
       const isMicroBus = (candidate) =>
@@ -4243,11 +4794,12 @@ var CodexCdpClient = class {
       const dispatch = bus.dispatchHostMessage ?? bus.dispatchMessage;
       if ((bus.handlers.get(${JSON.stringify(requiredHandler)})?.size ?? 0) === 0) {
         dispatch.call(bus, ${JSON.stringify(DEVICE_STATE)});
+        for (let attempt = 0; attempt < 3 && !(bus.handlers.get(${JSON.stringify(requiredHandler)})?.size > 0); attempt++) {
+          await new Promise(resolve => setTimeout(resolve, 35));
+        }
       }
-      // Never put Micro handler discovery on the physical key hot path. The
-      // native event is dispatched immediately; clickAgent keeps a DOM
-      // activation fallback in the background in case Codex has not installed
-      // its handler yet.
+      if (!(bus.handlers.get(${JSON.stringify(requiredHandler)})?.size > 0)) throw new Error("Codex has no handler for this control");
+      ${threadGuardExpression(threadId)}
       dispatch.call(bus, ${JSON.stringify(message)});
       return true;
     })()`);
@@ -4347,11 +4899,40 @@ var cached = {
     status: "off",
     selected: false
   })),
+  activeTasks: [],
+  lastTask: null,
   error: "Waiting for Codex",
   updatedAt: Date.now()
 };
+var rememberedLastTask = null;
 var refreshPromise = null;
 var nextReconnectAt = 0;
+var lastBroadcastDigest = "";
+var wss = new import_websocket_server.default({ noServer: true });
+var wsClients = /* @__PURE__ */ new Set();
+function broadcastState() {
+  const digest = stateDigest(cached);
+  if (digest === lastBroadcastDigest && wsClients.size > 0) return;
+  lastBroadcastDigest = digest;
+  const payload = JSON.stringify(cached);
+  for (const ws of wsClients) {
+    if (ws.readyState === 1) {
+      try {
+        ws.send(payload);
+      } catch {
+      }
+    }
+  }
+}
+wss.on("connection", (ws) => {
+  wsClients.add(ws);
+  try {
+    ws.send(JSON.stringify(cached));
+  } catch {
+  }
+  ws.on("close", () => wsClients.delete(ws));
+  ws.on("error", () => wsClients.delete(ws));
+});
 async function focusCodex() {
   await execFileAsync2("/usr/bin/open", ["-b", "com.openai.codex"], {
     timeout: 3e3
@@ -4363,10 +4944,25 @@ async function refresh(force = false) {
   refreshPromise = (async () => {
     try {
       const snapshot = await client.snapshot();
-      cached = { connected: true, ...snapshot, error: null, updatedAt: Date.now() };
+      if (Array.isArray(snapshot.activeTasks) && snapshot.activeTasks.length > 0) {
+        rememberedLastTask = snapshot.activeTasks[0];
+      } else if (snapshot.lastTask) {
+        rememberedLastTask = snapshot.lastTask;
+      }
+      cached = {
+        connected: true,
+        ...snapshot,
+        lastTask: rememberedLastTask || snapshot.lastTask || null,
+        error: null,
+        updatedAt: Date.now()
+      };
       nextReconnectAt = 0;
+      broadcastState();
     } catch (error) {
-      cached = { ...cached, connected: false, error: error.message, updatedAt: Date.now() };
+      if (cached.connected !== false || cached.error !== error.message) {
+        cached = { ...cached, connected: false, error: error.message, updatedAt: Date.now() };
+        broadcastState();
+      }
       nextReconnectAt = Date.now() + 2e3;
     }
   })();
@@ -4376,30 +4972,30 @@ async function refresh(force = false) {
     refreshPromise = null;
   }
 }
-function json(response, status, body) {
+function json2(response, status, body) {
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "no-store",
-    "Access-Control-Allow-Origin": "http://127.0.0.1"
+    "Cache-Control": "no-store"
   });
   response.end(`${JSON.stringify(body)}
 `);
 }
-var server = createServer(async (request, response) => {
+var server = createServer(secureHandler("codex", PORT, async (request, response) => {
   const url = new URL(request.url || "/", `http://${HOST}:${PORT}`);
+  const body = request.method === "POST" ? await readJson(request) : {};
   if (request.method === "GET" && url.pathname === "/health") {
     await refresh(true);
-    return json(response, 200, { ok: true, codexConnected: cached.connected, updatedAt: cached.updatedAt });
+    return json2(response, 200, { ok: true, codexConnected: cached.connected, updatedAt: cached.updatedAt });
   }
   if (request.method === "GET" && url.pathname === "/state") {
-    return json(response, 200, cached);
+    return json2(response, 200, cached);
   }
   if (request.method === "POST" && url.pathname === "/focus") {
     try {
       await focusCodex();
-      return json(response, 200, { ok: true });
+      return json2(response, 200, { ok: true });
     } catch (error) {
-      return json(response, 503, { ok: false, error: error.message });
+      return json2(response, 503, { ok: false, error: error.message });
     }
   }
   const match = request.method === "POST" && url.pathname.match(/^\/agent\/([0-5])\/click$/);
@@ -4409,9 +5005,9 @@ var server = createServer(async (request, response) => {
         client.clickAgent(Number(match[1])),
         focusCodex()
       ]);
-      return json(response, 200, { ok: true });
+      return json2(response, 200, { ok: true });
     } catch (error) {
-      return json(response, 503, { ok: false, error: error.message });
+      return json2(response, 503, { ok: false, error: error.message });
     }
   }
   const threadMatch = request.method === "POST" && url.pathname.match(
@@ -4428,9 +5024,9 @@ var server = createServer(async (request, response) => {
         client.clickThread(threadId, slot),
         focusCodex()
       ]);
-      return json(response, 200, { ok: true, bridge: true });
+      return json2(response, 200, { ok: true, bridge: true });
     } catch (error) {
-      return json(response, 503, {
+      return json2(response, 503, {
         ok: false,
         bridge: false,
         error: error.message
@@ -4438,21 +5034,32 @@ var server = createServer(async (request, response) => {
     }
   }
   const action = request.method === "POST" && url.pathname.match(
-    /^\/action\/(fast|approve|reject|pin|new|fork|mic|steer|submit)\/(down|up)$/
+    /^\/action\/(fast|approve|reject|pin|new|fork|mic|steer|submit|stop|model|reasoning|goal|subagents|plan)\/(down|up)$/
   );
   if (action) {
     try {
       if (action[1] === "steer") {
         if (action[2] === "down") {
           await focusCodex();
-          await client.dispatchComposerSteer();
+          await client.dispatchComposerSteer(body.threadId ?? null);
         }
-        return json(response, 200, { ok: true });
+        return json2(response, 200, { ok: true });
       }
-      await client.dispatchNamedAction(action[1], action[2] === "down");
-      return json(response, 200, { ok: true, bridge: true });
+      await client.dispatchNamedAction(action[1], action[2] === "down", body.threadId ?? null);
+      return json2(response, 200, { ok: true, bridge: true });
     } catch (error) {
-      return json(response, 503, { ok: false, error: error.message });
+      return json2(response, 503, { ok: false, error: error.message });
+    }
+  }
+  if (request.method === "POST" && url.pathname === "/prompt") {
+    try {
+      const { text } = body;
+      if (typeof text !== "string" || !text.trim() || text.length > 16e3) throw new Error("Prompt must contain 1\u201316000 characters");
+      await focusCodex();
+      await client.submitPrompt(text, body.threadId ?? null);
+      return json2(response, 200, { ok: true });
+    } catch (error) {
+      return json2(response, 500, { ok: false, error: error.message });
     }
   }
   const joystick = request.method === "POST" && url.pathname.match(
@@ -4460,13 +5067,27 @@ var server = createServer(async (request, response) => {
   );
   if (joystick) {
     try {
-      await client.dispatchJoystick(joystick[1], joystick[2] === "down" ? 1 : 0);
-      return json(response, 200, { ok: true });
+      await client.dispatchJoystick(joystick[1], joystick[2] === "down" ? 1 : 0, body.threadId ?? null);
+      return json2(response, 200, { ok: true });
     } catch (error) {
-      return json(response, 503, { ok: false, error: error.message });
+      return json2(response, 503, { ok: false, error: error.message });
     }
   }
-  return json(response, 404, { ok: false, error: "Not found" });
+  return json2(response, 404, { ok: false, error: "Not found" });
+}));
+server.on("upgrade", (request, socket, head) => {
+  if (!allowedRequest(request, "codex", PORT)) {
+    socket.destroy();
+    return;
+  }
+  const { pathname } = new URL(request.url || "/", `http://${HOST}:${PORT}`);
+  if (pathname === "/events" || pathname === "/ws") {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit("connection", ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
 });
 server.listen(PORT, HOST, () => {
   console.log(`Codex Keyboard bridge listening on http://${HOST}:${PORT}`);

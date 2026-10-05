@@ -15,7 +15,7 @@ const uid = process.getuid();
 const packageMetadata = JSON.parse(await readFile(resolve("package.json"), "utf8"));
 const releaseVersion = String(packageMetadata.version);
 const start = !process.argv.slice(2).includes("--no-start");
-const appRoot = join(home, "Library", "Application Support", "OpenCodexMicro");
+const appRoot = join(home, "Library", "Application Support", "OpenCodexMicro", "codex");
 const userApplications = join(home, "Applications");
 const bridgeApp = join(userApplications, "Codex Bridge.app");
 const agentsRoot = join(home, "Library", "LaunchAgents");
@@ -179,6 +179,15 @@ const bridgePlist = `<?xml version="1.0" encoding="UTF-8"?>
 </dict></plist>
 `;
 await writeFile(bridgeAgent, bridgePlist, { mode: 0o644 });
+
+const installMetadata = join(appRoot, "install.json");
+await writeFile(installMetadata, `${JSON.stringify({
+  version: releaseVersion,
+  nodeExecutable: process.execPath,
+  nodeVersion: process.version,
+  nodeSource: "system",
+  installedAt: new Date().toISOString()
+}, null, 2)}\n`, { mode: 0o600 });
 
 for (const agent of [bridgeAgent]) {
   try {

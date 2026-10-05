@@ -1,7 +1,10 @@
+import { contextPercent } from "../shared/token-metrics.mjs";
+import { readNativeModelPicker, cycleNativeModelPicker } from "./model-picker.mjs";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import WebSocket from "ws";
 import { localThreadKey } from "./thread-key.mjs";
+import { readNativeTaskAttention, taskAttentionStatus } from "./task-attention.mjs";
 
 const execFileAsync = promisify(execFile);
 const USAGE_REFRESH_MS = Math.max(
@@ -20,7 +23,7 @@ const MICRO_ACTION_KEYS = Object.freeze({
   mic: "ACT10",
   submit: "ACT12"
 });
-const RENDERER_ACTIONS = new Set(["pin", "new"]);
+const RENDERER_ACTIONS = new Set(["pin", "new", "approve", "reject", "stop", "model", "reasoning", "goal", "subagents", "plan"]);
 const PIN_ACTION_LABELS = Object.freeze([
   "Pin chat",
   "Unpin chat",
@@ -46,9 +49,111 @@ const STEER_ACTION_LABELS = Object.freeze([
   "調整方向",
   "引導"
 ]);
+const APPROVE_ACTION_LABELS = Object.freeze([
+  "Approve",
+  "Allow",
+  "Run",
+  "Accept",
+  "Confirm",
+  "Yes",
+  "Proceed",
+  "Aprovar",
+  "Permitir",
+  "Executar",
+  "Aceitar",
+  "Confirmar",
+  "Sim",
+  "Prosseguir",
+  "批准",
+  "允许",
+  "运行",
+  "接受",
+  "确认",
+  "是",
+  "继续",
+  "承認",
+  "許可",
+  "実行",
+  "同意",
+  "確認",
+  "はい",
+  "続行",
+  "Genehmigen",
+  "Zulassen",
+  "Ausführen",
+  "Bestätigen"
+]);
+const REJECT_ACTION_LABELS = Object.freeze([
+  "Reject",
+  "Deny",
+  "Cancel",
+  "Decline",
+  "No",
+  "Dismiss",
+  "Stop",
+  "Rejeitar",
+  "Negar",
+  "Cancelar",
+  "Recusar",
+  "Não",
+  "Dispensar",
+  "Parar",
+  "拒绝",
+  "否认",
+  "取消",
+  "否",
+  "关闭",
+  "停止",
+  "拒否",
+  "却下",
+  "キャンセル",
+  "辞退",
+  "いいえ",
+  "閉じる",
+  "Ablehnen",
+  "Verweigern",
+  "Abbrechen"
+]);
 
-export function rendererActionExpression(action) {
+export function threadGuardExpression(threadId) {
+  return `const expectedThread = ${JSON.stringify(threadId)};
+    if (expectedThread !== undefined) {
+      const actualThread = document.querySelector('[data-above-composer-conversation-id]')?.getAttribute('data-above-composer-conversation-id')
+        ?? document.querySelector('[data-app-action-sidebar-thread-id][data-app-action-sidebar-thread-active=true]')?.getAttribute('data-app-action-sidebar-thread-id') ?? null;
+      const normalizeThread = value => value == null ? null : String(value).replace(/^local:/, '');
+      if (normalizeThread(actualThread) !== normalizeThread(expectedThread)) throw new Error('Codex task changed; refresh the deck and try again');
+    }`;
+}
+
+// Exact labels from localConversation.planSummary.openInSidePanel in the
+// installed desktop bundle. Never match Implement, Download, or summary text.
+export function findNativePlanControl(document) {
+  const labels = new Set(["Open plan in side panel", "Abrir plano no painel lateral", "Plan im Seitenbereich öffnen", "Abrir plan en el panel lateral", "サイドパネルでプランを開く", "사이드 패널에서 계획 열기", "在侧边面板中打开套餐", "在側邊面板中開啟計劃", "在側邊面板開啟方案"]);
+  const matches = [...document.querySelectorAll('button[aria-label]')].filter(button =>
+    button.offsetParent !== null && !button.disabled && button.getAttribute('aria-disabled') !== 'true' &&
+    !button.closest?.('[role="dialog"], [aria-modal="true"], [inert], [aria-hidden="true"]') &&
+    labels.has(button.getAttribute('aria-label')));
+  return matches.length === 1 ? matches[0] : null;
+}
+
+export function rendererActionExpression(action, threadId) {
+  if (action === "model" || action === "reasoning") {
+    return `(async () => {
+      const guard = () => { ${threadGuardExpression(threadId)} };
+      const readPicker = () => (${readNativeModelPicker.toString()})(document);
+      guard();
+      const expected = (${cycleNativeModelPicker.toString()})(readPicker(), ${JSON.stringify(action)});
+      for (let attempt = 0; attempt < 40; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        guard();
+        const { props } = readPicker();
+        if (props.model === expected.model && props.reasoningEffort === expected.reasoningEffort) return true;
+      }
+      throw new Error('Codex did not confirm the model settings change');
+    })()`;
+  }
   return `(() => {
+    ${threadGuardExpression(threadId)}
     const action = ${JSON.stringify(action)};
     const visible = (element) => element && element.offsetParent !== null;
     let target = null;
@@ -83,6 +188,46 @@ export function rendererActionExpression(action) {
           (button.innerText || "").trim()
         ].some((label) => labels.has(label)));
       }
+    } else if (action === "approve") {
+      const labels = new Set(${JSON.stringify(APPROVE_ACTION_LABELS)});
+      const buttons = [...document.querySelectorAll("button, [role=button]")].filter(visible);
+      target = buttons.find((button) => [
+        button.getAttribute("aria-label"),
+        button.getAttribute("title"),
+        (button.innerText || "").trim()
+      ].some((label) => labels.has(label))) ?? buttons.find((button) =>
+        button.matches?.('[data-testid*="approve"],[data-testid*="allow"],[data-testid*="run"]')
+      );
+    } else if (action === "reject") {
+      const stopLabels = ["Stop", "Stop generating", "Cancel", "Parar", "Cancelar", "Interromper", "停止", "停止生成", "取消", "中止", "Abbrechen", "Stoppen"];
+      const rejectLabels = new Set(${JSON.stringify(REJECT_ACTION_LABELS)});
+      const buttons = [...document.querySelectorAll("button, [role=button]")].filter(visible);
+      target = buttons.find((button) => {
+        const aria = button.getAttribute("aria-label") || "";
+        const title = button.getAttribute("title") || "";
+        const text = (button.innerText || "").trim();
+        return stopLabels.some((l) => aria.includes(l) || title.includes(l) || text.includes(l)) ||
+               rejectLabels.has(aria) || rejectLabels.has(title) || rejectLabels.has(text);
+      }) ?? buttons.find((button) =>
+        button.matches?.('[data-testid*="stop"],[data-testid*="cancel"],[data-testid*="reject"],[data-testid*="deny"]')
+      );
+    } else if (action === "stop") {
+      const labels = new Set(["Stop", "Stop generating", "Parar", "Interromper", "停止", "停止生成", "中止", "Stoppen"]);
+      const matches = [...document.querySelectorAll("button, [role=button]")].filter(button =>
+        visible(button) && !button.disabled && button.getAttribute("aria-disabled") !== "true" &&
+        !button.closest?.('[role="dialog"], [aria-modal="true"]') &&
+        [button.getAttribute("aria-label"), button.getAttribute("title"), (button.innerText || "").trim()].some(label => labels.has(label))
+      );
+      if (matches.length !== 1) throw new Error("No unique stop control is available for this task");
+      target = matches[0];
+    } else if (action === "plan") {
+      target = (${findNativePlanControl.toString()})(document);
+      if (!target) throw new Error("No unique plan control is available for this task");
+    } else if (action === "goal" || action === "subagents") {
+      const labels = action === "goal" ? ["Pause goal", "Resume goal", "Pausar objetivo", "Retomar objetivo"] : ["Open subagents", "Abrir subagentes"];
+      const matches = [...document.querySelectorAll("button")].filter(button => visible(button) && !button.disabled && labels.includes(button.getAttribute("aria-label")));
+      if (matches.length !== 1) throw new Error("No unique " + action + " control is available for this task");
+      target = matches[0];
     }
     if (!target) return false;
     target.click();
@@ -90,8 +235,9 @@ export function rendererActionExpression(action) {
   })()`;
 }
 
-export function composerSteerExpression() {
+export function composerSteerExpression(threadId) {
   return `(() => {
+    ${threadGuardExpression(threadId)}
     const editor = [...document.querySelectorAll('[contenteditable="true"][role="textbox"]')]
       .find((element) => element.offsetParent !== null);
     if (!editor) throw new Error("Codex composer is not available");
@@ -107,6 +253,19 @@ export function composerSteerExpression() {
       );
     if (!steer) return false;
     steer.click();
+    return true;
+  })()`;
+}
+
+export function composerPromptExpression(text, threadId) {
+  return `(() => {
+    ${threadGuardExpression(threadId)}
+    const editor = [...document.querySelectorAll('[contenteditable="true"][role="textbox"]')]
+      .find((element) => element.offsetParent !== null);
+    if (!editor) throw new Error("Codex composer is not available");
+    if (editor.textContent?.trim()) throw new Error("Composer already contains a draft; send or clear it in Codex first");
+    editor.focus();
+    if (!document.execCommand("insertText", false, ${JSON.stringify(text)})) throw new Error("Could not insert prompt");
     return true;
   })()`;
 }
@@ -283,6 +442,26 @@ const SNAPSHOT_EXPRESSION = `(async () => {
       const data = query?.state?.data;
       const rateLimit = data?.rate_limit;
       if (!rateLimit || typeof rateLimit !== "object") continue;
+      const parseResetTimestamp = (win, nowTime) => {
+        if (!win || typeof win !== "object") return null;
+        const raw = win.reset_at ?? win.resets_at ?? win.reset_time ?? win.resetAt ?? win.resetsAt;
+        if (raw != null) {
+          if (typeof raw === "number" && Number.isFinite(raw)) {
+            return raw > 1e11 ? raw : raw * 1000;
+          }
+          if (typeof raw === "string") {
+            const parsed = Date.parse(raw);
+            if (Number.isFinite(parsed)) return parsed;
+            const num = Number(raw);
+            if (Number.isFinite(num)) return num > 1e11 ? num : num * 1000;
+          }
+        }
+        const relSec = Number(win.reset_after_seconds ?? win.reset_in_seconds ?? win.resets_in ?? win.reset_in ?? win.reset_after);
+        if (Number.isFinite(relSec) && relSec > 0) {
+          return nowTime + relSec * 1000;
+        }
+        return null;
+      };
       const normalizeWindow = (window, role) => {
         if (!window || typeof window !== "object") return null;
         const usedPercent = Number(window.used_percent);
@@ -293,12 +472,15 @@ const SNAPSHOT_EXPRESSION = `(async () => {
           : minutes != null && Math.abs(minutes - 10080) <= 1 ? "weekly"
             : "other";
         const used = Math.min(100, Math.max(0, usedPercent));
+        const parsedReset = parseResetTimestamp(window, now);
+        const defaultWindowMs = kind === "weekly" ? 7 * 86400 * 1000 : 5 * 3600 * 1000;
+        const fallbackReset = (updatedAt || now) + defaultWindowMs;
         return {
           id: kind === "other" ? role : kind,
           kind,
           usedPercent: used,
           remainingPercent: 100 - used,
-          resetsAt: Number(window.reset_at) || null
+          resetsAt: parsedReset || fallbackReset
         };
       };
       usage = {
@@ -311,6 +493,46 @@ const SNAPSHOT_EXPRESSION = `(async () => {
       break;
     } catch {}
   }
+  const conversationsMeta = new Map();
+  for (const queryClient of queryClients) {
+    try {
+      const queries = queryClient.getQueryCache().getAll();
+      for (const query of queries) {
+        if (JSON.stringify(query.queryKey).includes("recent-conversations-meta")) {
+          const items = query.state?.data?.items || query.state?.data || [];
+          const list = Array.isArray(items) ? items : (items.conversations || []);
+          for (const item of list) {
+            if (item && item.id && !conversationsMeta.has(item.id)) {
+              conversationsMeta.set(item.id, item);
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  const isWorkTask = (item) => {
+    if (!item) return false;
+    const originator = String(item.originator || "").toLowerCase();
+    const serviceName = String(item.serviceName || "").toLowerCase();
+    return originator.includes("work") || serviceName.includes("work");
+  };
+
+  const formatModel = (raw) => {
+    if (!raw) return "DEFAULT";
+    const str = String(raw).trim();
+    if (/luna/i.test(str)) return /5\.6/i.test(str) ? "5.6 LUNA" : "LUNA";
+    if (/terra/i.test(str)) return /5\.6/i.test(str) ? "5.6 TERRA" : "TERRA";
+    if (/daybreak/i.test(str)) return "DAYBREAK";
+    if (/gpt-5\.5/i.test(str)) return "GPT-5.5";
+    if (/gpt-5/i.test(str)) return "GPT-5";
+    if (/gpt-4o/i.test(str)) return "GPT-4o";
+    if (/o1/i.test(str)) return "o1";
+    if (/o3/i.test(str)) return "o3";
+    if (/claude/i.test(str)) return "CLAUDE";
+    return str.replace(/^gpt-/i, "").replace(/-latest$/i, "").toUpperCase();
+  };
+
   const active = document.querySelector("[data-app-action-sidebar-thread-id][data-app-action-sidebar-thread-active=true]")
     ?? document.querySelector("[data-app-action-sidebar-thread-id][aria-current=page]");
   const activeThreadKey = document.querySelector("[data-above-composer-conversation-id]")
@@ -318,17 +540,136 @@ const SNAPSHOT_EXPRESSION = `(async () => {
     ?? active?.getAttribute("data-app-action-sidebar-thread-id")
     ?? null;
   const normalizeThreadKey = (value) => String(value ?? "").replace(/^local:/, "");
-  return {
-    activeThreadKey,
-    slots: found.map((slot) => ({
+
+  const computeCtxPct = ${contextPercent.toString()};
+  const { threadIds, asyncQuestionThreads } = (${readNativeTaskAttention.toString()})(source, found);
+  const attentionStatus = ${taskAttentionStatus.toString()};
+
+  const enrichedSlots = found.map((slot) => {
+    const threadId = threadIds.get(slot.threadKey) ?? normalizeThreadKey(slot.threadKey);
+    const meta = threadId ? conversationsMeta.get(threadId) : null;
+    const rawModel = meta?.latestModel || meta?.latestThreadSettings?.model || meta?.previousTurnModel || null;
+    const isSlotRunning = ["working", "thinking", "running", "in_progress"].includes(String(slot.status || "").toLowerCase());
+    const isMetaRunning = ["working", "thinking", "running", "in_progress"].includes(String(meta?.threadRuntimeStatus?.type || "").toLowerCase());
+    const running = isSlotRunning || isMetaRunning;
+    const taskType = isWorkTask(meta) ? "WORK" : "CODEX";
+    const model = formatModel(rawModel);
+    const tokenUsage = meta?.latestTokenUsageInfo || meta?.tokenUsageInfo || meta?.tokenUsage || null;
+    const ctxPct = computeCtxPct(tokenUsage);
+    return {
       id: slot.id,
       threadKey: slot.threadKey ?? null,
-      title: slot.title ?? slot.thread?.title ?? slot.task?.title ?? null,
-      status: slot.status ?? "idle",
+      threadId: threadId || null,
+      title: slot.title ?? slot.thread?.title ?? slot.task?.title ?? meta?.title ?? null,
+      status: attentionStatus(slot.status ?? meta?.threadRuntimeStatus?.type, asyncQuestionThreads.has(threadId)),
+      running,
+      taskType,
+      model,
+      rawModel,
+      tokenUsage,
+      ctxPct,
       selected: Boolean(slot.selected) || Boolean(
-        activeThreadKey && normalizeThreadKey(slot.threadKey) === normalizeThreadKey(activeThreadKey)
+        activeThreadKey && threadId === normalizeThreadKey(activeThreadKey)
       )
-    })),
+    };
+  });
+
+  const activeTasks = [];
+  const seenRunningKeys = new Set();
+  for (const slot of enrichedSlots) {
+    if (slot.running && slot.threadKey) {
+      activeTasks.push({
+        threadKey: slot.threadKey,
+        threadId: slot.threadId,
+        slot: slot.id,
+        title: slot.title,
+        status: slot.status,
+        taskType: slot.taskType,
+        model: slot.model,
+        rawModel: slot.rawModel,
+        tokenUsage: slot.tokenUsage,
+        ctxPct: slot.ctxPct
+      });
+      seenRunningKeys.add(slot.threadId);
+    }
+  }
+
+  for (const [id, meta] of conversationsMeta.entries()) {
+    if (!seenRunningKeys.has(id)) {
+      const isMetaRunning = ["working", "thinking", "running", "in_progress"].includes(String(meta?.threadRuntimeStatus?.type || "").toLowerCase());
+      if (isMetaRunning) {
+        const rawModel = meta?.latestModel || meta?.latestThreadSettings?.model || meta?.previousTurnModel || null;
+        const tokenUsage = meta?.latestTokenUsageInfo || meta?.tokenUsageInfo || meta?.tokenUsage || null;
+        activeTasks.push({
+          threadKey: "local:" + id,
+          threadId: id,
+          slot: null,
+          title: meta.title || "Untitled",
+          status: attentionStatus(meta.threadRuntimeStatus?.type || "working", asyncQuestionThreads.has(id)),
+          taskType: isWorkTask(meta) ? "WORK" : "CODEX",
+          model: formatModel(rawModel),
+          rawModel,
+          tokenUsage,
+          ctxPct: computeCtxPct(tokenUsage)
+        });
+        seenRunningKeys.add(id);
+      }
+    }
+  }
+
+  let lastTask = null;
+  if (activeTasks.length > 0) {
+    lastTask = activeTasks[0];
+  } else if (activeThreadKey && conversationsMeta.has(normalizeThreadKey(activeThreadKey))) {
+    const meta = conversationsMeta.get(normalizeThreadKey(activeThreadKey));
+    const rawModel = meta?.latestModel || meta?.latestThreadSettings?.model || meta?.previousTurnModel || null;
+    const tokenUsage = meta?.latestTokenUsageInfo || meta?.tokenUsageInfo || meta?.tokenUsage || null;
+    lastTask = {
+      threadKey: "local:" + meta.id,
+      threadId: meta.id,
+      slot: null,
+      title: meta.title,
+      status: attentionStatus(meta.threadRuntimeStatus?.type, asyncQuestionThreads.has(meta.id)),
+      taskType: isWorkTask(meta) ? "WORK" : "CODEX",
+      model: formatModel(rawModel),
+      rawModel,
+      tokenUsage,
+      ctxPct: computeCtxPct(tokenUsage)
+    };
+  } else if (enrichedSlots[0]?.threadKey) {
+    lastTask = enrichedSlots[0];
+  }
+
+  const activeMeta = (activeThreadKey && conversationsMeta.get(normalizeThreadKey(activeThreadKey))) || null;
+  const tokenUsage = activeMeta?.latestTokenUsageInfo || activeMeta?.tokenUsageInfo || activeMeta?.tokenUsage || null;
+  let modelPicker = null;
+  try { modelPicker = (${readNativeModelPicker.toString()})(document).props; } catch {}
+  
+  const detectLiveReasoningEffort = () => {
+    if (modelPicker?.reasoningEffort) return modelPicker.reasoningEffort;
+    const srEffort = document.querySelector("[class*='ModelPickerTriggerEffortLabel'] .sr-only")?.textContent?.trim()?.toLowerCase();
+    if (srEffort) return srEffort;
+    const activeEffortEl = document.querySelector("[data-reasoning-effort][style*='opacity: 1']")
+      ?? document.querySelector("[data-reasoning-effort]:not([style*='opacity: 0'])");
+    if (activeEffortEl) {
+      return activeEffortEl.getAttribute("data-reasoning-effort") || activeEffortEl.textContent?.trim()?.toLowerCase();
+    }
+    return activeMeta?.latestReasoningEffort || activeMeta?.reasoningEffort || null;
+  };
+  const reasoningEffort = detectLiveReasoningEffort();
+
+  return {
+    activeThreadKey,
+    planAvailable: Boolean((${findNativePlanControl.toString()})(document)),
+    model: modelPicker?.model || activeMeta?.latestModel || activeMeta?.latestThreadSettings?.model || activeMeta?.previousTurnModel || null,
+    goalState: [...document.querySelectorAll('button')].some(b => b.offsetParent !== null && ['Pause goal', 'Pausar objetivo'].includes(b.getAttribute('aria-label'))) ? 'active'
+      : [...document.querySelectorAll('button')].some(b => b.offsetParent !== null && ['Resume goal', 'Retomar objetivo'].includes(b.getAttribute('aria-label'))) ? 'paused' : null,
+    subagentsSummary: [...document.querySelectorAll('button')].find(b => b.offsetParent !== null && ['Open subagents', 'Abrir subagentes'].includes(b.getAttribute('aria-label')))?.innerText?.trim() || null,
+    slots: enrichedSlots,
+    activeTasks,
+    lastTask,
+    tokenUsage,
+    reasoningEffort,
     usage,
     bridgeSnapshot: {
       source: cacheHit ? "cache" : "discovery",
@@ -372,6 +713,7 @@ export class CodexCdpClient {
   nextId = 0;
   pending = new Map();
   lastSnapshot = null;
+  modelActionQueue = Promise.resolve();
 
   async connect() {
     if (this.socket?.readyState === WebSocket.OPEN) return;
@@ -437,46 +779,65 @@ export class CodexCdpClient {
     }, "codex-micro-hid-event");
   }
 
-  async dispatchAction(key, act) {
+  async dispatchAction(key, act, threadId) {
     return this.dispatchMicroMessage({
       type: "codex-micro-hid-event",
       event: { key, act, slot: null, threadKey: null }
-    }, "codex-micro-hid-event");
+    }, "codex-micro-hid-event", act === 1 ? threadId : undefined);
   }
 
-  async dispatchNamedAction(action, pressed) {
+  async dispatchNamedAction(action, pressed, threadId) {
     const key = MICRO_ACTION_KEYS[action];
-    if (key) return this.dispatchAction(key, pressed ? 1 : 0);
+    if (key) {
+      // Native approval handlers must not be followed by a second DOM click:
+      // the first approval may already have exposed a different request.
+      return this.dispatchAction(key, pressed ? 1 : 0, threadId);
+    }
     if (!RENDERER_ACTIONS.has(action)) {
       throw new Error(`Unsupported Codex bridge action: ${action}`);
     }
     if (!pressed) return true;
-    return this.dispatchRendererAction(action);
+    if (action === "model" || action === "reasoning") {
+      const pending = this.modelActionQueue.catch(() => {}).then(() => this.dispatchRendererAction(action, threadId));
+      this.modelActionQueue = pending;
+      return pending;
+    }
+    return this.dispatchRendererAction(action, threadId);
   }
 
-  async dispatchRendererAction(action) {
+  async dispatchRendererAction(action, threadId) {
     await this.connect();
-    const invoked = await this.evaluate(rendererActionExpression(action));
+    const invoked = await this.evaluate(rendererActionExpression(action, threadId));
     if (!invoked) throw new Error(`Codex ${action} action is not available`);
     return true;
   }
 
-  async dispatchComposerSteer() {
+  async dispatchComposerSteer(threadId) {
     await this.connect();
-    const clicked = await this.evaluate(composerSteerExpression());
+    const clicked = await this.evaluate(composerSteerExpression(threadId));
     if (!clicked) throw new Error("Codex Steer action is not available");
   }
 
-  async dispatchJoystick(direction, distance) {
+  async submitPrompt(text, threadId) {
+    await this.connect();
+    await this.evaluate(composerPromptExpression(text, threadId));
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    await this.dispatchAction(MICRO_ACTION_KEYS.submit, 1, threadId);
+    await new Promise((resolve) => setTimeout(resolve, 35));
+    await this.dispatchAction(MICRO_ACTION_KEYS.submit, 0);
+    return true;
+  }
+
+  async dispatchJoystick(direction, distance, threadId) {
     const angle = { up: 0.75, right: 0, down: 0.25, left: 0.5 }[direction];
     if (angle === undefined) throw new Error(`Unknown joystick direction: ${direction}`);
     return this.dispatchMicroMessage({
       type: "codex-micro-joystick-event",
       event: { angle, distance }
-    }, "codex-micro-joystick-event");
+    }, "codex-micro-joystick-event", distance ? threadId : undefined);
   }
 
-  async dispatchMicroMessage(message, requiredHandler) {
+  async dispatchMicroMessage(message, requiredHandler, threadId) {
     return this.evaluate(`(async () => {
       const cacheKey = Symbol.for("codex-keyboard-micro-bus");
       const isMicroBus = (candidate) =>
@@ -512,11 +873,12 @@ export class CodexCdpClient {
       const dispatch = bus.dispatchHostMessage ?? bus.dispatchMessage;
       if ((bus.handlers.get(${JSON.stringify(requiredHandler)})?.size ?? 0) === 0) {
         dispatch.call(bus, ${JSON.stringify(DEVICE_STATE)});
+        for (let attempt = 0; attempt < 3 && !(bus.handlers.get(${JSON.stringify(requiredHandler)})?.size > 0); attempt++) {
+          await new Promise(resolve => setTimeout(resolve, 35));
+        }
       }
-      // Never put Micro handler discovery on the physical key hot path. The
-      // native event is dispatched immediately; clickAgent keeps a DOM
-      // activation fallback in the background in case Codex has not installed
-      // its handler yet.
+      if (!(bus.handlers.get(${JSON.stringify(requiredHandler)})?.size > 0)) throw new Error("Codex has no handler for this control");
+      ${threadGuardExpression(threadId)}
       dispatch.call(bus, ${JSON.stringify(message)});
       return true;
     })()`);

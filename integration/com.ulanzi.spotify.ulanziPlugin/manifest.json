@@ -1,0 +1,220 @@
+{
+  "Author": "OpenCodexMicro",
+  "Name": "Spotify Music Picker",
+  "Overview": "Spotify Music Picker and Player controller for Ulanzi D200 Series in Ulanzi Studio.",
+  "Description": "Turn your Ulanzi D200 Series into a full Spotify Music Picker and controller on macOS.\n\nFEATURES\n- Wide Screen Now Playing HUD with high-res cover art, track info, and playback progress.\n- Row 1 & 2 Music Picker buttons showing Made for You, Daily Mixes, and Most Played playlists.\n- Play/Pause, Next, Previous, Shuffle, Repeat, and Like transport controls.\n- Rotary volume and playlist scroll dials.\n- Native macOS zero-latency local control combined with Spotify Web API catalog.",
+  "Icon": "assets/icons/plugin.png",
+  "Category": "Music",
+  "CategoryIcon": "assets/icons/plugin.png",
+  "Banner": [
+    "assets/banners/codex-micro-banner-1.png",
+    "assets/banners/codex-micro-banner-2.png",
+    "assets/banners/codex-micro-banner-3.png"
+  ],
+  "Version": "0.4.1",
+  "UUID": "com.ulanzi.ulanzistudio.spotify",
+  "Type": "JavaScript",
+  "CodePath": "dist/app.js",
+  "Software": {
+    "MinVersion": "3.0.1"
+  },
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "13.0"
+    }
+  ],
+  "Actions": [
+    {
+      "Name": "Spotify Now Playing (Wide HUD)",
+      "Icon": "assets/icons/task-working.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.nowplaying",
+      "Tooltip": "Display current playing track, artist, album art and progress on wide screen.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Now Playing", "Image": "assets/icons/task-working.png" }]
+    },
+    {
+      "Name": "Spotify Play / Pause",
+      "Icon": "assets/icons/submit.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.playpause",
+      "Tooltip": "Toggle Spotify playback.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Play/Pause", "Image": "assets/icons/submit.png" }]
+    },
+    {
+      "Name": "Spotify Next Track",
+      "Icon": "assets/icons/fast.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.next",
+      "Tooltip": "Skip to next Spotify track.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Next", "Image": "assets/icons/fast.png" }]
+    },
+    {
+      "Name": "Spotify Previous Track",
+      "Icon": "assets/icons/fork.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.prev",
+      "Tooltip": "Return to previous Spotify track.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Previous", "Image": "assets/icons/fork.png" }]
+    },
+    {
+      "Name": "Spotify Like",
+      "Icon": "assets/icons/approve.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.like",
+      "Tooltip": "Save/Like current track in your Spotify library.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Like", "Image": "assets/icons/approve.png" }]
+    },
+    {
+      "Name": "Spotify Shuffle",
+      "Icon": "assets/icons/steer.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.shuffle",
+      "Tooltip": "Toggle Spotify shuffle mode.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Shuffle", "Image": "assets/icons/steer.png" }]
+    },
+    {
+      "Name": "Spotify Repeat",
+      "Icon": "assets/icons/pin.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.repeat",
+      "Tooltip": "Toggle Spotify repeat mode.",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Repeat", "Image": "assets/icons/pin.png" }]
+    },
+    {
+      "Name": "Music Picker Slot 1",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.item1",
+      "Tooltip": "Playlist / Album Slot 1",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Slot 1", "Image": "assets/icons/task-idle.png" }]
+    },
+    {
+      "Name": "Music Picker Slot 2",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.item2",
+      "Tooltip": "Playlist / Album Slot 2",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Slot 2", "Image": "assets/icons/task-idle.png" }]
+    },
+    {
+      "Name": "Music Picker Slot 3",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.item3",
+      "Tooltip": "Playlist / Album Slot 3",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Slot 3", "Image": "assets/icons/task-idle.png" }]
+    },
+    {
+      "Name": "Music Picker Slot 4",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.item4",
+      "Tooltip": "Playlist / Album Slot 4",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Slot 4", "Image": "assets/icons/task-idle.png" }]
+    },
+    {
+      "Name": "Music Picker Slot 5",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.item5",
+      "Tooltip": "Playlist / Album Slot 5",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Slot 5", "Image": "assets/icons/task-idle.png" }]
+    },
+    {
+      "Name": "Music Picker Slot 6",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.item6",
+      "Tooltip": "Playlist / Album Slot 6",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Slot 6", "Image": "assets/icons/task-idle.png" }]
+    },
+    {
+      "Name": "Music Picker Slot 7",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.item7",
+      "Tooltip": "Playlist / Album Slot 7",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Slot 7", "Image": "assets/icons/task-idle.png" }]
+    },
+    {
+      "Name": "Music Picker Slot 8",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.item8",
+      "Tooltip": "Playlist / Album Slot 8",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Slot 8", "Image": "assets/icons/task-idle.png" }]
+    },
+    {
+      "Name": "Music Picker Slot 9",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.item9",
+      "Tooltip": "Playlist / Album Slot 9",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Slot 9", "Image": "assets/icons/task-idle.png" }]
+    },
+    {
+      "Name": "Music Picker Slot 10",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.item10",
+      "Tooltip": "Playlist / Album Slot 10",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Slot 10", "Image": "assets/icons/task-idle.png" }]
+    },
+    {
+      "Name": "Spotify Volume Dial",
+      "Icon": "assets/icons/task-working.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.volume",
+      "Tooltip": "Control Spotify volume with knob rotation, press to play/pause.",
+      "Controllers": ["Encoder"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Volume", "Image": "assets/icons/task-working.png" }]
+    },
+    {
+      "Name": "Spotify Playlist Scroll Dial",
+      "Icon": "assets/icons/task-idle.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.spotify.scroll",
+      "Tooltip": "Scroll through playlists with knob rotation.",
+      "Controllers": ["Encoder"],
+      "DisableAutomaticStates": true,
+      "States": [{ "Name": "Scroll", "Image": "assets/icons/task-idle.png" }]
+    }
+  ]
+}
+

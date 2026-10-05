@@ -1,3 +1,5 @@
+import { removeBridgeFiles } from "../../../src/shared/bridge-files.mjs";
+import { localHeaders } from "../../../src/shared/local-api.mjs";
 import { constants as fsConstants } from "node:fs";
 import {
   access,
@@ -120,7 +122,7 @@ export function createBridgeInstaller({
   environmentPath = process.env.PATH || "",
   execute = execFileAsync
 }) {
-  const appRoot = join(home, "Library", "Application Support", "OpenCodexMicro");
+  const appRoot = join(home, "Library", "Application Support", "OpenCodexMicro", "codex");
   const userApplications = join(home, "Applications");
   const bridgeApp = join(userApplications, "Codex Bridge.app");
   const bridgeContents = join(bridgeApp, "Contents");
@@ -140,7 +142,8 @@ export function createBridgeInstaller({
   async function probeBridge() {
     try {
       const response = await fetch(`${bridgeUrl}/health`, {
-        signal: AbortSignal.timeout(1200)
+        headers: localHeaders("codex"),
+        signal: AbortSignal.timeout(12000)
       });
       const payload = await response.json();
       if (!response.ok || payload.ok === false) throw new Error(payload.error || `Bridge HTTP ${response.status}`);
@@ -150,23 +153,35 @@ export function createBridgeInstaller({
     }
   }
 
+  async function readAppPlistVersion() {
+    try {
+      const plistContent = await readFile(join(bridgeContents, "Info.plist"), "utf8");
+      const match = plistContent.match(/<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/);
+      return match?.[1] || null;
+    } catch {
+      return null;
+    }
+  }
+
   async function status() {
-    const [appInstalled, runtimeInstalled, agentInstalled, metadata, probe] = await Promise.all([
+    const [appInstalled, runtimeInstalled, agentInstalled, metadata, probe, plistVersion] = await Promise.all([
       exists(bridgeExecutable, fsConstants.X_OK),
       exists(bridgeRuntime),
       exists(bridgeAgent),
       readJson(installMetadata),
-      probeBridge()
+      probeBridge(),
+      readAppPlistVersion()
     ]);
+    const installedVersion = metadata?.version || plistVersion || null;
     const installed = appInstalled && runtimeInstalled && agentInstalled;
     return {
       supported: platform === "darwin" && Number.isInteger(uid),
       installed,
       appInstalled,
       serviceInstalled: runtimeInstalled && agentInstalled,
-      installedVersion: metadata?.version || null,
+      installedVersion,
       bundledVersion: version,
-      needsUpdate: !installed || metadata?.version !== version,
+      needsUpdate: !installed || installedVersion !== version,
       appPath: bridgeApp,
       nodeExecutable: metadata?.nodeExecutable || null,
       nodeVersion: metadata?.nodeVersion || null,
@@ -352,7 +367,7 @@ exit 1
       // The service may already be stopped or absent.
     }
     await rm(bridgeAgent, { force: true });
-    await rm(appRoot, { recursive: true, force: true });
+    await removeBridgeFiles(home, "codex");
     await rm(bridgeApp, { recursive: true, force: true });
     return status();
   }

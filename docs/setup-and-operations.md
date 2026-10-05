@@ -1,157 +1,108 @@
-# Setup and Operations
+# Setup and operations
 
-OpenCodexMicro has two installed components:
+OpenCodexMicro has four Ulanzi Studio plugins and three background bridges:
 
-```text
-Codex Desktop <-> Codex Bridge sidecar <-> Ulanzi Studio plugin <-> D200
-```
+| Plugin | Application connection | Local endpoint |
+| --- | --- | --- |
+| Codex App | Codex Desktop through its bridge wrapper | 127.0.0.1:17373 |
+| Antigravity | Antigravity Desktop controls plus saved history/artifacts | 127.0.0.1:17374 |
+| Codex CLI | Managed app-server over its Unix WebSocket socket | 127.0.0.1:17376 |
+| Spotify | macOS player and optional Spotify Web API | 127.0.0.1:17375 |
 
-## Dependencies
+Requires macOS 13+, Node.js 20+, Ulanzi Studio 3.0.1+, and the applications used by your selected plugins. Antigravity Desktop is required for live task controls; VS Code history alone does not provide those controls.
 
-- macOS;
-- Codex Desktop;
-- Ulanzi Studio with a supported keypad device;
-- Node.js 20 or newer only for repository-based manual installation.
+## Install or update
 
-## 1. Set up Codex Bridge.app in Ulanzi Studio
+Install the official standalone Codex CLI before setting up the CLI bridge. This project was verified against version 0.154.0. The npm-only CLI installation does not provide the managed daemon package. See the [official installer documentation](https://learn.chatgpt.com/docs/config-file/environment-variables#installation-variables).
 
-Drag any Codex Micro action onto a key and select it. In the shared
-**Codex Bridge Setup** page, choose **Install / Repair**. The plugin installs
-its bundled Bridge runtime, wrapper app, and user LaunchAgent without requiring
-a repository path, npm, or administrator access. Then choose
-**Launch Codex Bridge** and wait for the CDP status to become connected.
-
-## 2. Set up Codex Bridge.app from the repository
-
-From the repository root:
+Quit Ulanzi Studio, then run from the repository:
 
 ```bash
-npm install
-npm run setup
+npm ci
+npm run install:all
+npm run setup:all
 ```
 
-The installer builds the sidecar, writes and starts
-`io.opencodexmicro.bridge`, and ad-hoc signs:
+Reopen Ulanzi Studio afterward. Plugin installers build and preflight before replacement; no separate build is needed for repository installation. When changing source code, use the validation guidance in [AGENTS.md](../AGENTS.md) before installing. Update plugins and bridges together: authenticated bridge versions require matching authenticated plugin clients. Updating only one side can leave the deck offline. The installer preserves each previous plugin under `~/Library/Application Support/OpenCodexMicro/plugin-backups/`, outside Ulanzi's plugin discovery directory.
 
-```text
-~/Applications/Codex Bridge.app
-```
+For individual components:
 
-To install without starting the sidecar LaunchAgent:
+| Component | Plugin installation | Bridge setup |
+| --- | --- | --- |
+| Codex App | `npm run install:plugin` | `npm run setup` |
+| Antigravity | `npm run install:plugin:antigravity` | `npm run setup:antigravity` |
+| Codex CLI | `npm run install:plugin:codexcli` | `npm run setup:codexcli` |
+| Spotify | `npm run install:plugin:spotify` | Runs inside the plugin |
+
+Before an agent quits Ulanzi Studio, it must have your permission. Setup restarts the bridge services; it does not launch the Codex Bridge wrapper or quit Codex Desktop. For agent workflows, inspect installed manifests and CodePath first as described in [AGENTS.md](../AGENTS.md); a valid plugin should not be reinstalled unless update or repair was requested.
+
+## Configure the deck
+
+Use Ulanzi Studio to place the selected plugin's actions on keypad and encoder
+slots. Layouts are managed in Studio; the project does not own the device directly.
+Reopen Studio after replacing a plugin so it loads the new files.
+
+The developer plugins provide six task/session slots. Select the intended task
+before using its controls. Codex App Approve and Reject indicators reflect a
+pending approval in that selected task; attention from a question or error is
+not an approval. Stop is a separate action. Availability differs by application;
+see [capabilities and acceptance](feature-parity.md) before choosing a layout.
+
+Codex App scroll uses native Micro joystick events; Antigravity scroll targets
+the selected conversation viewport. Spotify playback may require macOS Automation
+permission, and its catalog/library features use the optional Web API connection
+configured in its inspector. Check the reported component error before changing
+system permissions.
+
+## Starting applications
+
+Launch Codex Desktop through `~/Applications/Codex Bridge.app` when its local debugging endpoint is not enabled. The wrapper quits and relaunches Codex, so save work before using it. Do not launch it merely to check installation.
+
+Antigravity Desktop publishes its own loopback debugging endpoint. The bridge requires exactly one matching app page and rejects ambiguous targets.
+
+The CLI bridge launcher runs the idempotent `codex app-server daemon start` before starting the bridge. To control the same CLI task from both a terminal and the deck, attach the terminal to that daemon:
 
 ```bash
-npm run setup -- --no-start
+~/.codex/packages/standalone/current/bin/codex --remote unix://
 ```
 
-## 3. Install the Ulanzi Studio plugin
+Use the explicit standalone path when an npm installation also provides `codex` on your PATH. Select the corresponding session on the deck after opening it. Recent CLI sessions refresh every three seconds without changing the selected task. A plain `codex` terminal uses a separate server; its prompts do not stream to this bridge. A task owned by that separate running process can appear in history but refuse writes with `already has an active writer`. Exit that terminal session normally before resuming the same task through the shared daemon; opening a new shared session does not require closing it.
 
-Quit Ulanzi Studio before replacing a plugin that is currently loaded, then
-run:
+The inspector explains access errors per task; daemon connectivity and other tasks remain usable. Attention counts unique tasks with pending approvals, protocol-reported questions, or errors, and displays `No tasks need attention` at zero. The inspector reports approval requests separately; questions never enable Approve/Reject. Answer questions in the CLI. Model, reasoning and Fast changes apply to the next prompt sent from the deck and are displayed as pending until submitted.
 
-```bash
-npm run install:plugin
-```
+Filtered session listings allow up to 30 seconds for larger histories. Other requests retain their eight-second deadline; commands are never automatically replayed after a timeout.
 
-The repository ships the prebuilt `dist/app.js`. The command validates that
-the manifest entry point exists and atomically replaces:
+Task Monitor rotates through known active tasks and tasks needing attention, including tasks outside the six visible slots. Press it to select the task currently displayed on that monitor. Status continues to show the selected task. Session cards show selection, reported context, and completed/stopped/error outcomes; Stop lights up only when the selected task has a controllable turn with a known ID.
 
-```text
-~/Library/Application Support/Ulanzi/UlanziDeck/Plugins/com.ulanzi.codexmicro.ulanziPlugin
-```
+Saved inspector drafts survive bridge restarts in `~/Library/Application Support/OpenCodexMicro/codex-cli/drafts-<socket-hash>.json`, with a private directory and file. Each daemon socket has separate storage, limited to 100 drafts of 16,000 characters each. Save an empty prompt to clear a draft. If delivery times out or the bridge stops during sending, the draft stays marked as uncertain; check the conversation before explicitly saving it again to retry. Unreadable draft files are preserved and reported in the inspector. Removing the CLI bridge also removes its saved drafts.
 
-Restart Ulanzi Studio and confirm the **Codex Micro** category and actions are
-visible.
-
-Plugin development still uses `npm run build:plugin` and `npm run check`; commit
-the updated `dist/app.js` and `dist/package.json` with source changes.
-
-## Starting Codex
-
-Quit a normally launched Codex instance, then open:
-
-```text
-~/Applications/Codex Bridge.app
-```
-
-The wrapper launches `/Applications/ChatGPT.app/Contents/MacOS/ChatGPT` with:
-
-```text
---remote-debugging-address=127.0.0.1
---remote-debugging-port=9222
---remote-allow-origins=http://127.0.0.1:9222
-```
-
-CDP binds to `127.0.0.1:9222` and the sidecar API to `127.0.0.1:17373`.
-Neither endpoint is reachable from the LAN.
-
-## Installed files and service
-
-```text
-~/Applications/Codex Bridge.app
-~/Library/Application Support/OpenCodexMicro/bridge.mjs
-~/Library/Application Support/OpenCodexMicro/bridge.log
-~/Library/Application Support/OpenCodexMicro/bridge-error.log
-~/Library/LaunchAgents/io.opencodexmicro.bridge.plist
-~/Library/Application Support/Ulanzi/UlanziDeck/Plugins/com.ulanzi.codexmicro.ulanziPlugin
-```
-
-Inspect or restart the Bridge sidecar:
-
-```bash
-launchctl print "gui/$(id -u)/io.opencodexmicro.bridge"
-launchctl kickstart -k "gui/$(id -u)/io.opencodexmicro.bridge"
-```
+A CLI opened in VS Code can be reported with `source: vscode`, even with `--remote unix://`. The bridge therefore includes interactive tasks returned by the shared daemon's `thread/loaded/list`, alongside recent CLI history. The source label alone does not establish which process owns the task. At startup, the bridge prefers the most recently updated loaded task; subsequent discovery preserves the selected task.
 
 ## Diagnostics
 
 ```bash
-curl http://127.0.0.1:17373/health
-curl http://127.0.0.1:17373/state
-tail -f "$HOME/Library/Application Support/OpenCodexMicro/bridge.log"
-tail -f "$HOME/Library/Application Support/OpenCodexMicro/bridge-error.log"
+node scripts/bridge-status.mjs codex health
+node scripts/bridge-status.mjs antigravity health
+node scripts/bridge-status.mjs codex-cli health
+node scripts/bridge-status.mjs spotify health
 ```
 
-| Symptom | Check |
-| --- | --- |
-| Plugin category is missing | Confirm the installed plugin directory contains `manifest.json` and `dist/app.js`, then restart Ulanzi Studio |
-| Plugin keys show offline | Start Codex with `Codex Bridge.app` and check `/health` and `/state` |
-| A task key does not switch | Check `bridge-error.log` and confirm `/state` contains the displayed thread |
-| Steer does nothing | Confirm a running task exposes the visible composer Steer action |
-| An action has no effect | Confirm the plugin can reach `127.0.0.1:17373` and inspect the Bridge log |
+Use `state` instead of `health` for detailed status. Diagnostics supply the private local credential automatically. Unauthenticated HTTP requests return 403; never place the token in a browser inspector or URL.
 
-## Update
+Runtime directories are component-specific:
 
-```bash
-git pull
-npm install
-npm run check
-npm run setup
-npm run install:plugin
+```text
+~/Library/Application Support/OpenCodexMicro/codex/
+~/Library/Application Support/OpenCodexMicro/antigravity/
+~/Library/Application Support/OpenCodexMicro/codex-cli/
 ```
 
-Restart Ulanzi Studio after updating the plugin.
+Logs are `bridge.log` / `bridge-error.log`, `bridge-antigravity.log` / `bridge-antigravity-error.log`, and `bridge-codex-cli.log` / `bridge-codex-cli-error.log` in the corresponding directory. LaunchAgent labels are `io.opencodexmicro.bridge`, `io.openantigravitymicro.bridge`, and `io.opencodexmicro.codexcli.bridge`.
 
-## Uninstall
+If the bridge is online but a control is unavailable, inspect application connectivity, selected task, and the reported action error. Empty quota/context values mean unknown. See [feature parity](feature-parity.md) for application-specific differences and validation limits.
 
-```bash
-npm run uninstall
-```
+## Removal
 
-This stops and removes the Bridge LaunchAgent, Bridge runtime, wrapper app, and
-installed Codex Micro plugin directory.
+`npm run uninstall` removes Codex App and its bridge only. `npm run uninstall:all` explicitly removes all project components. The separate official Codex CLI installation is not removed.
 
-## Development
-
-```bash
-npm install
-npm run check
-```
-
-Main entry points:
-
-- `src/bridge/`: Codex renderer bridge;
-- `scripts/build-bridge.mjs`: bundle the loopback sidecar;
-- `scripts/install.mjs`: install the sidecar and wrapper app;
-- `scripts/install-plugin.mjs`: validate and install the prebuilt Ulanzi plugin;
-- `integration/com.ulanzi.codexmicro.ulanziPlugin/`: Ulanzi Studio plugin;
-- `scripts/uninstall.mjs`: remove both installed components.
+CLI session keys use stable active-task slots rather than history pages. Running tasks and tasks needing attention take the lowest free key and keep it while active. Completed/stopped tasks release their key after 30 seconds; active work may reclaim a non-active key sooner when all six keys are occupied. Idle history is shown temporarily only when selected through navigation. Selection remains available in Status and the inspector after a key expires. History navigation and Task Monitor remain available for tasks outside the six keys. Clicking a key verifies its displayed task identity before selecting it.
