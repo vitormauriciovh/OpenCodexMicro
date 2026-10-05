@@ -18,6 +18,16 @@ commands from the repository root. Load only the references relevant to the task
 
 ## Runtime map and source ownership
 
+Windows additions live under `src/platform/`, `scripts/windows.mjs` and
+`scripts/build-windows.mjs`. See [Windows setup](docs/windows.md). Windows
+commands are opt-in and generate separate `dist/windows/` packages. Keep macOS
+manifests and launchd scripts intact. Never install a virtual device driver or
+change boot policy as a fallback for an incompatible Codex App CDP endpoint.
+The Windows CLI transport is authenticated loopback WebSocket; macOS retains
+WebSocket over its Unix socket. `npm run check:windows` covers Windows-specific
+fixtures, package validation and generated-plugin smoke tests. The CI matrix
+runs both checks on Windows and macOS; local Windows results do not certify Mac.
+
 Ulanzi Studio owns the physical device. There are four plugins and three
 background bridges. All HTTP endpoints below bind to `127.0.0.1` by default;
 each developer bridge serves WebSocket `/events` on its own HTTP port.
@@ -93,8 +103,8 @@ diffs before delivery. Regenerate tracked outputs when their sources change.
 
 Use Node.js 20+ and npm. When dependencies need installation, use the root
 lockfile with `npm ci`; do not reinstall dependencies on every task. This is
-JavaScript ESM with Node's test runner and esbuild; no lint/typecheck script or
-tracked CI workflow is currently provided.
+JavaScript ESM with Node's test runner and esbuild; no lint/typecheck script is
+provided. `.github/workflows/platform-checks.yml` checks Windows and macOS.
 
 For source changes, start with the relevant tests below (`node --test` followed
 by the listed paths), then build/check the affected plugin. Build its bridge

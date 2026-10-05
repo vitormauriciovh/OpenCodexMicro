@@ -58,7 +58,7 @@ export async function pluginSmoke(name) {
   const context = vm.createContext(sandbox);
   // Execute the complete entry point with injected platform dependencies; no real
   // applications, network connections, personal history or timers are accessed.
-  vm.runInContext(readFileSync(sourcePath, 'utf8').replace(/^import .*;\n/gm, ''), context, { filename: sourcePath });
+  vm.runInContext(readFileSync(sourcePath, 'utf8').replace(/^import .*;\r?\n/gm, ''), context, { filename: sourcePath });
   sockets[0].open(); await settle();
   const message = (action, cmd, extra = {}) => ({ cmd, uuid: `${manifest.UUID}.${action}`, actionid: action, key: action, ...extra });
   for (const action of manifest.Actions) sockets[0].message(message(action.UUID.split('.').pop(), 'add'));

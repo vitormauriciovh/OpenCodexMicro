@@ -25,6 +25,14 @@ Similar action names do not guarantee identical behavior across applications.
 See [capabilities and acceptance](docs/feature-parity.md) for supported controls,
 explicitly unavailable features and live verification limits.
 
+## Windows (experimental)
+
+Build isolated Windows packages with `npm run build:windows`. See
+[Windows setup and compatibility](docs/windows.md) for the separate installers,
+authenticated CLI server and application requirements. Codex App requires a
+CDP-capable build; Microsoft Store compatibility is not guaranteed. The macOS
+installation commands and manifests below remain unchanged.
+
 ## Installation and configuration
 
 Requires macOS 13+, Node.js 20+, Ulanzi Studio 3.0.1+, an Ulanzi D200 Series deck

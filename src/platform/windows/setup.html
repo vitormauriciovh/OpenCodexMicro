@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Codex Bridge for Windows</title><style>
+body{font:13px system-ui;background:#202124;color:#eee;margin:20px;line-height:1.5}button{padding:8px;margin:4px 4px 4px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere} .warning{color:#ffca75}
+</style></head><body>
+<h2>Codex Bridge for Windows</h2>
+<p class="warning">Experimental: requires a Codex desktop build with a local CDP endpoint. Microsoft Store builds may be incompatible.</p>
+<p>Install the bridge, then start it. To connect Codex, set CODEX_APP_EXE to its executable path, close Codex yourself, and use Launch. This installer does not close applications or install drivers.</p>
+<button id="install">Install / Update</button><button id="launch">Start bridge + Launch Codex</button><button id="status">Check connection</button><button id="uninstall">Remove bridge</button>
+<pre id="result">Connecting to Ulanzi Studio...</pre>
+<script>
+const query = new URLSearchParams(location.search), output = document.getElementById('result');
+let socket, timer;
+function send(action) { if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({cmd:'sendToPlugin', uuid:query.get('uuid') || 'com.ulanzi.ulanzistudio.codexmicro.task1', actionid:query.get('actionid') || '', key:query.get('key') || '', payload:{type:'bridgeSetup',action}})); }
+function connect() {
+  socket = new WebSocket(`ws://${query.get('address') || '127.0.0.1'}:${query.get('port') || '3906'}`);
+  socket.onopen = () => { socket.send(JSON.stringify({cmd:'connected',code:0,uuid:query.get('uuid') || 'com.ulanzi.ulanzistudio.codexmicro.task1'})); send('status'); timer = setInterval(() => send('status'), 5000); };
+  socket.onmessage = event => { const message = JSON.parse(event.data); if (message.payload?.type !== 'bridgeSetupStatus') return; const p = message.payload, s = p.status; output.textContent = p.error || `Installed: ${Boolean(s.installed)}\nBridge online: ${Boolean(s.serviceOnline)}\nCodex connected: ${Boolean(s.cdpConnected)}\n${s.serviceError || ''}`; for (const id of ['install','launch','uninstall']) document.getElementById(id).disabled = Boolean(p.busy); };
+  socket.onclose = () => { clearInterval(timer); output.textContent = 'Disconnected from Ulanzi Studio'; setTimeout(connect, 1000); };
+}
+for (const id of ['install','launch','status','uninstall']) document.getElementById(id).onclick = () => { if (id !== 'uninstall' || confirm('Remove only this Windows bridge runtime? Drafts and other components are retained.')) send(id); };
+connect();
+</script></body></html>

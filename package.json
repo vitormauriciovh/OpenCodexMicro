@@ -9,6 +9,16 @@
     "node": ">=20"
   },
   "scripts": {
+    "build:windows": "node scripts/build-windows.mjs",
+    "windows:install-plugin": "node scripts/windows.mjs install-plugin",
+    "windows:setup": "node scripts/windows.mjs setup",
+    "windows:start": "node scripts/windows.mjs start",
+    "windows:stop": "node scripts/windows.mjs stop",
+    "windows:status": "node scripts/windows.mjs status",
+    "windows:uninstall": "node scripts/windows.mjs uninstall",
+    "windows:launch-codex": "node scripts/windows.mjs launch-app codex",
+    "windows:terminal": "node scripts/windows.mjs terminal codex-cli",
+    "check:windows": "npm run build:windows && node --test test/windows*_test.mjs && node scripts/check-windows.mjs && node scripts/smoke-windows.mjs",
     "test": "node --test test/*_test.mjs",
     "build:bridge": "node scripts/build-bridge.mjs",
     "build:plugin": "npm --prefix integration/com.ulanzi.codexmicro.ulanziPlugin run build",

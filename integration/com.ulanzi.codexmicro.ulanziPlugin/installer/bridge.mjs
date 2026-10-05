@@ -3701,6 +3701,80 @@ var require_websocket_server = __commonJS({
   }
 });
 
+// ../../src/platform/windows/powershell.mjs
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+var exec = promisify(execFile);
+var psArgs = (script) => ["-NoProfile", "-NonInteractive", "-EncodedCommand", Buffer.from(script, "utf16le").toString("base64")];
+function powershell(script, { execute = exec, env = process.env, timeout = 1e4 } = {}) {
+  return execute("powershell.exe", psArgs("$ErrorActionPreference = 'Stop'\n" + script), {
+    env,
+    timeout,
+    windowsHide: true,
+    maxBuffer: 4 * 1024 * 1024
+  });
+}
+
+// ../../src/platform/desktop.mjs
+import { access } from "node:fs/promises";
+import { isAbsolute } from "node:path";
+function validateDebuggerEndpoint(endpoint, port) {
+  const url = new URL(endpoint);
+  if (url.protocol !== "ws:" || url.hostname !== "127.0.0.1" || Number(url.port) !== port || url.username || url.password) {
+    throw new Error("Codex debugger must stay on its discovered loopback endpoint");
+  }
+  return url.href;
+}
+async function processCommands({ platform = process.platform, execute = exec, mode = "command", env = process.env } = {}) {
+  if (platform !== "win32") {
+    return (await execute("/bin/ps", mode === "aux" ? ["aux"] : ["-axo", "command="], { timeout: mode === "aux" ? 2e3 : 4e3 })).stdout;
+  }
+  const filter = mode === "aux" ? "Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(agy|antigravity).*' }" : "Get-CimInstance Win32_Process | Where-Object { $_.Name -eq $env:ULANZI_CODEX_PROCESS -or $_.Name -eq 'Codex.exe' }";
+  const { stdout } = await powershell(`${filter} | ForEach-Object { $_.CommandLine }`, { execute, env: { ...env, ULANZI_CODEX_PROCESS: `${env.CODEX_WINDOWS_PROCESS_NAME || "ChatGPT"}.exe` } });
+  return stdout;
+}
+async function focusDesktop(application, { platform = process.platform, execute = exec, file, env = process.env } = {}) {
+  if (platform !== "win32") {
+    const args = application === "codex" ? ["-b", "com.openai.codex"] : ["-a", application];
+    if (file) args.push(file);
+    return execute("/usr/bin/open", args, { timeout: 3e3 });
+  }
+  if (file) {
+    const executable = env.ANTIGRAVITY_EDITOR_EXE;
+    if (!executable || !isAbsolute(executable) || !/\.exe$/i.test(executable)) throw new Error("Set ANTIGRAVITY_EDITOR_EXE to the editor executable to open artifacts");
+    await access(executable);
+    return execute(executable, [file], { timeout: 5e3, windowsHide: true });
+  }
+  const name = application === "codex" ? env.CODEX_WINDOWS_PROCESS_NAME || "ChatGPT" : application === "Visual Studio Code" ? "Code" : "Antigravity";
+  return powershell(`
+$windows = @(Get-Process -Name $env:ULANZI_FOCUS_PROCESS -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 })
+if ($windows.Count -ne 1) { throw 'Open exactly one application window before using this action' }
+$shell = New-Object -ComObject WScript.Shell
+if (-not $shell.AppActivate($windows[0].Id)) { throw 'Windows did not allow the application to receive focus' }
+`, { execute, env: { ...env, ULANZI_FOCUS_PROCESS: name } });
+}
+
+// ../../src/platform/windows/privacy.mjs
+import { execFileSync } from "node:child_process";
+import { realpathSync } from "node:fs";
+var secured = /* @__PURE__ */ new Set();
+function protectDirectory(directory) {
+  const target = realpathSync(directory);
+  if (secured.has(target)) return;
+  execFileSync("powershell.exe", psArgs(`
+$ErrorActionPreference = 'Stop'
+$identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+$directory = New-Object System.IO.DirectoryInfo($env:ULANZI_PRIVATE_DIRECTORY)
+$acl = $directory.GetAccessControl([System.Security.AccessControl.AccessControlSections]::Access)
+$acl.SetAccessRuleProtection($true, $false)
+foreach ($existing in @($acl.Access)) { $acl.RemoveAccessRuleSpecific($existing) }
+$rule = New-Object System.Security.AccessControl.FileSystemAccessRule($identity, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
+$acl.AddAccessRule($rule)
+$directory.SetAccessControl($acl)
+`), { env: { ...process.env, ULANZI_PRIVATE_DIRECTORY: target }, windowsHide: true, timeout: 1e4, stdio: "pipe" });
+  secured.add(target);
+}
+
 // ../../src/shared/local-api.mjs
 import { mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
 import { homedir } from "node:os";
@@ -3711,6 +3785,7 @@ function localHeaders(component) {
   const root = process.env.ULANZI_AUTH_DIR || join(homedir(), ".local/share/ulanzi-bridges");
   mkdirSync(root, { recursive: true, mode: 448 });
   chmodSync(root, 448);
+  if (process.platform === "win32") protectDirectory(root);
   const file = join(root, `${component}.token`);
   try {
     writeFileSync(file, randomBytes(32).toString("hex"), { flag: "wx", mode: 384 });
@@ -3781,8 +3856,6 @@ function stateDigest(state) {
 
 // ../../src/bridge/server.mjs
 import { createServer } from "node:http";
-import { execFile as execFile2 } from "node:child_process";
-import { promisify as promisify2 } from "node:util";
 
 // ../../src/shared/token-metrics.mjs
 function contextPercent(usage) {
@@ -3864,10 +3937,6 @@ function cycleNativeModelPicker(picker, action) {
   props.onSelectReasoningEffort(effort);
   return { model: props.model, reasoningEffort: effort };
 }
-
-// ../../src/bridge/codex-cdp.mjs
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 
 // ../../src/bridge/thread-key.mjs
 var UUID_PATTERN = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
@@ -3951,7 +4020,6 @@ function taskAttentionStatus(status, hasAsyncQuestion) {
 }
 
 // ../../src/bridge/codex-cdp.mjs
-var execFileAsync = promisify(execFile);
 var USAGE_REFRESH_MS = Math.max(
   15e3,
   Number(process.env.CODEX_KEYBOARD_USAGE_REFRESH_SECONDS || 600) * 1e3
@@ -4628,7 +4696,7 @@ async function fetchJson(url, timeout = 1200) {
   return response.json();
 }
 async function discoverDebugPort() {
-  const { stdout } = await execFileAsync("/bin/ps", ["-axo", "command="], { timeout: 4e3 });
+  const stdout = await processCommands();
   for (const line of stdout.split("\n")) {
     if (!line.includes("--remote-debugging-address=127.0.0.1")) continue;
     const port = Number(line.match(/--remote-debugging-port(?:=|\s+)(\d+)/)?.[1]);
@@ -4639,7 +4707,7 @@ async function discoverDebugPort() {
     } catch {
     }
   }
-  throw new Error("Codex is not running with the local debug bridge");
+  throw new Error(process.platform === "win32" ? "This Codex App has no local CDP endpoint. Close Codex yourself, then use the Windows launcher with a CDP-capable build. Store builds may not support CDP." : "Codex is not running with the local debug bridge");
 }
 var CodexCdpClient = class {
   socket = null;
@@ -4652,7 +4720,7 @@ var CodexCdpClient = class {
     const port = await discoverDebugPort();
     const target = selectMainTarget(await fetchJson(`http://127.0.0.1:${port}/json/list`));
     if (!target?.webSocketDebuggerUrl) throw new Error("Codex main renderer was not found");
-    const socket = new wrapper_default(target.webSocketDebuggerUrl);
+    const socket = new wrapper_default(process.platform === "win32" ? validateDebuggerEndpoint(target.webSocketDebuggerUrl, port) : target.webSocketDebuggerUrl);
     await new Promise((resolve, reject) => {
       const timer2 = setTimeout(() => reject(new Error("Timed out connecting to Codex")), 3e3);
       socket.once("open", () => {
@@ -4884,7 +4952,6 @@ var CodexCdpClient = class {
 };
 
 // ../../src/bridge/server.mjs
-var execFileAsync2 = promisify2(execFile2);
 var HOST = "127.0.0.1";
 var PORT = Number(process.env.CODEX_KEYBOARD_PORT || 17373);
 var configuredRefreshMs = Number(process.env.CODEX_KEYBOARD_REFRESH_MS || 500);
@@ -4934,9 +5001,7 @@ wss.on("connection", (ws) => {
   ws.on("error", () => wsClients.delete(ws));
 });
 async function focusCodex() {
-  await execFileAsync2("/usr/bin/open", ["-b", "com.openai.codex"], {
-    timeout: 3e3
-  });
+  await focusDesktop("codex");
 }
 async function refresh(force = false) {
   if (refreshPromise) return refreshPromise;

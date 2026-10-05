@@ -2,11 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { WebSocketServer } from 'ws';
 import { CodexCliClient } from '../src/bridge-codex-cli/app-server-client.mjs';
 
-test('CLI speaks uncompressed WebSocket over a Unix socket, including server approval requests', { timeout: 10000 }, async () => {
-  const dir = await mkdtemp('/private/tmp/ulanzi-cli-ws-');
+test('CLI speaks uncompressed WebSocket over a Unix socket, including server approval requests', { timeout: 10000, skip: process.platform === 'win32' && 'Unix transport; authenticated Windows transport tested separately' }, async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'ulanzi-cli-ws-'));
   const server = createServer();
   const wss = new WebSocketServer({ noServer: true });
   const messages = [];

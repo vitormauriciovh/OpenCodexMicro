@@ -1,6 +1,5 @@
+import { platformPaths } from '../platform/paths.mjs';
 import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
 import WebSocket from 'ws';
 
 // Selectors verified against Antigravity Desktop's locally served UI. All
@@ -147,7 +146,7 @@ export async function desktopOperation(request, env = { document: globalThis.doc
 }
 
 export class AntigravityDesktopClient {
-  constructor({ portFile = path.join(os.homedir(), 'Library/Application Support/Antigravity/DevToolsActivePort'), fetchImpl = fetch, socketFactory = url => new WebSocket(url) } = {}) {
+  constructor({ portFile = platformPaths().antigravityPort, fetchImpl = fetch, socketFactory = url => new WebSocket(url) } = {}) {
     this.portFile = portFile; this.fetch = fetchImpl; this.socketFactory = socketFactory;
     this.socket = null; this.pending = new Map(); this.sequence = 0; this.connecting = null; this.actionQueue = Promise.resolve();
   }

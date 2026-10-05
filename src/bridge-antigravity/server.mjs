@@ -1,16 +1,14 @@
+import { focusDesktop } from "../platform/desktop.mjs";
 import { AntigravityDesktopClient } from "./desktop-client.mjs";
 import { mergeDesktopState } from "./desktop-state.mjs";
 import { promptShortcuts } from "../shared/prompt-shortcuts.mjs";
 import { secureHandler, allowedRequest, readJson } from "../shared/local-api.mjs";
 import { stateDigest } from "../shared/plugin-runtime.mjs";
 import { createServer } from "node:http";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import path from "node:path";
 import { WebSocketServer } from "ws";
 import { AntigravityStateReader } from "./state-reader.mjs";
 
-const execFileAsync = promisify(execFile);
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.ANTIGRAVITY_BRIDGE_PORT || 17374);
 const REFRESH_MS = 500;
@@ -56,12 +54,12 @@ wss.on("connection", (ws) => {
 });
 
 async function focusVSCode() {
-  await execFileAsync("/usr/bin/open", ["-a", process.env.ANTIGRAVITY_EDITOR_APP || (cached.applicationConnected ? "Antigravity" : "Visual Studio Code")], { timeout: 3000 });
+  await focusDesktop(process.env.ANTIGRAVITY_EDITOR_APP || (cached.applicationConnected ? "Antigravity" : "Visual Studio Code"));
 }
 async function openFileInEditor(filePath) {
   const { access } = await import("node:fs/promises");
   await access(filePath);
-  await execFileAsync("/usr/bin/open", ["-a", process.env.ANTIGRAVITY_EDITOR_APP || "Visual Studio Code", filePath], { timeout: 3000 });
+  await focusDesktop(process.env.ANTIGRAVITY_EDITOR_APP || "Visual Studio Code", { file: filePath });
 }
 function unavailable() {
   return { ok: false, error: "This Antigravity version exposes no verified session control. Use the editor for this action." };

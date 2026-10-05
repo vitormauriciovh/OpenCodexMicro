@@ -3764,33 +3764,71 @@ var import_websocket = __toESM(require_websocket(), 1);
 var import_websocket_server = __toESM(require_websocket_server(), 1);
 var wrapper_default = import_websocket.default;
 
-// ../../src/shared/local-api.mjs
+// ../../src/platform/windows/privacy.mjs
+var import_node_child_process2 = require("node:child_process");
 var import_node_fs = require("node:fs");
+
+// ../../src/platform/windows/powershell.mjs
+var import_node_child_process = require("node:child_process");
+var import_node_util = require("node:util");
+var exec = (0, import_node_util.promisify)(import_node_child_process.execFile);
+var psArgs = (script) => ["-NoProfile", "-NonInteractive", "-EncodedCommand", Buffer.from(script, "utf16le").toString("base64")];
+function powershell(script, { execute = exec, env = process.env, timeout = 1e4 } = {}) {
+  return execute("powershell.exe", psArgs("$ErrorActionPreference = 'Stop'\n" + script), {
+    env,
+    timeout,
+    windowsHide: true,
+    maxBuffer: 4 * 1024 * 1024
+  });
+}
+
+// ../../src/platform/windows/privacy.mjs
+var secured = /* @__PURE__ */ new Set();
+function protectDirectory(directory) {
+  const target = (0, import_node_fs.realpathSync)(directory);
+  if (secured.has(target)) return;
+  (0, import_node_child_process2.execFileSync)("powershell.exe", psArgs(`
+$ErrorActionPreference = 'Stop'
+$identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+$directory = New-Object System.IO.DirectoryInfo($env:ULANZI_PRIVATE_DIRECTORY)
+$acl = $directory.GetAccessControl([System.Security.AccessControl.AccessControlSections]::Access)
+$acl.SetAccessRuleProtection($true, $false)
+foreach ($existing in @($acl.Access)) { $acl.RemoveAccessRuleSpecific($existing) }
+$rule = New-Object System.Security.AccessControl.FileSystemAccessRule($identity, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
+$acl.AddAccessRule($rule)
+$directory.SetAccessControl($acl)
+`), { env: { ...process.env, ULANZI_PRIVATE_DIRECTORY: target }, windowsHide: true, timeout: 1e4, stdio: "pipe" });
+  secured.add(target);
+}
+
+// ../../src/shared/local-api.mjs
+var import_node_fs2 = require("node:fs");
 var import_node_os = require("node:os");
 var import_node_path = require("node:path");
 var import_node_crypto = require("node:crypto");
 function localHeaders(component) {
   if (!/^[a-z-]+$/.test(component)) throw new Error("Invalid component");
   const root = process.env.ULANZI_AUTH_DIR || (0, import_node_path.join)((0, import_node_os.homedir)(), ".local/share/ulanzi-bridges");
-  (0, import_node_fs.mkdirSync)(root, { recursive: true, mode: 448 });
-  (0, import_node_fs.chmodSync)(root, 448);
+  (0, import_node_fs2.mkdirSync)(root, { recursive: true, mode: 448 });
+  (0, import_node_fs2.chmodSync)(root, 448);
+  if (process.platform === "win32") protectDirectory(root);
   const file = (0, import_node_path.join)(root, `${component}.token`);
   try {
-    (0, import_node_fs.writeFileSync)(file, (0, import_node_crypto.randomBytes)(32).toString("hex"), { flag: "wx", mode: 384 });
+    (0, import_node_fs2.writeFileSync)(file, (0, import_node_crypto.randomBytes)(32).toString("hex"), { flag: "wx", mode: 384 });
   } catch (error) {
     if (error.code !== "EEXIST") throw error;
   }
-  (0, import_node_fs.chmodSync)(file, 384);
-  const token = (0, import_node_fs.readFileSync)(file, "utf8").trim();
+  (0, import_node_fs2.chmodSync)(file, 384);
+  const token = (0, import_node_fs2.readFileSync)(file, "utf8").trim();
   if (!/^[a-f0-9]{64}$/.test(token)) throw new Error("Invalid local bridge credential; remove the component token file to regenerate it");
   return { Authorization: `Bearer ${token}` };
 }
 function localClient(component, baseUrl) {
   const url = new URL(baseUrl);
   if (url.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname)) throw new Error("Bridge URL must use HTTP loopback");
-  return async (path, options = {}) => {
-    if (!path.startsWith("/") || path.startsWith("//")) throw new Error("Invalid bridge path");
-    const response = await fetch(new URL(path, url), { ...options, redirect: "error", signal: options.signal || AbortSignal.timeout(12e3), headers: { ...options.headers, ...localHeaders(component) } });
+  return async (path2, options = {}) => {
+    if (!path2.startsWith("/") || path2.startsWith("//")) throw new Error("Invalid bridge path");
+    const response = await fetch(new URL(path2, url), { ...options, redirect: "error", signal: options.signal || AbortSignal.timeout(12e3), headers: { ...options.headers, ...localHeaders(component) } });
     const payload = await response.json();
     if (!response.ok || payload.ok === false || payload.result?.ok === false) throw new Error(payload.error || payload.result?.error || `Bridge HTTP ${response.status}`);
     return payload;
@@ -3852,12 +3890,346 @@ function bridgeFeed({ component, url, poll, onState }) {
 }
 
 // plugin/app.js
-var import_node_fs3 = require("node:fs");
+var import_node_fs4 = require("node:fs");
+var import_node_path8 = require("node:path");
+
+// ../../src/platform/windows/installer.mjs
+var import_promises2 = require("node:fs/promises");
+var import_node_crypto3 = require("node:crypto");
 var import_node_path4 = require("node:path");
 
-// ../../src/shared/bridge-files.mjs
-var import_promises = require("node:fs/promises");
+// ../../src/platform/paths.mjs
+var import_node_os2 = require("node:os");
 var import_node_path2 = require("node:path");
+function platformPaths({ platform = process.platform, home = (0, import_node_os2.homedir)(), env = process.env } = {}) {
+  if (platform === "win32") {
+    const local = env.LOCALAPPDATA || (0, import_node_path2.join)(home, "AppData", "Local");
+    const roaming = env.APPDATA || (0, import_node_path2.join)(home, "AppData", "Roaming");
+    return {
+      data: (0, import_node_path2.join)(local, "OpenCodexMicro"),
+      plugins: env.ULANZI_PLUGINS_DIR || (0, import_node_path2.join)(roaming, "Ulanzi", "UlanziDeck", "Plugins"),
+      antigravityPort: env.ANTIGRAVITY_PORT_FILE || (0, import_node_path2.join)(roaming, "Antigravity", "DevToolsActivePort")
+    };
+  }
+  return {
+    data: (0, import_node_path2.join)(home, "Library", "Application Support", "OpenCodexMicro"),
+    plugins: (0, import_node_path2.join)(home, "Library", "Application Support", "Ulanzi", "UlanziDeck", "Plugins"),
+    antigravityPort: (0, import_node_path2.join)(home, "Library", "Application Support", "Antigravity", "DevToolsActivePort")
+  };
+}
+function childPath(root, ...segments) {
+  const base = (0, import_node_path2.resolve)(root), target = (0, import_node_path2.resolve)(base, ...segments), rel = (0, import_node_path2.relative)(base, target);
+  if (!rel || rel === ".." || rel.startsWith("..\\") || rel.startsWith("../") || (0, import_node_path2.isAbsolute)(rel)) {
+    throw new Error("Path must stay inside the component directory");
+  }
+  return target;
+}
+
+// ../../src/shared/storage.mjs
+var import_promises = __toESM(require("node:fs/promises"), 1);
+var import_node_path3 = __toESM(require("node:path"), 1);
+var import_node_crypto2 = require("node:crypto");
+async function atomicJson(file, value) {
+  await import_promises.default.mkdir(import_node_path3.default.dirname(file), { recursive: true, mode: 448 });
+  await import_promises.default.chmod(import_node_path3.default.dirname(file), 448);
+  const temp = `${file}.${(0, import_node_crypto2.randomUUID)()}.tmp`;
+  try {
+    await import_promises.default.writeFile(temp, JSON.stringify(value, null, 2) + "\n", { mode: 384, flag: "wx" });
+    await import_promises.default.rename(temp, file);
+  } finally {
+    await import_promises.default.rm(temp, { force: true });
+  }
+}
+
+// ../../src/platform/windows/installer.mjs
+var components = {
+  codex: { plugin: "codexmicro", port: 17373, runtime: "bridge.mjs" },
+  antigravity: { plugin: "antigravity", port: 17374, runtime: "bridge-antigravity.mjs" },
+  "codex-cli": { plugin: "codexcli", port: 17376, runtime: "bridge-codex-cli.mjs" }
+};
+var literal = (value) => "'" + String(value).replaceAll("'", "''") + "'";
+var exists = async (file) => {
+  try {
+    await (0, import_promises2.access)(file);
+    return true;
+  } catch (e) {
+    if (e.code === "ENOENT") return false;
+    throw e;
+  }
+};
+async function resolveCliExecutable({ env = process.env, execute = exec } = {}) {
+  const candidates = [env.CODEX_CLI_EXE];
+  if (!env.CODEX_CLI_EXE) {
+    try {
+      candidates.push(...(await execute("where.exe", ["codex.exe"], { windowsHide: true })).stdout.trim().split(/\r?\n/));
+    } catch {
+    }
+  }
+  for (const candidate of candidates.filter(Boolean)) {
+    if ((0, import_node_path4.isAbsolute)(candidate) && /\.exe$/i.test(candidate) && await exists(candidate)) return candidate;
+  }
+  throw new Error("Set CODEX_CLI_EXE to the full path of a compatible codex.exe (not a .cmd shim)");
+}
+function createWindowsInstaller({
+  component = "codex",
+  payloadRoot,
+  version,
+  home,
+  env = process.env,
+  bridgeUrl,
+  nodeExecutable = process.execPath,
+  execute = exec,
+  secure = protectDirectory,
+  fetchImpl = fetch
+} = {}) {
+  const spec = components[component];
+  if (!spec) throw new Error("Unknown Windows bridge component");
+  const endpoint = new URL(bridgeUrl || `http://127.0.0.1:${spec.port}`);
+  if (endpoint.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(endpoint.hostname) || endpoint.username || endpoint.password) throw new Error("Bridge URL must use HTTP loopback");
+  const paths = platformPaths({ platform: "win32", home, env });
+  const root = childPath(paths.data, component);
+  const metadataFile = childPath(root, "windows-install.json");
+  const taskName = `OpenCodexMicro ${component} Bridge`;
+  async function checkDirectories() {
+    for (const directory of [paths.data, root, childPath(root, "releases")]) {
+      try {
+        if ((await (0, import_promises2.lstat)(directory)).isSymbolicLink()) throw new Error("Bridge directories must not be junctions or symbolic links");
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
+    }
+  }
+  const taskEnv = (extra) => ({ ...env, ULANZI_TASK_NAME: taskName, ...extra });
+  const run = (script, extra) => powershell(script, { execute, env: taskEnv(extra) });
+  async function metadata() {
+    try {
+      return JSON.parse(await (0, import_promises2.readFile)(metadataFile, "utf8"));
+    } catch (e) {
+      if (e.code === "ENOENT") return null;
+      throw e;
+    }
+  }
+  async function task() {
+    const { stdout } = await run(`
+$task = Get-ScheduledTask -TaskName $env:ULANZI_TASK_NAME -ErrorAction SilentlyContinue
+if ($task) { [pscustomobject]@{ state = [string]$task.State; xml = (Export-ScheduledTask -TaskName $env:ULANZI_TASK_NAME) } | ConvertTo-Json -Compress }
+else { 'null' }
+`);
+    return JSON.parse(stdout.trim() || "null");
+  }
+  async function status() {
+    const stored = await metadata();
+    let current = null, serviceError = null, serviceOnline = false, connected = false;
+    try {
+      current = await task();
+    } catch (e) {
+      serviceError = e.message;
+    }
+    try {
+      const response = await fetchImpl(new URL("/health", endpoint), { headers: localHeaders(component), signal: AbortSignal.timeout(1500), redirect: "error" });
+      const data = await response.json();
+      serviceOnline = response.ok && data.ok === true;
+      connected = Boolean(data.codexConnected || data.antigravityConnected || data.daemonConnected);
+    } catch (e) {
+      serviceError ||= e.message;
+    }
+    const installed = Boolean(stored && current && await exists(stored.runtime));
+    return {
+      platform: "win32",
+      supported: true,
+      installed,
+      appInstalled: installed,
+      serviceInstalled: installed,
+      serviceOnline,
+      cdpConnected: connected,
+      serviceError,
+      installedVersion: stored?.version || null,
+      bundledVersion: version,
+      needsUpdate: !installed || stored.version !== version,
+      appPath: root,
+      nodeExecutable: stored?.nodeExecutable || null,
+      nodeVersion: stored?.nodeVersion || null,
+      nodeSource: "system"
+    };
+  }
+  async function install({ start = false } = {}) {
+    await checkDirectories();
+    const previous = await task(), previousMetadata = await metadata();
+    if (previous && !previousMetadata) throw new Error(`An unmanaged task named ${taskName} already exists`);
+    if (previous?.state === "Running") throw new Error("Bridge is running. Stop this component explicitly before installing an update");
+    const previousConfig = previousMetadata ? JSON.parse(await (0, import_promises2.readFile)(previousMetadata.configPath, "utf8")) : null;
+    const installEnv = { ...previousConfig?.env, ...env };
+    const nodeVersion2 = (await execute(nodeExecutable, ["--version"], { windowsHide: true })).stdout.trim();
+    if (Number(nodeVersion2.match(/^v(\d+)/)?.[1]) < 20 || !/^v\d+\./.test(nodeVersion2)) throw new Error("Node.js 20+ is required");
+    let cliExecutable;
+    if (component === "codex-cli") {
+      cliExecutable = await resolveCliExecutable({ env: { CODEX_CLI_EXE: previousConfig?.cliExecutable, ...installEnv }, execute });
+      const help = (await execute(cliExecutable, ["app-server", "--help"], { windowsHide: true })).stdout;
+      if (!help.includes("--ws-token-file") || !help.includes("--ws-auth")) throw new Error("Update Codex CLI: authenticated app-server WebSocket support is required");
+    }
+    for (const file of [spec.runtime, "windows-runner.mjs", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md"]) await (0, import_promises2.access)((0, import_node_path4.join)(payloadRoot, file));
+    await (0, import_promises2.mkdir)(root, { recursive: true });
+    secure(root);
+    const release = childPath(root, "releases", (0, import_node_crypto3.randomUUID)());
+    await (0, import_promises2.mkdir)(release, { recursive: true });
+    const runtime = childPath(release, spec.runtime), runner = childPath(release, "windows-runner.mjs");
+    let registered = false;
+    try {
+      for (const file of [spec.runtime, "windows-runner.mjs", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md"]) await (0, import_promises2.cp)((0, import_node_path4.join)(payloadRoot, file), childPath(release, file));
+      const config = { component, runtime, cliExecutable, env: Object.fromEntries([
+        "CODEX_APP_EXE",
+        "CODEX_WINDOWS_PROCESS_NAME",
+        "CODEX_WINDOWS_OCCLUSION_WORKAROUND",
+        "ANTIGRAVITY_EDITOR_EXE",
+        "ANTIGRAVITY_EDITOR_APP",
+        "ANTIGRAVITY_PORT_FILE",
+        "ANTIGRAVITY_BRAIN_DIR",
+        "ULANZI_AUTH_DIR",
+        "CODEX_HOME"
+      ].filter((key) => installEnv[key]).map((key) => [key, installEnv[key]])) };
+      const configPath = childPath(release, "config.json");
+      await (0, import_promises2.writeFile)(configPath, JSON.stringify(config));
+      const command = `$ErrorActionPreference = 'Stop'
+& ${literal(nodeExecutable)} ${literal(runner)} ${literal(configPath)}
+exit $LASTEXITCODE`;
+      const args = ["-WindowStyle", "Hidden", ...psArgs(command)].join(" ");
+      await run(`
+$identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $env:ULANZI_TASK_ARGUMENTS
+$trigger = New-ScheduledTaskTrigger -AtLogOn -User $identity
+$principal = New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive -RunLevel Limited
+$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+Register-ScheduledTask -TaskName $env:ULANZI_TASK_NAME -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
+`, { ULANZI_TASK_ARGUMENTS: args });
+      registered = true;
+      await atomicJson(metadataFile, { version, runtime, runner, configPath, release, nodeExecutable, nodeVersion: nodeVersion2, taskName, stopProtocol: 1 });
+    } catch (error) {
+      if (registered) {
+        if (previous) await run("Register-ScheduledTask -TaskName $env:ULANZI_TASK_NAME -Xml $env:ULANZI_TASK_XML -Force | Out-Null", { ULANZI_TASK_XML: previous.xml });
+        else await run("Unregister-ScheduledTask -TaskName $env:ULANZI_TASK_NAME -Confirm:$false");
+      }
+      if (previousMetadata) await atomicJson(metadataFile, previousMetadata);
+      else await (0, import_promises2.rm)(metadataFile, { force: true });
+      await (0, import_promises2.rm)(childPath(root, "releases", release.split(/[\\/]/).at(-1)), { recursive: true, force: true });
+      throw error;
+    }
+    if (start) await launch();
+    return { installed: true, taskName, root, started: start };
+  }
+  async function launch() {
+    if (!await metadata()) throw new Error("Install the Windows bridge first");
+    if ((await task())?.state === "Disabled") await run("Enable-ScheduledTask -TaskName $env:ULANZI_TASK_NAME | Out-Null");
+    await run("Start-ScheduledTask -TaskName $env:ULANZI_TASK_NAME");
+  }
+  async function launchEnvironment() {
+    const stored = await metadata();
+    if (!stored) throw new Error("Install the Windows bridge first");
+    const config = JSON.parse(await (0, import_promises2.readFile)(stored.configPath, "utf8"));
+    return { ...env, ...config.env };
+  }
+  async function stop() {
+    const stored = await metadata();
+    if (!stored) throw new Error("This component has no managed Windows installation");
+    if (stored.stopProtocol === 1 && (await task())?.state === "Running") {
+      await (0, import_promises2.writeFile)(`${stored.configPath}.stop`, "stop\n");
+      const deadline = Date.now() + 5e3;
+      while ((await task())?.state === "Running") {
+        if (Date.now() >= deadline) throw new Error("Bridge did not acknowledge stop; runtime retained. Do not reinstall while it is running");
+        await new Promise((resolve4) => setTimeout(resolve4, 250));
+      }
+    } else if (stored.stopProtocol !== 1 && (await task())?.state === "Running") {
+      throw new Error("This older runner cannot stop its children reliably. Close its managed bridge processes before updating; other Codex sessions must remain open");
+    }
+    await run("Stop-ScheduledTask -TaskName $env:ULANZI_TASK_NAME");
+  }
+  async function uninstall() {
+    await checkDirectories();
+    if (!await metadata()) throw new Error("This component has no managed Windows installation");
+    await stop();
+    await run("Unregister-ScheduledTask -TaskName $env:ULANZI_TASK_NAME -Confirm:$false");
+    await (0, import_promises2.rm)(childPath(root, "releases"), { recursive: true, force: true });
+    await (0, import_promises2.rm)(metadataFile, { force: true });
+  }
+  return { status, install, launch, stop, uninstall, launchEnvironment };
+}
+
+// ../../src/platform/windows/codex-launcher.mjs
+var import_promises3 = require("node:fs/promises");
+var import_node_child_process3 = require("node:child_process");
+var import_node_path5 = require("node:path");
+
+// ../../src/platform/windows/packaged-app.mjs
+async function launchPackagedCodex(executable, args, { env = process.env, run = powershell } = {}) {
+  const { stdout } = await run(`
+$matches = @(Get-AppxPackage -Name OpenAI.Codex | ForEach-Object {
+  $package = $_
+  $manifest = Get-AppxPackageManifest $package
+  foreach ($application in $manifest.Package.Applications.Application) {
+    if ((Join-Path $package.InstallLocation $application.Executable) -eq $env:ULANZI_PACKAGED_EXE) {
+      $package.PackageFamilyName + '!' + $application.Id
+    }
+  }
+})
+if ($matches.Count -ne 1) { throw 'Cannot identify exactly one registered Codex application for this executable' }
+$matches[0]
+`, { env: { ...env, ULANZI_PACKAGED_EXE: executable } });
+  const appId = stdout.trim();
+  if (!/^OpenAI\.Codex_[a-z0-9]+![A-Za-z0-9.]+$/.test(appId)) throw new Error("Invalid registered Codex application identity");
+  await run(`
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+namespace OpenCodexMicro {
+  [ComImport, Guid("2e941141-7f97-4756-ba1d-9decde894a3d"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+  interface IActivation {
+    [PreserveSig] int ActivateApplication([MarshalAs(UnmanagedType.LPWStr)] string app, [MarshalAs(UnmanagedType.LPWStr)] string arguments, uint options, out uint processId);
+    [PreserveSig] int ActivateForFile([MarshalAs(UnmanagedType.LPWStr)] string app, IntPtr items, [MarshalAs(UnmanagedType.LPWStr)] string verb, out uint processId);
+    [PreserveSig] int ActivateForProtocol([MarshalAs(UnmanagedType.LPWStr)] string app, IntPtr items, out uint processId);
+  }
+  [ComImport, Guid("45BA127D-10A8-46EA-8AB7-56EA9078943C")]
+  class ActivationManager { }
+  public static class StoreLaunch {
+    public static uint Launch(string app, string arguments) {
+      var manager = (IActivation)new ActivationManager();
+      try {
+        uint processId;
+        int result = manager.ActivateApplication(app, arguments, 0, out processId);
+        Marshal.ThrowExceptionForHR(result);
+        if (processId == 0) throw new InvalidOperationException("Windows did not return an application process");
+        return processId;
+      } finally { Marshal.ReleaseComObject(manager); }
+    }
+  }
+}
+'@
+[OpenCodexMicro.StoreLaunch]::Launch($env:ULANZI_CODEX_AUMID, $env:ULANZI_CODEX_ARGUMENTS) | Out-Null
+`, { env: { ...env, ULANZI_CODEX_AUMID: appId, ULANZI_CODEX_ARGUMENTS: args.join(" ") } });
+}
+
+// ../../src/platform/windows/codex-launcher.mjs
+async function launchWindowsCodex({ env = process.env, run = powershell, spawnImpl = import_node_child_process3.spawn } = {}) {
+  const executable = env.CODEX_APP_EXE;
+  if (!executable || !(0, import_node_path5.isAbsolute)(executable) || !/\.exe$/i.test(executable)) throw new Error("Set CODEX_APP_EXE to the full Codex desktop executable path. CDP-capable builds only; Store builds may not support this integration");
+  await (0, import_promises3.access)(executable);
+  const { stdout } = await run("@(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $env:CODEX_APP_EXE }).Count", { env });
+  if (Number(stdout.trim()) !== 0) throw new Error("Codex is already running. Save your work and close it yourself before using this launcher");
+  const args = ["--remote-debugging-address=127.0.0.1", "--remote-debugging-port=9222", "--remote-allow-origins=http://127.0.0.1:9222"];
+  if (env.CODEX_WINDOWS_OCCLUSION_WORKAROUND === "1") args.push("--disable-features=CalculateNativeWinOcclusion");
+  if (/[\\/]WindowsApps[\\/]/i.test(executable)) {
+    await launchPackagedCodex(executable, args, { env, run });
+    return;
+  }
+  const child = spawnImpl(executable, args, { cwd: (0, import_node_path5.dirname)(executable), windowsHide: false, detached: true, stdio: "ignore", env });
+  await new Promise((resolve4, reject) => {
+    child.once("spawn", resolve4);
+    child.once("error", reject);
+  });
+  child.unref();
+}
+
+// ../../src/shared/bridge-files.mjs
+var import_promises4 = require("node:fs/promises");
+var import_node_path6 = require("node:path");
 var bridgeComponents = {
   codex: { agent: "io.opencodexmicro.bridge.plist", files: ["bridge.mjs", "install.json", "bridge.log", "bridge-error.log", "CodexBridge.iconset", "LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md"] },
   antigravity: { agent: "io.openantigravitymicro.bridge.plist", files: ["bridge-antigravity.mjs", "bridge-antigravity.log", "bridge-antigravity-error.log"] },
@@ -3866,38 +4238,38 @@ var bridgeComponents = {
 async function removeBridgeFiles(home, component) {
   const spec = bridgeComponents[component];
   if (!spec) throw new Error("Unknown bridge component");
-  const root = (0, import_node_path2.join)(home, "Library/Application Support/OpenCodexMicro");
-  await (0, import_promises.rm)((0, import_node_path2.join)(root, component), { recursive: true, force: true });
-  for (const name of spec.files) await (0, import_promises.rm)((0, import_node_path2.join)(root, name), { recursive: true, force: true });
+  const root = (0, import_node_path6.join)(home, "Library/Application Support/OpenCodexMicro");
+  await (0, import_promises4.rm)((0, import_node_path6.join)(root, component), { recursive: true, force: true });
+  for (const name of spec.files) await (0, import_promises4.rm)((0, import_node_path6.join)(root, name), { recursive: true, force: true });
   try {
-    await (0, import_promises.rmdir)(root);
+    await (0, import_promises4.rmdir)(root);
   } catch (error) {
     if (!["ENOENT", "ENOTEMPTY", "EEXIST"].includes(error.code)) throw error;
   }
 }
 
 // plugin/bridge-installer.js
-var import_node_fs2 = require("node:fs");
-var import_promises2 = require("node:fs/promises");
-var import_node_child_process = require("node:child_process");
-var import_node_util = require("node:util");
-var import_node_os2 = require("node:os");
-var import_node_path3 = require("node:path");
-var execFileAsync = (0, import_node_util.promisify)(import_node_child_process.execFile);
+var import_node_fs3 = require("node:fs");
+var import_promises5 = require("node:fs/promises");
+var import_node_child_process4 = require("node:child_process");
+var import_node_util2 = require("node:util");
+var import_node_os3 = require("node:os");
+var import_node_path7 = require("node:path");
+var execFileAsync = (0, import_node_util2.promisify)(import_node_child_process4.execFile);
 function xml2(value) {
   return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;");
 }
-async function exists(path, mode = import_node_fs2.constants.F_OK) {
+async function exists2(path2, mode = import_node_fs3.constants.F_OK) {
   try {
-    await (0, import_promises2.access)(path, mode);
+    await (0, import_promises5.access)(path2, mode);
     return true;
   } catch {
     return false;
   }
 }
-async function readJson(path) {
+async function readJson(path2) {
   try {
-    return JSON.parse(await (0, import_promises2.readFile)(path, "utf8"));
+    return JSON.parse(await (0, import_promises5.readFile)(path2, "utf8"));
   } catch {
     return null;
   }
@@ -3913,46 +4285,46 @@ async function nodeVersion(executable, execute) {
   }
 }
 async function selectBridgeNodeRuntime({
-  home = (0, import_node_os2.homedir)(),
+  home = (0, import_node_os3.homedir)(),
   fallbackNodeExecutable = process.execPath,
   environmentPath = process.env.PATH || "",
   platform = process.platform,
   execute = execFileAsync
 } = {}) {
   const candidates = [];
-  if (platform === "darwin" && await exists("/bin/zsh", import_node_fs2.constants.X_OK)) {
+  if (platform === "darwin" && await exists2("/bin/zsh", import_node_fs3.constants.X_OK)) {
     try {
       const { stdout = "" } = await execute("/bin/zsh", ["-lic", "node -p process.execPath"]);
       const discovered = String(stdout).split(/\r?\n/).map((line) => line.trim()).find((line) => line.startsWith("/") && line.split("/").at(-1) === "node");
-      if (discovered) candidates.push(await (0, import_promises2.realpath)(discovered));
+      if (discovered) candidates.push(await (0, import_promises5.realpath)(discovered));
     } catch {
     }
   }
-  for (const directory of environmentPath.split(import_node_path3.delimiter).filter(Boolean)) {
-    candidates.push((0, import_node_path3.join)(directory, "node"));
+  for (const directory of environmentPath.split(import_node_path7.delimiter).filter(Boolean)) {
+    candidates.push((0, import_node_path7.join)(directory, "node"));
   }
   candidates.push(
     "/opt/homebrew/bin/node",
     "/usr/local/bin/node",
     "/usr/bin/node",
-    (0, import_node_path3.join)(home, ".local", "bin", "node")
+    (0, import_node_path7.join)(home, ".local", "bin", "node")
   );
   let resolvedFallback = fallbackNodeExecutable;
   try {
-    resolvedFallback = await (0, import_promises2.realpath)(fallbackNodeExecutable);
+    resolvedFallback = await (0, import_promises5.realpath)(fallbackNodeExecutable);
   } catch {
   }
   for (const executable of [...new Set(candidates)]) {
-    if (!executable.startsWith("/")) continue;
-    if (!await exists(executable, import_node_fs2.constants.X_OK)) continue;
-    const resolvedExecutable = await (0, import_promises2.realpath)(executable);
+    if (!(0, import_node_path7.isAbsolute)(executable)) continue;
+    if (!await exists2(executable, import_node_fs3.constants.X_OK)) continue;
+    const resolvedExecutable = await (0, import_promises5.realpath)(executable);
     if (resolvedExecutable === resolvedFallback) continue;
     const version = await nodeVersion(resolvedExecutable, execute);
     if (version?.major >= 20) {
       return { executable: resolvedExecutable, version: version.text, source: "system" };
     }
   }
-  if (await exists(resolvedFallback, import_node_fs2.constants.X_OK)) {
+  if (await exists2(resolvedFallback, import_node_fs3.constants.X_OK)) {
     const version = await nodeVersion(resolvedFallback, execute);
     if (version?.major >= 20) {
       return { executable: resolvedFallback, version: version.text, source: "ulanzi" };
@@ -3964,29 +4336,37 @@ function createBridgeInstaller({
   pluginRoot,
   bridgeUrl,
   version,
-  home = (0, import_node_os2.homedir)(),
+  home = (0, import_node_os3.homedir)(),
   uid = process.getuid?.(),
   platform = process.platform,
   nodeExecutable = process.execPath,
   environmentPath = process.env.PATH || "",
   execute = execFileAsync
 }) {
-  const appRoot = (0, import_node_path3.join)(home, "Library", "Application Support", "OpenCodexMicro", "codex");
-  const userApplications = (0, import_node_path3.join)(home, "Applications");
-  const bridgeApp = (0, import_node_path3.join)(userApplications, "Codex Bridge.app");
-  const bridgeContents = (0, import_node_path3.join)(bridgeApp, "Contents");
-  const bridgeMacOS = (0, import_node_path3.join)(bridgeContents, "MacOS");
-  const bridgeResources = (0, import_node_path3.join)(bridgeContents, "Resources");
-  const bridgeLicenses = (0, import_node_path3.join)(bridgeResources, "licenses");
-  const bridgeExecutable = (0, import_node_path3.join)(bridgeMacOS, "Codex Bridge");
-  const bridgeIcon = (0, import_node_path3.join)(bridgeResources, "CodexBridge.icns");
-  const bridgeRuntime = (0, import_node_path3.join)(appRoot, "bridge.mjs");
-  const installMetadata = (0, import_node_path3.join)(appRoot, "install.json");
-  const agentsRoot = (0, import_node_path3.join)(home, "Library", "LaunchAgents");
-  const bridgeAgent = (0, import_node_path3.join)(agentsRoot, "io.opencodexmicro.bridge.plist");
-  const installerRoot = (0, import_node_path3.resolve)(pluginRoot, "installer");
-  const bundledRuntime = (0, import_node_path3.join)(installerRoot, "bridge.mjs");
-  const bundledIcon = (0, import_node_path3.join)(installerRoot, "CodexBridge.png");
+  if (platform === "win32") {
+    const installer = createWindowsInstaller({ component: "codex", payloadRoot: (0, import_node_path7.resolve)(pluginRoot, "installer"), version, home, bridgeUrl, nodeExecutable, execute });
+    return { ...installer, async launch() {
+      await installer.launch();
+      await launchWindowsCodex({ env: await installer.launchEnvironment() });
+      return installer.status();
+    } };
+  }
+  const appRoot = (0, import_node_path7.join)(home, "Library", "Application Support", "OpenCodexMicro", "codex");
+  const userApplications = (0, import_node_path7.join)(home, "Applications");
+  const bridgeApp = (0, import_node_path7.join)(userApplications, "Codex Bridge.app");
+  const bridgeContents = (0, import_node_path7.join)(bridgeApp, "Contents");
+  const bridgeMacOS = (0, import_node_path7.join)(bridgeContents, "MacOS");
+  const bridgeResources = (0, import_node_path7.join)(bridgeContents, "Resources");
+  const bridgeLicenses = (0, import_node_path7.join)(bridgeResources, "licenses");
+  const bridgeExecutable = (0, import_node_path7.join)(bridgeMacOS, "Codex Bridge");
+  const bridgeIcon = (0, import_node_path7.join)(bridgeResources, "CodexBridge.icns");
+  const bridgeRuntime = (0, import_node_path7.join)(appRoot, "bridge.mjs");
+  const installMetadata = (0, import_node_path7.join)(appRoot, "install.json");
+  const agentsRoot = (0, import_node_path7.join)(home, "Library", "LaunchAgents");
+  const bridgeAgent = (0, import_node_path7.join)(agentsRoot, "io.opencodexmicro.bridge.plist");
+  const installerRoot = (0, import_node_path7.resolve)(pluginRoot, "installer");
+  const bundledRuntime = (0, import_node_path7.join)(installerRoot, "bridge.mjs");
+  const bundledIcon = (0, import_node_path7.join)(installerRoot, "CodexBridge.png");
   async function probeBridge() {
     try {
       const response = await fetch(`${bridgeUrl}/health`, {
@@ -4002,7 +4382,7 @@ function createBridgeInstaller({
   }
   async function readAppPlistVersion() {
     try {
-      const plistContent = await (0, import_promises2.readFile)((0, import_node_path3.join)(bridgeContents, "Info.plist"), "utf8");
+      const plistContent = await (0, import_promises5.readFile)((0, import_node_path7.join)(bridgeContents, "Info.plist"), "utf8");
       const match = plistContent.match(/<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/);
       return match?.[1] || null;
     } catch {
@@ -4011,9 +4391,9 @@ function createBridgeInstaller({
   }
   async function status() {
     const [appInstalled, runtimeInstalled, agentInstalled, metadata, probe, plistVersion] = await Promise.all([
-      exists(bridgeExecutable, import_node_fs2.constants.X_OK),
-      exists(bridgeRuntime),
-      exists(bridgeAgent),
+      exists2(bridgeExecutable, import_node_fs3.constants.X_OK),
+      exists2(bridgeRuntime),
+      exists2(bridgeAgent),
       readJson(installMetadata),
       probeBridge(),
       readAppPlistVersion()
@@ -4036,9 +4416,9 @@ function createBridgeInstaller({
     };
   }
   async function buildIcon() {
-    const iconset = (0, import_node_path3.join)(appRoot, "CodexBridge.iconset");
-    await (0, import_promises2.rm)(iconset, { recursive: true, force: true });
-    await (0, import_promises2.mkdir)(iconset, { recursive: true });
+    const iconset = (0, import_node_path7.join)(appRoot, "CodexBridge.iconset");
+    await (0, import_promises5.rm)(iconset, { recursive: true, force: true });
+    await (0, import_promises5.mkdir)(iconset, { recursive: true });
     try {
       for (const [name, size] of [
         ["icon_16x16.png", 16],
@@ -4058,19 +4438,19 @@ function createBridgeInstaller({
           String(size),
           bundledIcon,
           "--out",
-          (0, import_node_path3.join)(iconset, name)
+          (0, import_node_path7.join)(iconset, name)
         ]);
       }
       await execute("/usr/bin/iconutil", ["-c", "icns", iconset, "-o", bridgeIcon]);
     } finally {
-      await (0, import_promises2.rm)(iconset, { recursive: true, force: true });
+      await (0, import_promises5.rm)(iconset, { recursive: true, force: true });
     }
   }
   async function install() {
     if (platform !== "darwin" || !Number.isInteger(uid)) {
       throw new Error("Codex Bridge installation is supported on macOS only.");
     }
-    if (!await exists(bundledRuntime) || !await exists(bundledIcon)) {
+    if (!await exists2(bundledRuntime) || !await exists2(bundledIcon)) {
       throw new Error("The plugin does not contain the Codex Bridge installation resources.");
     }
     const nodeRuntime = await selectBridgeNodeRuntime({
@@ -4080,18 +4460,18 @@ function createBridgeInstaller({
       platform,
       execute
     });
-    await (0, import_promises2.mkdir)(appRoot, { recursive: true, mode: 448 });
-    await (0, import_promises2.chmod)(appRoot, 448);
-    await (0, import_promises2.mkdir)(userApplications, { recursive: true });
-    await (0, import_promises2.mkdir)(agentsRoot, { recursive: true });
-    await (0, import_promises2.copyFile)(bundledRuntime, bridgeRuntime);
-    await (0, import_promises2.rm)(bridgeApp, { recursive: true, force: true });
-    await (0, import_promises2.mkdir)(bridgeMacOS, { recursive: true });
-    await (0, import_promises2.mkdir)(bridgeLicenses, { recursive: true });
+    await (0, import_promises5.mkdir)(appRoot, { recursive: true, mode: 448 });
+    await (0, import_promises5.chmod)(appRoot, 448);
+    await (0, import_promises5.mkdir)(userApplications, { recursive: true });
+    await (0, import_promises5.mkdir)(agentsRoot, { recursive: true });
+    await (0, import_promises5.copyFile)(bundledRuntime, bridgeRuntime);
+    await (0, import_promises5.rm)(bridgeApp, { recursive: true, force: true });
+    await (0, import_promises5.mkdir)(bridgeMacOS, { recursive: true });
+    await (0, import_promises5.mkdir)(bridgeLicenses, { recursive: true });
     for (const notice of ["LICENSE", "NOTICE.md", "THIRD_PARTY_NOTICES.md"]) {
-      const source = (0, import_node_path3.join)(installerRoot, notice);
-      await (0, import_promises2.copyFile)(source, (0, import_node_path3.join)(bridgeLicenses, notice));
-      await (0, import_promises2.copyFile)(source, (0, import_node_path3.join)(appRoot, notice));
+      const source = (0, import_node_path7.join)(installerRoot, notice);
+      await (0, import_promises5.copyFile)(source, (0, import_node_path7.join)(bridgeLicenses, notice));
+      await (0, import_promises5.copyFile)(source, (0, import_node_path7.join)(appRoot, notice));
     }
     await buildIcon();
     const info = `<?xml version="1.0" encoding="UTF-8"?>
@@ -4110,7 +4490,7 @@ function createBridgeInstaller({
   <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 `;
-    await (0, import_promises2.writeFile)((0, import_node_path3.join)(bridgeContents, "Info.plist"), info);
+    await (0, import_promises5.writeFile)((0, import_node_path7.join)(bridgeContents, "Info.plist"), info);
     const launcher = `#!/bin/zsh
 set -u
 unsetopt BG_NICE
@@ -4156,8 +4536,8 @@ done
 /usr/bin/osascript -e 'display alert "Codex Bridge" message "Codex started, but the bridge endpoint is unavailable. Quit Codex and launch Codex Bridge again." as critical'
 exit 1
 `;
-    await (0, import_promises2.writeFile)(bridgeExecutable, launcher, { mode: 493 });
-    await (0, import_promises2.chmod)(bridgeExecutable, 493);
+    await (0, import_promises5.writeFile)(bridgeExecutable, launcher, { mode: 493 });
+    await (0, import_promises5.chmod)(bridgeExecutable, 493);
     await execute("/usr/bin/codesign", ["--force", "--deep", "--sign", "-", bridgeApp]);
     const plist = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -4171,12 +4551,12 @@ exit 1
   <key>KeepAlive</key><true/>
   <key>ProcessType</key><string>Background</string>
   <key>ThrottleInterval</key><integer>2</integer>
-  <key>StandardOutPath</key><string>${xml2((0, import_node_path3.join)(appRoot, "bridge.log"))}</string>
-  <key>StandardErrorPath</key><string>${xml2((0, import_node_path3.join)(appRoot, "bridge-error.log"))}</string>
+  <key>StandardOutPath</key><string>${xml2((0, import_node_path7.join)(appRoot, "bridge.log"))}</string>
+  <key>StandardErrorPath</key><string>${xml2((0, import_node_path7.join)(appRoot, "bridge-error.log"))}</string>
 </dict></plist>
 `;
-    await (0, import_promises2.writeFile)(bridgeAgent, plist, { mode: 420 });
-    await (0, import_promises2.writeFile)(installMetadata, `${JSON.stringify({
+    await (0, import_promises5.writeFile)(bridgeAgent, plist, { mode: 420 });
+    await (0, import_promises5.writeFile)(installMetadata, `${JSON.stringify({
       version,
       nodeExecutable: nodeRuntime.executable,
       nodeVersion: nodeRuntime.version,
@@ -4192,7 +4572,7 @@ exit 1
     return status();
   }
   async function launch() {
-    if (!await exists(bridgeExecutable, import_node_fs2.constants.X_OK)) {
+    if (!await exists2(bridgeExecutable, import_node_fs3.constants.X_OK)) {
       throw new Error("Codex Bridge.app is not installed.");
     }
     await execute("/usr/bin/open", [bridgeApp]);
@@ -4206,9 +4586,9 @@ exit 1
       await execute("/bin/launchctl", ["bootout", `gui/${uid}`, bridgeAgent]);
     } catch {
     }
-    await (0, import_promises2.rm)(bridgeAgent, { force: true });
+    await (0, import_promises5.rm)(bridgeAgent, { force: true });
     await removeBridgeFiles(home, "codex");
-    await (0, import_promises2.rm)(bridgeApp, { recursive: true, force: true });
+    await (0, import_promises5.rm)(bridgeApp, { recursive: true, force: true });
     return status();
   }
   return { status, install, launch, uninstall };
@@ -4239,15 +4619,15 @@ var requestLocal = localClient("codex", BRIDGE_URL);
 var [address = "127.0.0.1", port = "3906"] = process.argv.slice(2);
 var HOST_URL = `ws://${address}:${port}`;
 var instances = /* @__PURE__ */ new Map();
-var PLUGIN_ROOT = (0, import_node_path4.resolve)((0, import_node_path4.dirname)((0, import_node_path4.resolve)(process.argv[1])), "..");
-var MANIFEST = JSON.parse((0, import_node_fs3.readFileSync)((0, import_node_path4.resolve)(PLUGIN_ROOT, "manifest.json"), "utf8"));
+var PLUGIN_ROOT = (0, import_node_path8.resolve)((0, import_node_path8.dirname)((0, import_node_path8.resolve)(process.argv[1])), "..");
+var MANIFEST = JSON.parse((0, import_node_fs4.readFileSync)((0, import_node_path8.resolve)(PLUGIN_ROOT, "manifest.json"), "utf8"));
 var bridgeSetup = createBridgeInstaller({
   pluginRoot: PLUGIN_ROOT,
   bridgeUrl: BRIDGE_URL,
   version: MANIFEST.Version
 });
-var USAGE_BASE64 = (0, import_node_fs3.readFileSync)(
-  (0, import_node_path4.resolve)(PLUGIN_ROOT, "assets/icons/usage-base.png")
+var USAGE_BASE64 = (0, import_node_fs4.readFileSync)(
+  (0, import_node_path8.resolve)(PLUGIN_ROOT, "assets/icons/usage-base.png")
 ).toString("base64");
 var ACTION_LABELS = Object.freeze({
   fast: "FAST",
@@ -5693,11 +6073,11 @@ function renderInstance(instance) {
 function renderAll() {
   for (const instance of instances.values()) renderInstance(instance);
 }
-async function bridgeRequest(path, method = "GET", body = null) {
-  if (method === "POST" && (path.startsWith("/action/") || path === "/prompt" || path.startsWith("/joystick/"))) {
+async function bridgeRequest(path2, method = "GET", body = null) {
+  if (method === "POST" && (path2.startsWith("/action/") || path2 === "/prompt" || path2.startsWith("/joystick/"))) {
     body = { threadId: latestState?.activeThreadKey ?? null, ...body };
   }
-  return requestLocal(path, { method, ...body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {} });
+  return requestLocal(path2, { method, ...body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {} });
 }
 async function openTaskSlot(slot) {
   const task = latestState?.slots?.[slot];
@@ -5848,7 +6228,7 @@ async function invokeEncoder(instance, message) {
       for (let i = 0; i < Math.abs(ticks); i++) {
         try {
           await bridgeRequest(`/joystick/${direction}/down`, "POST", body);
-          await new Promise((resolve3) => setTimeout(resolve3, 45));
+          await new Promise((resolve4) => setTimeout(resolve4, 45));
         } finally {
           await bridgeRequest(`/joystick/${direction}/up`, "POST", body);
         }

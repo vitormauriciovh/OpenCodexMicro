@@ -1,13 +1,11 @@
+import { focusDesktop } from "../platform/desktop.mjs";
 import { secureHandler, allowedRequest, readJson } from "../shared/local-api.mjs";
 import { stateDigest } from "../shared/plugin-runtime.mjs";
 import { createServer } from "node:http";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { WebSocketServer } from "ws";
 import { CodexCdpClient } from "./codex-cdp.mjs";
 import { decodeThreadPathSegment } from "./thread-key.mjs";
 
-const execFileAsync = promisify(execFile);
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.CODEX_KEYBOARD_PORT || 17373);
 const configuredRefreshMs = Number(process.env.CODEX_KEYBOARD_REFRESH_MS || 500);
@@ -53,9 +51,7 @@ wss.on("connection", (ws) => {
 });
 
 async function focusCodex() {
-  await execFileAsync("/usr/bin/open", ["-b", "com.openai.codex"], {
-    timeout: 3000
-  });
+  await focusDesktop("codex");
 }
 
 async function refresh(force = false) {

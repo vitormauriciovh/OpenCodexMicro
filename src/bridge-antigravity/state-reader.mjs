@@ -462,17 +462,14 @@ export class AntigravityStateReader {
 
   async fetchLiveAgyQuota() {
     try {
-      const { execFile } = await import("node:child_process");
-      const { promisify } = await import("node:util");
-      const execFileAsync = promisify(execFile);
-
       // Cache the discovered port for 10 seconds to avoid running ps aux every 500ms
       const now = Date.now();
       if (this._cachedAgyPort && this._cachedAgyPortTime && (now - this._cachedAgyPortTime) < 10000) {
         // Use cached port
       } else {
         try {
-          const { stdout: ps } = await execFileAsync("/bin/ps", ["aux"], { timeout: 2000 });
+          const { processCommands } = await import("../platform/desktop.mjs");
+          const ps = await processCommands({ mode: "aux" });
           const lines = ps.split("\n").filter(l => /agy.*--hub-port=/.test(l) && !/grep/.test(l));
           const match = lines[0]?.match(/--hub-port=(\d+)/);
           this._cachedAgyPort = match ? Number(match[1]) : 51548;
