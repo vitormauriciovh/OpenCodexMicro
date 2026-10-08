@@ -3694,6 +3694,21 @@ var require_websocket_server = __commonJS({
   }
 });
 
+// ../../src/shared/task-progress.mjs
+function taskProgressMarkup(progress, { running = false, color = "#94a3b8", now = Date.now() } = {}) {
+  const valid = Number.isInteger(progress?.total) && progress.total > 0 && progress.total <= 200 && Number.isInteger(progress.completed) && progress.completed >= 0 && progress.completed <= progress.total;
+  const escape = (text) => String(text).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[char]);
+  const rawStep = valid ? String(progress.currentStep ?? "") : "";
+  const step = [...rawStep];
+  const label = valid ? `${progress.completed}/${progress.total}` : running ? "\u2026" : "\u2014";
+  const width = valid ? 172 * progress.completed / progress.total : running ? 34 : 0;
+  const x = valid ? 12 : 12 + Math.floor(now / 1e3) % 5 * 34;
+  return `<text x="98" y="112" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" fill="${color}">${label}</text>
+    <text x="98" y="130" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" fill="#cbd5e1">${escape(step.length > 23 ? step.slice(0, 22).join("") + "\u2026" : rawStep)}</text>
+    <rect x="12" y="138" width="172" height="6" rx="3" fill="#21262d"/>
+    ${width > 0 ? `<rect x="${x}" y="138" width="${width}" height="6" rx="3" fill="${color}"/>` : ""}`;
+}
+
 // ../../src/shared/task-timer.mjs
 var TaskTimers = class {
   constructor() {
@@ -4597,6 +4612,7 @@ function taskCardIconData({
   elapsed = "",
   model = "default",
   ctxPct = null,
+  progress = null,
   selected = false,
   connected = true,
   empty = false
@@ -4690,9 +4706,10 @@ function taskCardIconData({
     <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#ffffff" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
     <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="rgba(255,255,255,0.95)" letter-spacing="0.3">${selected ? "\u25CF " : ""}${escapeXml(headerRight)}</text>
     
-    <text x="98" y="94" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="${titleFontSize}" font-weight="800" fill="#ffffff" letter-spacing="0.4">${escapeXml(titleDisplay)}</text>
-    <text x="98" y="120" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="${subColor}" letter-spacing="0.3">${escapeXml(subText)}</text>
+    <text x="98" y="70" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="${titleFontSize}" font-weight="800" fill="#ffffff" letter-spacing="0.4">${escapeXml(titleDisplay)}</text>
+    <text x="98" y="92" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="${subColor}" letter-spacing="0.3">${escapeXml(subText)}</text>
     
+    ${taskProgressMarkup(progress, { running: isWorking, color: subColor })}
     <text x="12" y="162" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#f59e0b" letter-spacing="0.2">${escapeXml(modelDisplay)}</text>
     <text x="184" y="162" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#94a3b8" letter-spacing="0.2">ctx ${validPct === null ? "\u2014" : `${validPct}%`}</text>
     
@@ -5643,6 +5660,7 @@ function renderInstance(instance) {
         elapsed: elapsed2,
         model: model2,
         ctxPct: ctxPct2,
+        progress: task2.progress,
         selected: Boolean(task2.selected),
         connected: true,
         empty: false
@@ -5685,6 +5703,7 @@ function renderInstance(instance) {
     elapsed,
     model,
     ctxPct,
+    progress: task.progress,
     selected: Boolean(task.selected),
     connected: true,
     empty: false

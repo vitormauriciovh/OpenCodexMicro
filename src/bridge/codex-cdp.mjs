@@ -1,3 +1,4 @@
+import { readTaskProgress, readNativeTaskData, taskMetadata } from "./task-progress.mjs";
 import { contextPercent } from "../shared/token-metrics.mjs";
 import { readNativeModelPicker, cycleNativeModelPicker } from "./model-picker.mjs";
 import { execFile } from "node:child_process";
@@ -544,6 +545,14 @@ const SNAPSHOT_EXPRESSION = `(async () => {
   const computeCtxPct = ${contextPercent.toString()};
   const { threadIds, asyncQuestionThreads } = (${readNativeTaskAttention.toString()})(source, found);
   const attentionStatus = ${taskAttentionStatus.toString()};
+  const metadataTasks = found.map(slot => ({
+    threadKey: slot.threadKey,
+    threadId: threadIds.get(slot.threadKey) ?? normalizeThreadKey(slot.threadKey)
+  }));
+  if (activeThreadKey) metadataTasks.push({ threadKey: "local:" + normalizeThreadKey(activeThreadKey), threadId: normalizeThreadKey(activeThreadKey) });
+  const nativeMetadata = (${readNativeTaskData.toString()})(source, metadataTasks, ${taskMetadata.toString()});
+  for (const meta of nativeMetadata.values()) if (meta?.id) conversationsMeta.set(meta.id, meta);
+
 
   const enrichedSlots = found.map((slot) => {
     const threadId = threadIds.get(slot.threadKey) ?? normalizeThreadKey(slot.threadKey);
@@ -639,6 +648,10 @@ const SNAPSHOT_EXPRESSION = `(async () => {
   } else if (enrichedSlots[0]?.threadKey) {
     lastTask = enrichedSlots[0];
   }
+
+  const progressTasks = [...enrichedSlots, ...activeTasks, ...(lastTask ? [lastTask] : [])];
+  const progressByKey = (${readNativeTaskData.toString()})(source, progressTasks, ${readTaskProgress.toString()});
+  for (const task of progressTasks) task.progress = progressByKey.get(task.threadKey) ?? null;
 
   const activeMeta = (activeThreadKey && conversationsMeta.get(normalizeThreadKey(activeThreadKey))) || null;
   const tokenUsage = activeMeta?.latestTokenUsageInfo || activeMeta?.tokenUsageInfo || activeMeta?.tokenUsage || null;

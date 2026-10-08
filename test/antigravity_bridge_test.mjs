@@ -78,3 +78,34 @@ test("quota summary accepts only explicit valid unambiguous windows", () => {
   }
   assert.equal(windowedQuotaSummary(summary([{ window: "5h", remainingFraction: 0.8 }, { window: "5h", remainingFraction: 0.2 }])), null);
 });
+
+test('native task checklist parser handles active steps and ignores fenced examples', async () => {
+  const { readChecklistProgress } = await import('../src/bridge-antigravity/task-progress.mjs');
+  const markdown = '- [x] Inspect\n- [/] Test <code>\n- `[ ]` Review\n```md\n- [x] example\n```';
+  assert.deepEqual(readChecklistProgress(markdown), { turnId: null, completed: 1, total: 3, currentStep: 'Test <code>', source: 'saved-checklist' });
+  assert.equal(readChecklistProgress('A prose plan'), null);
+  assert.equal(readChecklistProgress('x'.repeat(65537)), null);
+  assert.equal(readChecklistProgress(Array(201).fill('- [ ] Too many').join('\n')), null);
+});
+test('saved checklist follows the exact conversation and becomes unknown after a newer prompt', async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'agy-progress-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const logs = path.join(root, 'session', '.system_generated/logs');
+  await fs.mkdir(logs, { recursive: true });
+  const transcript = path.join(logs, 'transcript.jsonl');
+  const taskFile = path.join(root, 'session', 'task.md');
+  await fs.writeFile(transcript, JSON.stringify({ type: 'USER_INPUT', content: 'Fixture', created_at: new Date(1000).toISOString() }));
+  await fs.writeFile(taskFile, '- [x] Inspect\n- [/] Test');
+  await fs.utimes(taskFile, 2, 2);
+  const reader = new AntigravityStateReader({ brainDir: root, quotaFetch: async () => null });
+  let state = await reader.snapshot();
+  assert.equal(state.slots[0].progress.completed, 1);
+  assert.equal(state.activeTasks[0].progress.currentStep, 'Test');
+  assert.equal(await reader.readProgress(path.join(root, 'other'), 1000), null);
+  assert.equal(await reader.readProgress(path.join(root, 'session'), 3000), null);
+  await fs.writeFile(taskFile, '- [x] Inspect\n- [x] Test');
+  await fs.utimes(taskFile, 4, 4);
+  assert.equal((await reader.readProgress(path.join(root, 'session'), 3000)).completed, 2);
+  await fs.unlink(taskFile);
+  assert.equal(await reader.readProgress(path.join(root, 'session'), 3000), null);
+});

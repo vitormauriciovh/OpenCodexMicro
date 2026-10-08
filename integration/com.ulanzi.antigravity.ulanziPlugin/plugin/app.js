@@ -1,3 +1,4 @@
+import { taskProgressMarkup } from "../../../src/shared/task-progress.mjs";
 import { textCard } from "../../../src/shared/deck-cards.mjs";
 import { unavailableIcon, encoderTicks, invalidateDisplays, reportActionError, bridgeFeed, inspectorReply } from "../../../src/shared/plugin-runtime.mjs";
 import { localClient } from "../../../src/shared/local-api.mjs";
@@ -324,6 +325,7 @@ function sessionCardIconData({
   elapsed = "",
   model = null,
   ctxPct = null,
+  progress = null,
   connected = true,
   empty = false
 }) {
@@ -423,9 +425,10 @@ function sessionCardIconData({
     <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#ffffff" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
     <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="rgba(255,255,255,0.95)" letter-spacing="0.3">${escapeXml(headerRight)}</text>
     
-    <text x="98" y="94" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="${titleFontSize}" font-weight="800" fill="#ffffff" letter-spacing="0.4">${escapeXml(titleDisplay)}</text>
-    <text x="98" y="120" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="${subColor}" letter-spacing="0.3">${escapeXml(subText)}</text>
+    <text x="98" y="70" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="${titleFontSize}" font-weight="800" fill="#ffffff" letter-spacing="0.4">${escapeXml(titleDisplay)}</text>
+    <text x="98" y="92" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="${subColor}" letter-spacing="0.3">${escapeXml(subText)}</text>
     
+    ${taskProgressMarkup(progress, { running: isWorking, color: subColor })}
     <text x="12" y="162" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#f59e0b" letter-spacing="0.2">${escapeXml(modelDisplay)}</text>
     <text x="184" y="162" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#94a3b8" letter-spacing="0.2">${validPct == null ? "ctx —" : `est. ctx ${validPct}%`}</text>
     
@@ -993,6 +996,7 @@ function renderInstance(instance) {
       elapsed,
       model: task.model || null,
       ctxPct: task.ctxPct ?? null,
+      progress: task.progress,
       connected: true,
       empty: false
     }));
@@ -1085,6 +1089,7 @@ function renderInstance(instance) {
       elapsed,
       model: latestTask.model || null,
       ctxPct: latestTask.ctxPct ?? null,
+      progress: latestTask.progress,
       connected: true,
       empty: false
     }));

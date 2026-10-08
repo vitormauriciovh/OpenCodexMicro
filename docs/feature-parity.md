@@ -43,10 +43,22 @@ source routing and [setup and operations](setup-and-operations.md) for setup.
 - Unknown metrics remain unknown and measured zero remains zero. Do not borrow
   another task's metadata, derive context usage from cumulative tokens, or infer
   quotas from activity. Antigravity's unlabeled quota data is not a five-hour window.
+- Codex App task keys and Latest Task show completed/total steps and the current
+  step from the latest loaded local execution plan. This measures checklist steps,
+  not time remaining or objective completion. A new turn clears the previous plan;
+  unloaded, remote or unavailable plans remain unknown. Running tasks without a
+  plan show an activity segment. Context usage retains its separate labeled bar.
 - CLI uses WebSocket framing over the managed app-server's Unix socket. A task
   owned by another writer remains read-only; the bridge does not take it over.
   Settings on the deck affect the next deck prompt, not an already running turn.
   Daemon terminal methods do not identify the user's terminal window or viewport.
+- CLI task, status and monitor cards show the live structured plan for the same
+  task and turn; a new turn clears the previous checklist. Antigravity session
+  and Latest cards use the saved native `task.md` checklist, only when its timestamp
+  is at least as recent as the latest user input. Missing, stale or oversized
+  checklists stay unknown. Counts include nested checklist entries and measure
+  saved steps, not real-time work or remaining time. Active work without a plan
+  shows an activity segment.
 - CLI cards show reported context per task, selection and distinct completed,
   stopped and error outcomes. Unknown context remains unknown. The monitor rotates
   through known active/attention tasks without changing selection; pressing it selects
