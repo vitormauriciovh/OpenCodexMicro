@@ -201,3 +201,11 @@ test('queued steering rejects ambiguous, disabled, collapsed or hidden queues', 
   await assert.rejects(desktopOperation({ action: 'steer', threadId: a }, f), /unavailable/);
   assert.equal(queue.buttons[0].clicks + queue.buttons[1].clicks, 0);
 });
+
+test('desktop merge keeps saved progress attached to the matching history task', () => {
+  const progress = { completed: 1, total: 2, currentStep: 'Test', source: 'saved-checklist' };
+  const history = { activeTasks: [{ threadKey: 'a', progress }], capabilities: {} };
+  const state = mergeDesktopState(history, { connected: true, activeThreadKey: 'a', activeStatus: 'working', tasks: [{ threadKey: 'a' }, { threadKey: 'b', running: true }] });
+  assert.equal(state.slots[0].progress, progress);
+  assert.equal(state.slots[1].progress, undefined);
+});

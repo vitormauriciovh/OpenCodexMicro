@@ -160,7 +160,7 @@ const bridge = createServer((request, response) => {
       activeThreadKey,
       planAvailable: true,
       slots: [
-        { id: 0, threadKey: "11111111-1111-1111-1111-111111111111", title: "Working task", status: firstTaskStatus, tokenUsage: { totalTokens: 987654 } },
+        { id: 0, threadKey: "11111111-1111-1111-1111-111111111111", title: "Working task", status: firstTaskStatus, progress: { turnId: "turn-progress", completed: 2, total: 5, currentStep: "Validate <plan>" }, tokenUsage: { totalTokens: 987654 } },
         { id: 1, threadKey: "22222222-2222-2222-2222-222222222222", title: "Unread task", status: "unread" },
         { id: 2, threadKey: "33333333-3333-3333-3333-333333333333", title: "Input task", status: "input" },
         { id: 3, threadKey: "44444444-4444-4444-4444-444444444444", title: "Failed task", status: "error" },
@@ -264,7 +264,7 @@ try {
     assert.equal(item?.type, 1);
     assert.match(item?.data || "", /^data:image\/svg\+xml;base64,/);
     assert.equal(item?.showtext, false);
-    assert.equal(item?.textdata, "");
+    assert.equal(item?.textData, "");
   }
 
   client.send(JSON.stringify({ cmd: "keydown", uuid: "com.ulanzi.ulanzistudio.codexmicro.task1", actionid: "a1", key: "0_0", param: {} }));
@@ -364,7 +364,7 @@ try {
   const usageItem = usageState?.param?.statelist?.[0];
   assert.equal(usageItem?.type, 1);
   assert.equal(usageItem?.showtext, false);
-  assert.equal(usageItem?.textdata, "");
+  assert.equal(usageItem?.textData, "");
   assert.match(usageItem?.data || "", /^data:image\/svg\+xml;base64,/);
   const usageSvg = Buffer.from(usageItem.data.split(",")[1], "base64").toString();
   assert.match(usageSvg, />23<tspan/);
@@ -464,11 +464,22 @@ try {
     }
     for (const uuid of ["com.ulanzi.ulanzistudio.codexmicro.task1", navigateEvent.uuid]) {
       assert.ok(latestSvg(uuid).includes(header), `${uuid} must render ${status} with ${color}`);
+      assert.match(latestSvg(uuid), />2\/5</);
+      assert.match(latestSvg(uuid), /Validate &lt;plan&gt;/);
       assert.match(latestSvg(uuid), new RegExp(`>${label}(?: |<)`));
     }
     assert.ok(latestSvg(attentionEvent.uuid).includes(`>${count}<`), `${status} must update the attention count`);
     assert.ok(latestSvg("com.ulanzi.ulanzistudio.codexmicro.approve").includes(status === "awaiting-approval" ? ">ACTION READY<" : ">NO PENDING<"), `${status} must update Approve`);
     assert.ok(latestSvg("com.ulanzi.ulanzistudio.codexmicro.reject").includes(status === "awaiting-approval" ? ">DENY REQUEST<" : ">NO PENDING<"), `${status} must update Reject`);
+  }
+  // Check the final host-visible update, rather than only finding an SVG that
+  // could subsequently be overwritten by a manifest icon in the same batch.
+  for (const message of messages.filter(message => message.cmd === "state")) {
+    const items = message.param.statelist;
+    for (const image of items.filter(item => item.type === 1)) {
+      const last = items.findLast(item => item.uuid === image.uuid && item.actionid === image.actionid && item.key === image.key);
+      assert.equal(last.data, image.data, `${image.uuid}: live display overwritten in the same batch`);
+    }
   }
   process.stdout.write("Codex App plugin smoke test passed.\n");
 } finally {

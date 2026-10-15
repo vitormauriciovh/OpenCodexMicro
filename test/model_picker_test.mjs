@@ -152,3 +152,12 @@ test('rapid model and effort presses serialize and releases do nothing', async (
   unblock(); await Promise.all([first, second]);
   assert.deepEqual(order, ['start:model', 'end:model', 'start:reasoning', 'end:reasoning']);
 });
+
+test('current picker can report the model without a separate reasoning callback', () => {
+  const f = fixture();
+  delete f.props.onSelectReasoningEffort;
+  f.props.onCommitPower = () => {};
+  assert.equal(readNativeModelPicker(f.document).props.model, 'a');
+  assert.throws(() => cycleNativeModelPicker(f, 'reasoning'), /disabled/);
+  assert.deepEqual(f.calls, []);
+});

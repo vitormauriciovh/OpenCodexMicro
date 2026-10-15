@@ -23,7 +23,7 @@ export function readNativeModelPicker(document) {
   for (let node = mounted; node; node = node.return) {
     const props = node.memoizedProps;
     if (Array.isArray(props?.models) && Array.isArray(props?.modelOptions) &&
-        typeof props.onSelectModel === 'function' && typeof props.onSelectReasoningEffort === 'function') {
+        typeof props.onSelectModel === 'function') {
       return { trigger, props };
     }
   }
@@ -56,7 +56,7 @@ export function cycleNativeModelPicker(picker, action) {
     return { model: next.model, reasoningEffort: effort };
   }
   if (action !== 'reasoning') throw new Error('Unsupported model picker action');
-  if (props.reasoningEffortDisabled || props.showReasoningEffortControls === false) {
+  if (typeof props.onSelectReasoningEffort !== 'function' || props.reasoningEffortDisabled || props.showReasoningEffortControls === false) {
     throw new Error('Reasoning effort selection is disabled');
   }
   const current = props.models.find(model => model.model === props.model);

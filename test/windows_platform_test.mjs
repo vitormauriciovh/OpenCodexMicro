@@ -242,10 +242,26 @@ test('Windows private directory DACL allows only the current user and is inherit
   protectDirectory(directory);
   await writeFile(join(directory, 'token'), 'fixture-not-a-real-token');
   const { stdout } = await powershell(`
-$acl = Get-Acl -LiteralPath $env:ULANZI_TEST_PATH
+# Read ACLs directly through .NET, without autoloading PowerShell security modules.
+# CI can inherit a PSModulePath from a different PowerShell edition.
+$directory = [System.IO.DirectoryInfo]::new($env:ULANZI_TEST_PATH)
+$token = [System.IO.FileInfo]::new([System.IO.Path]::Combine($env:ULANZI_TEST_PATH, 'token'))
 $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-$rules = @($acl.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier]))
-[pscustomobject]@{ protected = $acl.AreAccessRulesProtected; others = @($rules | Where-Object { $_.IdentityReference.Value -ne $sid }).Count; user = @($rules | Where-Object { $_.IdentityReference.Value -eq $sid }).Count } | ConvertTo-Json -Compress
+$results = foreach ($entry in @($directory, $token)) {
+  $acl = $entry.GetAccessControl([System.Security.AccessControl.AccessControlSections]::Access)
+  $rules = @($acl.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier]))
+  [pscustomobject]@{
+    protected = $acl.AreAccessRulesProtected
+    others = @($rules | Where-Object { $_.IdentityReference.Value -ne $sid }).Count
+    user = @($rules | Where-Object { $_.IdentityReference.Value -eq $sid }).Count
+    inherited = @($rules | Where-Object { $_.IsInherited }).Count
+    fullControl = @($rules | Where-Object { $_.IdentityReference.Value -eq $sid -and $_.AccessControlType -eq 'Allow' -and $_.FileSystemRights -eq 'FullControl' }).Count
+  }
+}
+ConvertTo-Json -InputObject @($results) -Compress
 `, { env: { ...process.env, ULANZI_TEST_PATH: directory } });
-  assert.deepEqual(JSON.parse(stdout), { protected: true, others: 0, user: 1 });
+  assert.deepEqual(JSON.parse(stdout), [
+    { protected: true, others: 0, user: 1, inherited: 0, fullControl: 1 },
+    { protected: false, others: 0, user: 1, inherited: 1, fullControl: 1 }
+  ]);
 });

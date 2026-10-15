@@ -542,3 +542,22 @@ test('Continue readiness blocks active, attention, unknown and read-only tasks a
   client.connected = false;
   assert.equal(client.canContinue(), false);
 });
+
+test('progress belongs to each task and current turn, survives completion and clears on new turn or disconnect', async () => {
+  const client = ready();
+  const notify = (method, params) => client.handleNotification({ method, params: { threadId: 'thread-a', ...params } });
+  notify('turn/started', { turn: { id: 'a-1' } });
+  notify('turn/plan/updated', { turnId: 'a-1', plan: [{ step: 'Inspect', status: 'completed' }, { step: 'Test', status: 'inProgress' }] });
+  const state = await client.snapshot();
+  assert.deepEqual(state.slots.find(t => t.threadKey === 'thread-a').progress, { turnId: 'a-1', completed: 1, total: 2, currentStep: 'Test' });
+  client.updateThread({ id: 'thread-b', name: 'Other', status: { type: 'idle' } });
+  assert.equal(client.taskSnapshot(client.sessions.get('thread-b')).progress, null);
+  notify('turn/completed', { turn: { id: 'a-1', status: 'completed' } });
+  assert.equal(client.taskSnapshot(client.sessions.get('thread-a')).progress.completed, 1, 'turn completion never invents completed plan steps');
+  notify('turn/started', { turn: { id: 'a-2' } });
+  assert.equal(client.taskSnapshot(client.sessions.get('thread-a')).progress, null);
+  notify('turn/plan/updated', { turnId: 'a-2', plan: [{ step: 'Fresh', status: 'pending' }] });
+  assert.equal(client.taskSnapshot(client.sessions.get('thread-a')).progress.completed, 0);
+  client.connected = false;
+  assert.equal(client.taskSnapshot(client.sessions.get('thread-a')).progress, null);
+});
