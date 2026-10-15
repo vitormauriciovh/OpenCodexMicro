@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 import { cliBridgeLauncher } from '../src/shared/cli-launcher.mjs';
 const exec = promisify(execFile);
 
-test('launcher uses literal paths and serves diagnostics even if daemon startup fails', async t => {
+test('launcher uses literal paths and serves diagnostics even if daemon startup fails', { skip: process.platform === 'win32' && 'macOS/POSIX launcher; Windows installer has separate coverage' }, async t => {
   const dir = await mkdtemp(join(tmpdir(), "ulanzi launcher ' "));
   t.after(() => rm(dir, { recursive: true, force: true }));
   const codex = join(dir, 'codex');

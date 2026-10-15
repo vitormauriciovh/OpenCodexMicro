@@ -1,13 +1,11 @@
 import { readTaskProgress, readNativeTaskData, taskMetadata } from "./task-progress.mjs";
 import { contextPercent } from "../shared/token-metrics.mjs";
 import { readNativeModelPicker, cycleNativeModelPicker } from "./model-picker.mjs";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { processCommands, validateDebuggerEndpoint } from "../platform/desktop.mjs";
 import WebSocket from "ws";
 import { localThreadKey } from "./thread-key.mjs";
 import { readNativeTaskAttention, taskAttentionStatus } from "./task-attention.mjs";
 
-const execFileAsync = promisify(execFile);
 const USAGE_REFRESH_MS = Math.max(
   15000,
   Number(process.env.CODEX_KEYBOARD_USAGE_REFRESH_SECONDS || 600) * 1000
@@ -708,7 +706,7 @@ async function fetchJson(url, timeout = 1200) {
 }
 
 async function discoverDebugPort() {
-  const { stdout } = await execFileAsync("/bin/ps", ["-axo", "command="], { timeout: 4000 });
+  const stdout = await processCommands();
   for (const line of stdout.split("\n")) {
     if (!line.includes("--remote-debugging-address=127.0.0.1")) continue;
     const port = Number(line.match(/--remote-debugging-port(?:=|\s+)(\d+)/)?.[1]);
@@ -718,7 +716,9 @@ async function discoverDebugPort() {
       return port;
     } catch {}
   }
-  throw new Error("Codex is not running with the local debug bridge");
+  throw new Error(process.platform === "win32"
+    ? "This Codex App has no local CDP endpoint. Close Codex yourself, then use the Windows launcher with a CDP-capable build. Store builds may not support CDP."
+    : "Codex is not running with the local debug bridge");
 }
 
 export class CodexCdpClient {
@@ -733,7 +733,7 @@ export class CodexCdpClient {
     const port = await discoverDebugPort();
     const target = selectMainTarget(await fetchJson(`http://127.0.0.1:${port}/json/list`));
     if (!target?.webSocketDebuggerUrl) throw new Error("Codex main renderer was not found");
-    const socket = new WebSocket(target.webSocketDebuggerUrl);
+    const socket = new WebSocket(process.platform === "win32" ? validateDebuggerEndpoint(target.webSocketDebuggerUrl, port) : target.webSocketDebuggerUrl);
     await new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error("Timed out connecting to Codex")), 3000);
       socket.once("open", () => { clearTimeout(timer); resolve(); });

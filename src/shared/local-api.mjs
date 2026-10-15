@@ -1,3 +1,4 @@
+import { protectDirectory } from "../platform/windows/privacy.mjs";
 import { mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -8,6 +9,7 @@ export function localHeaders(component) {
   const root = process.env.ULANZI_AUTH_DIR || join(homedir(), ".local/share/ulanzi-bridges");
   mkdirSync(root, { recursive: true, mode: 0o700 });
   chmodSync(root, 0o700);
+  if (process.platform === "win32") protectDirectory(root);
   const file = join(root, `${component}.token`);
   try { writeFileSync(file, randomBytes(32).toString("hex"), { flag: "wx", mode: 0o600 }); }
   catch (error) { if (error.code !== "EEXIST") throw error; }

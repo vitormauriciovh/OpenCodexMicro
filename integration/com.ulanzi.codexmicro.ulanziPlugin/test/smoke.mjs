@@ -225,7 +225,10 @@ try {
     key: "0_0",
     payload: { type: "bridgeSetup", action: "status" }
   }));
-  await new Promise(resolve => setTimeout(resolve, 150));
+  // Windows also queries Task Scheduler; wait for the reply, not a fixed timing assumption.
+  for (let attempt = 0; attempt < 100 && !messages.some(message => message.actionid === "setup-action" && message.payload?.type === "bridgeSetupStatus"); attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
   const setupStatus = messages.find(message =>
     message.cmd === "sendToPropertyInspector" &&
     message.actionid === "setup-action" &&
@@ -282,7 +285,9 @@ try {
   client.send(JSON.stringify({ cmd: "dialup", ...navigateEvent }));
   client.send(JSON.stringify({ cmd: "dialrotate", rotateEvent: "left", ...navigateEvent }));
   client.send(JSON.stringify({ cmd: "dialrotate", rotateEvent: "right", ...navigateEvent }));
-  await new Promise(resolve => setTimeout(resolve, 150));
+  for (let attempt = 0; attempt < 100 && !["up", "down"].every(direction => bridgeRequests.includes(`POST /joystick/${direction}/up`)); attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
   assert.equal(
     bridgeRequests.filter(item => item.includes("/thread/11111111-1111-1111-1111-111111111111/click?slot=0")).length,
     2,

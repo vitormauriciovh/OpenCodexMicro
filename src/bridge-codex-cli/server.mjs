@@ -1,3 +1,4 @@
+import { platformPaths } from "../platform/paths.mjs";
 import { secureHandler, allowedRequest, readJson } from "../shared/local-api.mjs";
 import { dispatchCliAction, cliActions } from "./actions.mjs";
 import { stateDigest } from "../shared/plugin-runtime.mjs";
@@ -5,7 +6,6 @@ import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
 import { CodexCliClient } from "./app-server-client.mjs";
 import { CliDraftStore } from "./draft-store.mjs";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 
@@ -16,7 +16,7 @@ const REFRESH_MS = 500;
 const client = new CodexCliClient({ createDraftStore: socketPath => {
   // Keep drafts separate if a custom daemon socket is configured.
   const scope = createHash("sha256").update(socketPath).digest("hex").slice(0, 16);
-  return new CliDraftStore(join(homedir(), "Library/Application Support/OpenCodexMicro/codex-cli", `drafts-${scope}.json`));
+  return new CliDraftStore(join(platformPaths().data, "codex-cli", `drafts-${scope}.json`));
 } });
 
 

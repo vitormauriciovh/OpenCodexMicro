@@ -49,7 +49,7 @@ test("sync follows pages and preserves manually curated items", async t => {
   await fs.writeFile(api.manualFile, JSON.stringify([{ uri, title: "Manual" }]));
   const result = await api.fetchUserPlaylistsFromApi();
   assert.equal(result.length, 2); assert.equal((await api.getSavedPlaylists()).length, 3);
-  assert.equal((await fs.stat(api.playlistsFile)).mode & 0o777, 0o600);
+  if (process.platform !== 'win32') assert.equal((await fs.stat(api.playlistsFile)).mode & 0o777, 0o600);
 });
 test("Like saves exact track via current library endpoint and propagates failure", async t => {
   const calls = [];
@@ -66,7 +66,7 @@ test("OAuth rejects expired or mismatched state and stores private credentials",
   await assert.rejects(api.handleAuthCallback("code", "wrong"), /Invalid/);
   const state = api.pendingAuth.state;
   await api.handleAuthCallback("code", state);
-  assert.equal((await fs.stat(api.tokensFile)).mode & 0o777, 0o600);
+  if (process.platform !== 'win32') assert.equal((await fs.stat(api.tokensFile)).mode & 0o777, 0o600);
   await assert.rejects(api.handleAuthCallback("code", state), /Invalid/);
   api.createPkceAuthUrl("a".repeat(32)); api.pendingAuth.expiresAt = 0;
   await assert.rejects(api.handleAuthCallback("code", api.pendingAuth.state), /expired/);

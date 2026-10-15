@@ -118,8 +118,10 @@ test('private drafts survive restart, stay task-bound and clear only after ackno
   const client = ready({ draftStore: store });
   client.updateThread({ id: 'b' });
   client.setDraft('For A', 'a'); client.setDraft('For B', 'b');
-  assert.equal(statSync(file).mode & 0o777, 0o600);
-  assert.equal(statSync(join(file, '..')).mode & 0o777, 0o700);
+  if (process.platform !== 'win32') {
+    assert.equal(statSync(file).mode & 0o777, 0o600);
+    assert.equal(statSync(join(file, '..')).mode & 0o777, 0o700);
+  } // Windows privacy uses DACLs; see windows_platform_test.mjs.
   const restarted = ready({ draftStore: new CliDraftStore(file) });
   assert.equal((await restarted.snapshot()).draft, 'For A');
   restarted.callRpc = async () => ({});

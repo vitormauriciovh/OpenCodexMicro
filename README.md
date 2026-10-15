@@ -22,6 +22,14 @@ Ulanzi Studio owns the physical device. Four native plugins use local interfaces
 The three developer bridges serve WebSocket `/events` on their HTTP port.
 Local APIs require private credentials; use the diagnostic helper below.
 
+## Windows (experimental)
+
+Build isolated Windows packages with `npm run build:windows`. See
+[Windows setup and compatibility](docs/windows.md) for the separate installers,
+authenticated CLI server and application requirements. Codex App requires a
+CDP-capable build; Microsoft Store compatibility is not guaranteed. The macOS
+installation commands and manifests below remain unchanged.
+
 ## Install or update
 
 Requires macOS 13+, Node.js 20+, Ulanzi Studio 3.0.1+, an Ulanzi D200 Series deck
