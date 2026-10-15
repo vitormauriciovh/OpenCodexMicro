@@ -1,3 +1,4 @@
+import { summarizePlan } from "../shared/task-progress.mjs";
 import { SessionSlots } from "./session-slots.mjs";
 import { TaskTimers } from "../shared/task-timer.mjs";
 import net from "node:net";
@@ -671,6 +672,10 @@ export class CodexCliClient {
       status, runId: turn?.id, startedAt: turn?.startedAt,
       elapsedSec: last?.elapsedSec
     }, this.now()) : null;
+    const checklist = this.plans.get(thread.id)?.checklist;
+    const expectedTurnId = turn?.id ?? last?.id;
+    const progress = this.connected && expectedTurnId && checklist?.turnId === expectedTurnId
+      ? summarizePlan(checklist.steps, checklist.turnId) : null;
     return { threadKey: thread.id, title: thread.name || thread.preview || "Codex CLI", model: thread.model || null,
       reasoningEffort: thread.reasoningEffort ?? null, serviceTier: thread.serviceTier ?? null,
       controllable: this.connected && this.subscribedThreads.has(thread.id), error, source: thread.source ?? null,
@@ -678,6 +683,7 @@ export class CodexCliClient {
       activeTurnId: this.connected ? turn?.id || null : null,
       selected: thread.id === this.selectedThreadId, pendingApprovalCount: approvals.length,
       pendingApprovalId: approvals.length === 1 ? approvals[0].id : null,
+      progress,
       contextPercent: this.connected ? contextPercent(thread.tokenUsage) : null,
       elapsedSec: elapsedMs == null ? last?.elapsedSec ?? null : Math.floor(elapsedMs / 1000) };
   }

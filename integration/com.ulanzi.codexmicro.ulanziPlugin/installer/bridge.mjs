@@ -3784,6 +3784,76 @@ import { createServer } from "node:http";
 import { execFile as execFile2 } from "node:child_process";
 import { promisify as promisify2 } from "node:util";
 
+// ../../src/bridge/task-progress.mjs
+function readTaskProgress(conversation) {
+  if (!conversation) return null;
+  let turn;
+  if (conversation.turnHistory?.kind === "canonical") {
+    const history = conversation.turnHistory.history;
+    const tail = history?.islands?.at(-1);
+    if (tail?.newerBoundary?.status !== "exhausted") return null;
+    const key = tail.entries?.at(-1)?.value;
+    turn = key == null ? null : history.entitiesByKey?.[key];
+  } else {
+    turn = conversation.turns?.at(-1);
+  }
+  if (!turn?.turnId || !Array.isArray(turn.items)) return null;
+  const item = turn.items.findLast((item2) => item2?.type === "todo-list");
+  const plan = item?.plan;
+  if (!Array.isArray(plan) || !plan.length || plan.length > 200) return null;
+  const statuses = /* @__PURE__ */ new Set(["pending", "inProgress", "in_progress", "completed"]);
+  if (plan.some((step) => typeof step?.step !== "string" || !statuses.has(step.status))) return null;
+  const completed = plan.filter((step) => step.status === "completed").length;
+  const current = plan.find((step) => ["inProgress", "in_progress"].includes(step.status)) ?? plan.find((step) => step.status === "pending");
+  return {
+    turnId: turn.turnId,
+    completed,
+    total: plan.length,
+    currentStep: current?.step.slice(0, 240) ?? null
+  };
+}
+function readNativeTaskData(source, tasks, summarize) {
+  const result = /* @__PURE__ */ new Map();
+  const clients = /* @__PURE__ */ new Set();
+  for (const node of /* @__PURE__ */ new Set([source?.node, ...source?.contextMap?.values?.() ?? []])) {
+    for (const members of node?.familyBindings?.values?.() ?? []) {
+      if (!(members instanceof Map)) continue;
+      try {
+        const signal = members.get("local")?.value;
+        const client2 = typeof signal?.get === "function" ? signal.get() : typeof signal?.resolve === "function" ? node.store.get(signal.resolve(node, source.contextMap)) : null;
+        if (client2?.hostId === "local" && !client2.disposed && typeof client2.getConversation === "function") clients.add(client2);
+      } catch {
+      }
+    }
+  }
+  for (const task of tasks) {
+    if (!task?.threadId || !task.threadKey?.startsWith("local:")) continue;
+    for (const client2 of clients) {
+      try {
+        const conversation = client2.getConversation(task.threadId);
+        if (conversation?.id !== task.threadId || conversation.hostId !== "local") continue;
+        result.set(task.threadKey, summarize(conversation));
+        break;
+      } catch {
+      }
+    }
+  }
+  return result;
+}
+function taskMetadata(conversation) {
+  return {
+    id: conversation.id,
+    title: conversation.title,
+    originator: conversation.originator,
+    latestModel: conversation.latestModel,
+    latestThreadSettings: { model: conversation.latestThreadSettings?.model },
+    previousTurnModel: conversation.previousTurnModel,
+    latestReasoningEffort: conversation.latestReasoningEffort,
+    threadRuntimeStatus: conversation.threadRuntimeStatus,
+    latestTokenUsageInfo: conversation.latestTokenUsageInfo ?? null
+  };
+}
+
 // ../../src/shared/token-metrics.mjs
 function contextPercent(usage) {
   if (!usage || typeof usage !== "object") return null;
@@ -3823,7 +3893,7 @@ function readNativeModelPicker(document) {
   }
   for (let node = mounted; node; node = node.return) {
     const props = node.memoizedProps;
-    if (Array.isArray(props?.models) && Array.isArray(props?.modelOptions) && typeof props.onSelectModel === "function" && typeof props.onSelectReasoningEffort === "function") {
+    if (Array.isArray(props?.models) && Array.isArray(props?.modelOptions) && typeof props.onSelectModel === "function") {
       return { trigger, props };
     }
   }
@@ -3852,7 +3922,7 @@ function cycleNativeModelPicker(picker, action) {
     return { model: next.model, reasoningEffort: effort2 };
   }
   if (action !== "reasoning") throw new Error("Unsupported model picker action");
-  if (props.reasoningEffortDisabled || props.showReasoningEffortControls === false) {
+  if (typeof props.onSelectReasoningEffort !== "function" || props.reasoningEffortDisabled || props.showReasoningEffortControls === false) {
     throw new Error("Reasoning effort selection is disabled");
   }
   const current = props.models.find((model) => model.model === props.model);
@@ -4477,6 +4547,14 @@ var SNAPSHOT_EXPRESSION = `(async () => {
   const computeCtxPct = ${contextPercent.toString()};
   const { threadIds, asyncQuestionThreads } = (${readNativeTaskAttention.toString()})(source, found);
   const attentionStatus = ${taskAttentionStatus.toString()};
+  const metadataTasks = found.map(slot => ({
+    threadKey: slot.threadKey,
+    threadId: threadIds.get(slot.threadKey) ?? normalizeThreadKey(slot.threadKey)
+  }));
+  if (activeThreadKey) metadataTasks.push({ threadKey: "local:" + normalizeThreadKey(activeThreadKey), threadId: normalizeThreadKey(activeThreadKey) });
+  const nativeMetadata = (${readNativeTaskData.toString()})(source, metadataTasks, ${taskMetadata.toString()});
+  for (const meta of nativeMetadata.values()) if (meta?.id) conversationsMeta.set(meta.id, meta);
+
 
   const enrichedSlots = found.map((slot) => {
     const threadId = threadIds.get(slot.threadKey) ?? normalizeThreadKey(slot.threadKey);
@@ -4572,6 +4650,10 @@ var SNAPSHOT_EXPRESSION = `(async () => {
   } else if (enrichedSlots[0]?.threadKey) {
     lastTask = enrichedSlots[0];
   }
+
+  const progressTasks = [...enrichedSlots, ...activeTasks, ...(lastTask ? [lastTask] : [])];
+  const progressByKey = (${readNativeTaskData.toString()})(source, progressTasks, ${readTaskProgress.toString()});
+  for (const task of progressTasks) task.progress = progressByKey.get(task.threadKey) ?? null;
 
   const activeMeta = (activeThreadKey && conversationsMeta.get(normalizeThreadKey(activeThreadKey))) || null;
   const tokenUsage = activeMeta?.latestTokenUsageInfo || activeMeta?.tokenUsageInfo || activeMeta?.tokenUsage || null;

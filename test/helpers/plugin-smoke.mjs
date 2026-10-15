@@ -1,3 +1,4 @@
+import { taskProgressMarkup } from '../../src/shared/task-progress.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -29,7 +30,7 @@ export async function pluginSmoke(name) {
   }
   const timer = (fn, ms) => { const value = { fn, ms, unref() {} }; timers.push(value); return value; };
   const sandbox = {
-    ...runtime, textCard, usageCard, Buffer, URL, AbortSignal, console, WebSocket: Socket, dirname, resolve, readFileSync,
+    ...runtime, textCard, usageCard, taskProgressMarkup, Buffer, URL, AbortSignal, console, WebSocket: Socket, dirname, resolve, readFileSync,
     process: { argv: ['node', sourcePath], env: {}, on() {}, exit() {} },
     setTimeout: timer, setInterval: timer, clearTimeout() {}, clearInterval() {},
     bridgeFeed: () => ({ start() {}, stop() {} }),
@@ -69,6 +70,24 @@ export async function pluginSmoke(name) {
   sockets[1].open(); await settle();
   for (const action of manifest.Actions) assert.ok(sent.some(m => m.cmd === 'state' && m.param.statelist.some(s => s.uuid === action.UUID)), `${name}: unchanged display not replayed for ${action.UUID}`);
   const host = sockets[1];
+  if (name === 'codexcli' || name === 'antigravity') {
+    const progress = { turnId: 'test-turn', completed: 1, total: 3, currentStep: 'Test <steps>' };
+    state.slots[0].progress = progress;
+    state.slots[0].status = 'working';
+    sent.length = 0;
+    vm.runInContext('renderAll()', context);
+    const card = sent.flatMap(m => m.param?.statelist || []).find(s => s.uuid.endsWith('.task1') && s.type === 1);
+    assert.ok(card, 'progress must update the task display');
+    const image = Buffer.from(card.data.split(',')[1], 'base64').toString();
+    assert.match(image, />1\/3</);
+    assert.match(image, /Test &lt;steps&gt;/);
+    state.slots[0].progress = null;
+    sent.length = 0;
+    vm.runInContext('renderAll()', context);
+    const cleared = sent.flatMap(m => m.param?.statelist || []).find(s => s.uuid.endsWith('.task1') && s.type === 1);
+    assert.doesNotMatch(Buffer.from(cleared.data.split(',')[1], 'base64').toString(), />1\/3</);
+  }
+
   if (name === 'codexcli') {
     // Attention counts tasks; approval readiness still belongs to the selected task.
     const renderAttention = count => {

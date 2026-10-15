@@ -1,3 +1,4 @@
+import { readChecklistProgress } from "./task-progress.mjs";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -28,6 +29,7 @@ export class AntigravityStateReader {
     this.cachedState = null;
     this.lastReadTime = 0;
     this.transcriptCache = new Map();
+    this.checklistCache = new Map();
     this.quotaTtl = options.quotaTtl ?? 60000;
     this.fetch = options.fetchImpl || fetch;
     this.quotaFetch = options.quotaFetch || (() => this.fetchLiveAgyQuota());
@@ -61,6 +63,30 @@ export class AntigravityStateReader {
     } catch {
       return [];
     }
+  }
+
+  async readProgress(convPath, lastUserInputTime) {
+    if (!Number.isFinite(lastUserInputTime) || lastUserInputTime <= 0) return null;
+    const file = path.join(convPath, "task.md");
+    try {
+      const stat = await fs.stat(file);
+      if (!stat.isFile() || stat.size > 65536 || stat.mtimeMs < lastUserInputTime) return null;
+      let cached = this.checklistCache.get(file);
+      if (!cached || cached.mtimeMs !== stat.mtimeMs || cached.size !== stat.size) {
+        const handle = await fs.open(file, "r");
+        let content;
+        try {
+          const buffer = Buffer.alloc(65537);
+          const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+          if (bytesRead > 65536) return null;
+          content = buffer.subarray(0, bytesRead).toString("utf8");
+        } finally { await handle.close(); }
+        cached = { mtimeMs: stat.mtimeMs, size: stat.size, progress: readChecklistProgress(content) };
+        this.checklistCache.set(file, cached);
+        while (this.checklistCache.size > 6) this.checklistCache.delete(this.checklistCache.keys().next().value);
+      }
+      return cached.progress;
+    } catch { return null; }
   }
 
   async readConversationDetails(convDir) {
@@ -345,6 +371,7 @@ export class AntigravityStateReader {
         model,
         ctxPct,
         tokenUsage,
+        progress: await this.readProgress(convPath, lastUserInputTime),
         pendingFeedback,
         subagentsCount,
         hasPlan,
@@ -364,6 +391,7 @@ export class AntigravityStateReader {
         model: null,
         ctxPct: null,
         tokenUsage: null,
+        progress: null,
         pendingFeedback,
         subagentsCount,
         hasPlan,
@@ -420,6 +448,7 @@ export class AntigravityStateReader {
         model: task.model,
         ctxPct: task.ctxPct,
         tokenUsage: task.tokenUsage,
+        progress: task.progress,
         selected: id === 0
       };
     });
@@ -435,6 +464,7 @@ export class AntigravityStateReader {
       model: t.model,
       ctxPct: t.ctxPct,
       tokenUsage: t.tokenUsage,
+      progress: t.progress,
       pendingFeedback: t.pendingFeedback,
       hasPlan: t.hasPlan,
       hasWalkthrough: t.hasWalkthrough,
