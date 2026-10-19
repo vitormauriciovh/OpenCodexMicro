@@ -3764,11 +3764,11 @@ function protectDirectory(directory) {
   execFileSync("powershell.exe", psArgs(`
 $ErrorActionPreference = 'Stop'
 $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
-$directory = New-Object System.IO.DirectoryInfo($env:ULANZI_PRIVATE_DIRECTORY)
+$directory = [System.IO.DirectoryInfo]::new($env:ULANZI_PRIVATE_DIRECTORY)
 $acl = $directory.GetAccessControl([System.Security.AccessControl.AccessControlSections]::Access)
 $acl.SetAccessRuleProtection($true, $false)
 foreach ($existing in @($acl.Access)) { $acl.RemoveAccessRuleSpecific($existing) }
-$rule = New-Object System.Security.AccessControl.FileSystemAccessRule($identity, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
+$rule = [System.Security.AccessControl.FileSystemAccessRule]::new($identity, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
 $acl.AddAccessRule($rule)
 $directory.SetAccessControl($acl)
 `), { env: { ...process.env, ULANZI_PRIVATE_DIRECTORY: target }, windowsHide: true, timeout: 1e4, stdio: "pipe" });
@@ -5223,7 +5223,13 @@ var server = createServer(secureHandler("codex", PORT, async (request, response)
   return json2(response, 404, { ok: false, error: "Not found" });
 }));
 server.on("upgrade", (request, socket, head) => {
-  if (!allowedRequest(request, "codex", PORT)) {
+  try {
+    if (!allowedRequest(request, "codex", PORT)) {
+      socket.destroy();
+      return;
+    }
+  } catch {
+    console.error("Codex WebSocket authentication unavailable; connection rejected");
     socket.destroy();
     return;
   }

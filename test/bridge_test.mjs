@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
+import { readFile } from "node:fs/promises";
 import { contextPercent } from "../src/shared/token-metrics.mjs";
 
 import {
@@ -423,4 +424,30 @@ test('plan opens only the unique enabled native control of the expected task', (
   buttons = [make('Implement plan'), make('Plan')];
   assert.equal(findNativePlanControl(document), null);
   assert.equal(clicks, 1);
+});
+
+test("WebSocket credential failures reject the connection and allow recovery", async () => {
+  const source = await readFile(new URL("../src/bridge/server.mjs", import.meta.url), "utf8");
+  const begin = source.indexOf('server.on("upgrade", ');
+  const end = source.indexOf('\n});', begin) + 4;
+  let handler, unavailable = true, destroyed = 0, upgrades = 0, messages = 0;
+  const context = vm.createContext({
+    server: { on(_event, callback) { handler = callback; } },
+    allowedRequest() {
+      if (unavailable) throw Object.assign(new Error("credential setup timed out"), { code: "ETIMEDOUT" });
+      return true;
+    },
+    console: { error() { messages++; } }, URL, HOST: "127.0.0.1", PORT: 17373,
+    wss: { handleUpgrade(_request, _socket, _head, callback) { upgrades++; callback({}); }, emit() {} }
+  });
+  vm.runInContext(source.slice(begin, end), context);
+  const request = { url: "/events" }, socket = { destroy() { destroyed++; } };
+  assert.doesNotThrow(() => handler(request, socket, Buffer.alloc(0)));
+  assert.equal(destroyed, 1);
+  assert.equal(upgrades, 0);
+  assert.equal(messages, 1);
+  unavailable = false;
+  handler(request, socket, Buffer.alloc(0));
+  assert.equal(upgrades, 1);
+  assert.equal(destroyed, 1);
 });

@@ -194,7 +194,16 @@ const server = createServer(secureHandler("codex", PORT, async (request, respons
 }));
 
 server.on("upgrade", (request, socket, head) => {
-  if (!allowedRequest(request, "codex", PORT)) { socket.destroy(); return; }
+  // Credential storage can be temporarily unavailable (for example, a Windows
+  // DACL setup timeout). Reject this connection without crashing the bridge;
+  // the plugin can reconnect once storage is available again.
+  try {
+    if (!allowedRequest(request, "codex", PORT)) { socket.destroy(); return; }
+  } catch {
+    console.error("Codex WebSocket authentication unavailable; connection rejected");
+    socket.destroy();
+    return;
+  }
   const { pathname } = new URL(request.url || "/", `http://${HOST}:${PORT}`);
   if (pathname === "/events" || pathname === "/ws") {
     wss.handleUpgrade(request, socket, head, (ws) => {
