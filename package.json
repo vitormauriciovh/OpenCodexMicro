@@ -17,6 +17,8 @@
     "windows:status": "node scripts/windows.mjs status",
     "windows:uninstall": "node scripts/windows.mjs uninstall",
     "windows:launch-codex": "node scripts/windows.mjs launch-app codex",
+    "windows:open-codex": "node scripts/windows.mjs open codex",
+    "windows:build-shortcut": "node scripts/build-windows-shortcut.mjs",
     "windows:terminal": "node scripts/windows.mjs terminal codex-cli",
     "check:windows": "npm run build:windows && node --test test/windows*_test.mjs && node scripts/check-windows.mjs && node scripts/smoke-windows.mjs",
     "test": "node --test test/*_test.mjs",

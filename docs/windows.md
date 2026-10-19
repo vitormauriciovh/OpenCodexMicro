@@ -24,7 +24,7 @@ Spotify remains macOS-only and is excluded from the Windows build.
   Only builds exposing the local CDP renderer used by the integration can work.
   Microsoft Store builds may not expose it. Failure reports disconnected state;
   this package does not install virtual HID drivers, change Secure Boot, enable
-  test signing, modify the app, or close a running Codex process. This is not a
+  test signing, modify the app, or close a running Codex process during setup. This is not a
   claim of feature parity on Store builds.
 
 ## Build and install
@@ -89,6 +89,8 @@ then run `npm run windows:launch-codex` with `CODEX_APP_EXE` set. This command
 does not start the bridge; use `windows:start` as well. If Codex is already
 running the launcher refuses, without terminating it. The plugin's Windows
 setup page can also install/start the bridge and launch Codex when configured.
+For explicit opening/restarting shortcuts and the separately authorized
+process-termination option, see [Starting applications](../README.md#starting-applications).
 
 For CLI sessions, use `npm run windows:terminal` from this repository. It reads
 the installed endpoint credentials locally and invokes the configured CLI with

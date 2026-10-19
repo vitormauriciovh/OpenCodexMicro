@@ -74,6 +74,32 @@ first. Setup installs/restarts the sidecar but does not open the wrapper; do not
 launch it merely to verify installation. For a deliberately stopped sidecar,
 see [agent setup procedures](AGENTS.md#codex-bridge-setup).
 
+On Windows, run `npm run windows:open-codex` to start the installed bridge and
+open Codex together. For a shortcut without a console, run
+`npm run windows:build-shortcut` on Windows. Set the shortcut target to the built
+`dist/windows/CodexUlanziLauncher.exe` with the full paths to `node.exe` and
+`scripts/windows.mjs` as its two quoted arguments. Keep the repository in place.
+Add `--restart` as a third argument to make an explicit shortcut click close
+and reopen an already running Codex with the connection parameters. Save work
+before clicking. Closing is graceful; a timeout or ambiguous window selection
+fails without forcibly terminating the app or retrying the launch.
+This Windows app can remain active after its window closes. Use **Quit/Sair**
+in its tray menu for a complete normal exit. After explicitly accepting that
+running tasks may be interrupted, `--force-restart` can replace `--restart`:
+it attempts a normal close, then terminates only the captured processes of the
+configured Codex App executable. It does not kill CLI/app-server process trees.
+Repeated clicks while an opening is in progress are ignored. The launcher
+records recent results in
+`%LOCALAPPDATA%\OpenCodexMicro\codex\shortcut-launch.log`.
+Windows keeps a separate copy of a taskbar-pinned shortcut. After changing a
+desktop or Start-menu shortcut, update that pinned copy too, or unpin it and
+pin the updated shortcut again.
+The launcher starts the existing bridge task and opens Codex with the local
+connection parameters. Without `--restart`, it focuses an already running app.
+To re-open with connection parameters on an explicit command, use
+`npm run windows:open-codex -- --restart`, or save work, close Codex manually
+and use the default command. No delayed re-opening task is created.
+
 Antigravity: open Antigravity Desktop for live controls. The bridge requires one
 matching desktop page and rejects ambiguous targets. Saved history can remain
 available without a live desktop connection; VS Code history alone does not
@@ -223,6 +249,12 @@ and use the case-sensitive `textData` field. They retain the supported legacy
    package, follow [the agent procedure](AGENTS.md#prebuilt-codex-plugin-installation).
 4. Switch profiles and return to check that cards are restored. Allow Spotify
    artwork to finish loading. Record physical-device observations separately.
+
+On Windows, the package in `dist/windows/` can still contain the old display
+code even when the source is corrected. Run `npm run check:windows` to rebuild
+and validate the Windows bundles, close Studio, then run
+`npm run windows:install-plugin -- codex` and reopen Studio. This replaces only
+the Codex App plugin and keeps a backup; it does not require bridge setup.
 
 ## Recorded validation
 

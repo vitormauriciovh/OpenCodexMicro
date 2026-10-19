@@ -8,6 +8,7 @@ import { platformPaths } from "../src/platform/paths.mjs";
 import { localHeaders } from "../src/shared/local-api.mjs";
 import { WINDOWS_CLI_URL } from "../src/platform/cli-transport.mjs";
 import { launchWindowsCodex } from "../src/platform/windows/codex-launcher.mjs";
+import { openWindowsCodex, codexOpenErrorMessage } from "../src/platform/windows/codex-open.mjs";
 import { powershell } from "../src/platform/windows/powershell.mjs";
 
 if (process.platform !== "win32") throw new Error("Windows commands cannot modify a macOS installation");
@@ -28,6 +29,16 @@ else if (action === "stop") await installer.stop();
 else if (action === "uninstall") { await installer.uninstall(); console.log("Bridge runtime removed; drafts, logs, credentials and plugins retained."); }
 else if (action === "status") console.log(JSON.stringify(await installer.status(), null, 2));
 else if (action === "launch-app") await launchWindowsCodex({ env: await installer.launchEnvironment() });
+else if (action === "open") {
+  if (component !== "codex") throw new Error("Combined opening is supported only for Codex App");
+  try {
+    const force = process.argv.includes("--force-restart");
+    console.log(await openWindowsCodex({ env: await installer.launchEnvironment(), startBridge: () => installer.launch(), restart: force || process.argv.includes("--restart"), force }));
+  } catch (error) {
+    console.error(codexOpenErrorMessage(error));
+    process.exitCode = 1;
+  }
+}
 else if (action === "terminal") {
   const metadata = JSON.parse(await readFile(join(platformPaths().data, "codex-cli/windows-install.json"), "utf8"));
   const config = JSON.parse(await readFile(metadata.configPath, "utf8"));
@@ -36,4 +47,4 @@ else if (action === "terminal") {
   const child = spawn(config.cliExecutable, ["--remote", WINDOWS_CLI_URL, "--remote-auth-token-env", "ULANZI_CODEX_REMOTE_TOKEN"], { stdio: "inherit", env: { ...process.env, ULANZI_CODEX_REMOTE_TOKEN: token } });
   child.on("error", error => { console.error(error.message); process.exitCode = 1; });
   child.on("exit", code => { process.exitCode = code || 0; });
-} else throw new Error("Choose install-plugin, setup, start, stop, status, uninstall, launch-app or terminal");
+} else throw new Error("Choose install-plugin, setup, start, stop, status, uninstall, launch-app, open or terminal");

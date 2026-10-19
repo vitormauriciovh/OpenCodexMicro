@@ -29,6 +29,21 @@ The Windows CLI transport is authenticated loopback WebSocket; macOS retains
 WebSocket over its Unix socket. `npm run check:windows` covers Windows-specific
 fixtures, package validation and generated-plugin smoke tests. The CI matrix
 runs both checks on Windows and macOS; local Windows results do not certify Mac.
+`windows:open-codex` starts the existing bridge task and opens or focuses Codex
+on an explicit invocation. Its optional `--restart` flag requests a graceful
+close of one Codex window, waits for exit and launches once. Force is available
+only through `--force-restart` after explicit user authorization for interruption:
+try normal close first, then target only the original CIM process IDs with the
+same creation time and exact configured Codex App executable. Never kill a
+process tree or CLI/app-server binaries. Never replay a launch after an uncertain
+response or create a delayed relaunch task;
+test it with `test/windows_codex_open_test.mjs`.
+The optional GUI shortcut is built from `src/platform/windows/shortcut-launcher.cs`
+with `npm run windows:build-shortcut`; `test/windows_shortcut_test.mjs` validates
+its launch arguments and result logging on Windows.
+Serialize shortcut invocations to prevent overlapping restarts. Select processes
+by CIM executable path before reading their window handles; 32-bit PowerShell
+cannot reliably read `Get-Process.Path` for the 64-bit Codex process.
 
 Ulanzi Studio owns the physical device. There are four plugins and three
 background bridges. All HTTP endpoints below bind to `127.0.0.1` by default;

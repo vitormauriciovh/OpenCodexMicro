@@ -34,6 +34,26 @@ for (const [name, component, variable] of [['codexmicro', 'codex', 'CODEX_BRIDGE
     const uuid = `com.ulanzi.ulanzistudio.${name}.task1`;
     peer.send(JSON.stringify({ cmd: 'add', uuid, actionid: 'fixture', key: '0_0', param: {} }));
     await until(() => calls.some(call => call.url === '/state') && messages.some(message => message.cmd === 'state'));
+    if (name === 'codexmicro') {
+      // Exercise the distributed Windows bundle: source-only tests cannot catch
+      // an old package that resets its live image to the manifest placeholder.
+      const usageUuid = `com.ulanzi.ulanzistudio.${name}.usageweekly`;
+      peer.send(JSON.stringify({ cmd: 'add', uuid: usageUuid, actionid: 'usage-fixture', key: '0_1', param: {} }));
+      await until(() => messages.some(message => message.param?.statelist?.some(item => item.uuid === usageUuid)));
+      for (const action of [uuid, usageUuid]) {
+        const batches = messages.filter(message => message.cmd === 'state' && message.param?.statelist?.some(item => item.uuid === action));
+        assert.ok(batches.length > 0, `${action}: expected a rendered card`);
+        for (const batch of batches) {
+          const updates = batch.param.statelist.filter(item => item.uuid === action);
+          const displayed = updates.at(-1);
+          assert.equal(displayed.type, 1, 'A manifest reset must not overwrite the live Windows card');
+          assert.match(displayed.data, /^data:image\/svg\+xml;base64,/);
+          assert.equal(displayed.showtext, false);
+          assert.equal(displayed.textData, '', 'Studio requires the case-sensitive textData field');
+          assert.ok(updates.every(item => !Object.hasOwn(item, 'textdata')));
+        }
+      }
+    }
     assert.ok(calls.every(call => call.auth === authorization), 'Every local request must be authenticated');
     assert.equal(child.exitCode, null);
     console.log(`Windows ${name} bundle starts, authenticates and renders through a fixture Ulanzi host.`);
