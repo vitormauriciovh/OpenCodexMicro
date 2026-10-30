@@ -1,0 +1,242 @@
+<!doctype html>
+<html data-action="com.ulanzi.ulanzistudio.codexcli.task1" lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Codex CLI Deck Setup</title>
+  <style>
+    :root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    html, body { margin: 0; background: transparent; color: #e8e8e8; font-size: 13px; }
+    * { box-sizing: border-box; }
+    main { padding: 12px 14px 10px; }
+    h1 { margin: 0 0 5px; font-size: 15px; font-weight: 650; }
+    .intro { margin: 0 0 10px; color: #aeb3ba; line-height: 1.35; }
+    .panel { border: 1px solid rgba(255,255,255,.12); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.035); }
+    .row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; min-height: 37px; padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .row:last-child { border-bottom: 0; }
+    .value { display: inline-flex; align-items: center; gap: 6px; color: #aeb3ba; text-align: right; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #72777f; box-shadow: 0 0 0 2px rgba(114,119,127,.15); }
+    .value.good { color: #75d6a3; }
+    .value.good .dot { background: #42c985; box-shadow: 0 0 0 2px rgba(66,201,133,.15); }
+    .value.warn { color: #f0bc68; }
+    .value.warn .dot { background: #e6a84b; box-shadow: 0 0 0 2px rgba(230,168,75,.15); }
+    .value.bad { color: #ef8585; }
+    .value.bad .dot { background: #e45f5f; box-shadow: 0 0 0 2px rgba(228,95,95,.15); }
+    .message { min-height: 18px; margin: 8px 1px 4px; color: #aeb3ba; line-height: 1.35; }
+    .message.error { color: #ef8585; }
+    .message.success { color: #75d6a3; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 8px; }
+    button { min-height: 33px; border: 1px solid rgba(255,255,255,.14); border-radius: 6px; color: #f3f3f3; background: rgba(255,255,255,.08); cursor: pointer; }
+    button:hover:not(:disabled) { background: rgba(255,255,255,.13); }
+    button.primary { border-color: #0284c7; background: #0369a1; }
+    button.primary:hover:not(:disabled) { background: #0284c7; }
+    button:disabled { cursor: default; opacity: .45; }
+    .version { margin-top: 7px; color: #777e87; font-size: 11px; text-align: right; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 id="title">Codex CLI Deck Setup</h1>
+    <p id="intro" class="intro">Select and control tasks served by your local Codex app-server. The deck does not type into or focus terminal windows.</p>
+    <p class="intro">For live terminal updates, open the standalone CLI on the same server, then select its session on the deck:</p>
+    <pre style="white-space:pre-wrap;overflow-wrap:anywhere">~/.codex/packages/standalone/current/bin/codex --remote unix://</pre>
+    <section class="panel">
+      <div class="row"><span>Bridge Service (127.0.0.1:17376)</span><span id="serviceValue" class="value"><i class="dot"></i><span id="serviceText">Checking...</span></span></div>
+      <div class="row"><span>Codex App-Server Daemon</span><span id="daemonValue" class="value"><i class="dot"></i><span id="daemonText">Checking...</span></span></div>
+      <div class="row"><span>Pending Approvals</span><span id="approvalsValue" class="value"><i class="dot"></i><span id="approvalsText">None</span></span></div>
+      <div class="row"><span>Tasks Needing Attention</span><span id="attentionText">None</span></div>
+    </section>
+    <div id="message" class="message"></div>
+    <div class="actions">
+      <button id="refreshBtn" class="primary" onclick="checkStatus()">Refresh Status</button>
+      <button disabled title="Select the intended session using its deck button">Select session on deck</button>
+    </div>
+    <section style="margin-top:12px">
+      <p class="intro">Selected task: <span id="selectedTask">none</span></p>
+      <p id="taskAccess" class="intro"></p>
+      <p id="settings" class="intro"></p>
+      <p id="subagents" class="intro">Press Subagents on the deck to load direct child tasks.</p>
+      <label for="prompt">Prompt for <span id="draftTask">selected task</span></label>
+      <textarea id="prompt" maxlength="16000" rows="5" style="width:100%;margin-top:6px" placeholder="Save a prompt, then press Submit or Steer on the deck."></textarea>
+      <button onclick="saveDraft()">Save prompt for this task</button>
+      <p class="intro">Saved drafts survive bridge restarts and remain bound to their task. Save an empty prompt to clear one.</p>
+      <p id="draftWarning" class="message error"></p>
+    </section>
+    <section style="margin-top:12px">
+      <label for="objective">Goal for the selected task</label>
+      <p id="goalStatus" class="intro">No goal loaded</p>
+      <textarea id="objective" maxlength="16000" rows="3" style="width:100%" placeholder="Describe the objective to pursue."></textarea>
+      <button id="createGoalBtn" onclick="createGoal()">Create and activate goal</button>
+      <p class="intro">Creating a goal may continue work automatically. The deck Goal button pauses or resumes an existing goal; Stop interrupts only the current turn. Existing unfinished goals are never overwritten.</p>
+    </section>
+    <section style="margin-top:12px">
+      <h1>Task plan</h1>
+      <p class="intro">Read the latest saved plan and live checklist for the selected task. This viewer does not start or change the task.</p>
+      <button id="loadPlanBtn" onclick="loadPlan()">Load saved plan</button>
+      <p id="planStatus" class="intro">Select a task and load its plan.</p>
+      <pre id="planText" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;font:inherit"></pre>
+    </section>
+    <div class="version">Codex CLI Deck v0.4.1</div>
+  </main>
+  <script src="inspector-api.js"></script>
+  <script>
+    let selectedThreadId = null;
+    let draftThreadId = null;
+    let promptDirty = false;
+    let statusVersion = 0;
+    document.getElementById("prompt").addEventListener("input", () => { promptDirty = true; });
+    async function checkStatus() {
+      const version = ++statusVersion;
+      const msg = document.getElementById("message");
+      const serviceValue = document.getElementById("serviceValue");
+      const serviceText = document.getElementById("serviceText");
+      const daemonValue = document.getElementById("daemonValue");
+      const daemonText = document.getElementById("daemonText");
+      const approvalsValue = document.getElementById("approvalsValue");
+      const approvalsText = document.getElementById("approvalsText");
+
+      try {
+        const res = await localFetch("http://127.0.0.1:17376/state");
+        if (!res.ok) throw new Error("Bridge returned HTTP " + res.status);
+        const data = await res.json();
+        if (version !== statusVersion) return;
+        selectedThreadId = data.selectedThreadId;
+        document.getElementById("attentionText").textContent = data.connected ? String(data.pendingAttentionCount || 0) : "—";
+        document.getElementById("draftWarning").textContent = data.draftStorageError || (data.draftDeliveryUncertain ? "The previous send may have reached this task. Check the conversation before saving this prompt again to retry." : "");
+        renderPlan(data.plan, data.connected);
+        document.getElementById("selectedTask").textContent = data.lastTask?.title || "no task selected";
+        if (!promptDirty) {
+          draftThreadId = data.selectedThreadId;
+          document.getElementById("draftTask").textContent = data.lastTask?.title || "no task selected";
+          document.getElementById("prompt").value = data.draft || "";
+        }
+        const source = data.lastTask?.source;
+        document.getElementById("taskAccess").textContent = (data.lastTask?.controllable ? "Available for deck actions" : "History only until this app-server can resume the task") + (typeof source === "string" ? ` · Source: ${source}` : "");
+        const agents = data.subagents;
+        document.getElementById("subagents").textContent = agents?.error || (agents ? `${agents.complete ? agents.count : "Incomplete count of"} direct child tasks: ${agents.agents.map(a => a.title + " (" + a.status + ")").join(", ") || "none reported"}. Press Subagents to refresh.` : "Press Subagents on the deck to load direct child tasks.");
+        const setting = data.nextPromptSettings;
+        document.getElementById("settings").textContent = setting
+          ? `Next deck prompt: ${setting.model}, ${setting.effort}, ${setting.serviceTier === "priority" ? "Fast" : "standard speed"}. Steering keeps the active turn's settings.`
+          : "Model, Reasoning and Fast controls apply to the next prompt sent from this deck.";
+        document.getElementById("goalStatus").textContent = data.goalError || (data.goal ? `${data.goal.status}: ${data.goal.objective}` : "No goal");
+        document.getElementById("createGoalBtn").disabled = !data.connected || Boolean(data.selectedTaskError) || Boolean(data.goalError) || Boolean(data.goal && data.goal.status !== "complete");
+
+        serviceValue.className = "value good";
+        serviceText.innerText = "Running";
+
+        if (data.daemonConnected) {
+          daemonValue.className = "value good";
+          daemonText.innerText = "Connected";
+        } else if (data.isProcessRunning) {
+          daemonValue.className = "value warn";
+          daemonText.innerText = "CLI Active";
+        } else {
+          daemonValue.className = "value";
+          daemonText.innerText = "Disconnected";
+        }
+
+        const count = data.pendingApprovalCount || 0;
+        if (count > 0) {
+          approvalsValue.className = "value warn";
+          approvalsText.innerText = count + " Required";
+        } else {
+          approvalsValue.className = "value good";
+          approvalsText.innerText = "All Clear";
+        }
+
+        msg.className = data.daemonConnected && !data.selectedTaskError ? "message success" : "message error";
+        msg.innerText = data.selectedTaskError ? "Selected task is read-only: " + data.selectedTaskError + ". A terminal opened without --remote unix:// uses a separate server. Open the CLI with the command above and select that session on the deck." : data.daemonConnected ? (promptDirty ? "Unsaved prompt preserved for its original task. Save it before loading another task’s draft." : "Codex CLI bridge is ready.") : data.error || "Start a compatible local Codex app-server.";
+      } catch (err) {
+        if (version !== statusVersion) return;
+        document.getElementById("createGoalBtn").disabled = true;
+        renderPlan(null, false);
+        serviceValue.className = "value bad";
+        serviceText.innerText = "Offline";
+        daemonValue.className = "value";
+        daemonText.innerText = "Unknown";
+        approvalsValue.className = "value";
+        approvalsText.innerText = "—";
+        msg.className = "message error";
+        msg.innerText = "Could not reach bridge on 127.0.0.1:17376. Run 'npm run setup:codexcli' to start it.";
+      }
+    }
+
+    function renderPlan(plan, connected) {
+      document.getElementById("loadPlanBtn").disabled = !connected || !selectedThreadId;
+      const parts = [];
+      if (plan?.checklist) {
+        parts.push(`Live checklist · turn ${plan.checklist.turnId}`);
+        if (plan.checklist.explanation) parts.push(plan.checklist.explanation);
+        parts.push(plan.checklist.steps.map(step => `${step.status === "completed" ? "[✓]" : step.status === "inProgress" ? "[→]" : "[ ]"} ${step.step}`).join("\n"));
+      }
+      if (plan?.document) parts.push(`Latest saved plan · turn ${plan.document.turnId}\n${plan.document.text}`);
+      document.getElementById("planText").textContent = parts.join("\n\n");
+      document.getElementById("planStatus").textContent = !connected ? "App-server disconnected. Refresh after reconnecting." : plan?.error ? `Could not refresh plan: ${plan.error}. Any displayed plan is the previous result.` : plan?.historyStatus === "partial" ? "History search is incomplete; no saved plan found in the most recent 1,000 items." : plan?.historyStatus === "complete" && !plan.document ? "No saved plan was reported for this task." : parts.length ? "Plan content reported by app-server. Live checklist updates while this inspector is open." : "Press Load saved plan or the Plan deck button.";
+    }
+    async function loadPlan() {
+      const task = selectedThreadId;
+      try {
+        if (!task) throw new Error("Select a task and refresh status first.");
+        document.getElementById("loadPlanBtn").disabled = true;
+        const response = await localFetch("http://127.0.0.1:17376/action/plan", { method: "POST", body: JSON.stringify({ threadId: task }) });
+        if (!response.ok) throw new Error("Could not read task plan");
+        await refreshPlanDisplay();
+      } catch (error) {
+        document.getElementById("planStatus").textContent = error.message;
+        document.getElementById("loadPlanBtn").disabled = !selectedThreadId;
+      }
+    }
+    let planPollInFlight = false;
+    async function refreshPlanDisplay() {
+      if (planPollInFlight || !selectedThreadId) return;
+      planPollInFlight = true;
+      try {
+        const response = await localFetch("http://127.0.0.1:17376/state");
+        if (!response.ok) throw new Error("Bridge unavailable");
+        const state = await response.json();
+        if (state.selectedThreadId !== selectedThreadId) {
+          document.getElementById("planText").textContent = "";
+          document.getElementById("planStatus").textContent = "Task selection changed. Refresh Status to view its plan.";
+          document.getElementById("loadPlanBtn").disabled = true;
+          return;
+        }
+        renderPlan(state.plan, state.connected);
+      } catch {
+        document.getElementById("planText").textContent = "";
+        document.getElementById("planStatus").textContent = "Bridge unavailable. Refresh Status to reconnect.";
+        document.getElementById("loadPlanBtn").disabled = true;
+      } finally { planPollInFlight = false; }
+    }
+    setInterval(refreshPlanDisplay, 2000);
+
+    async function saveDraft() {
+      const msg = document.getElementById("message");
+      try {
+        if (!draftThreadId) throw new Error("Select a task on the deck and refresh status first.");
+        const text = document.getElementById("prompt").value;
+        const task = draftThreadId;
+        await localFetch("http://127.0.0.1:17376/draft", { method: "POST", body: JSON.stringify({ threadId: task, text }) });
+        if (draftThreadId === task && document.getElementById("prompt").value === text) promptDirty = false;
+        msg.className = "message success";
+        msg.textContent = "Prompt saved for this task. Use Submit or Steer on the deck.";
+      } catch (error) { msg.className = "message error"; msg.textContent = error.message; }
+    }
+
+    async function createGoal() {
+      const msg = document.getElementById("message");
+      const button = document.getElementById("createGoalBtn");
+      try {
+        if (!selectedThreadId) throw new Error("Select a task and refresh status first.");
+        const objective = document.getElementById("objective").value;
+        if (!objective.trim()) throw new Error("Enter the goal objective first.");
+        button.disabled = true;
+        await localFetch("http://127.0.0.1:17376/goal", { method: "POST", body: JSON.stringify({ threadId: selectedThreadId, objective }) });
+        document.getElementById("objective").value = "";
+        await checkStatus();
+      } catch (error) { msg.className = "message error"; msg.textContent = error.message; button.disabled = false; }
+    }
+
+    checkStatus();
+  </script>
+</body>
+</html>

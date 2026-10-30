@@ -1,0 +1,144 @@
+{
+  "Description": "Controla la tarea seleccionada en Antigravity Desktop. Los tokens son estimaciones; los valores de uso no confirmados permanecen desconocidos.",
+  "Name": "Antigravity",
+  "com.ulanzi.ulanzistudio.antigravity.task1": {
+    "Name": "Antigravity Sesi\u00f3n 1",
+    "Tooltip": "Selecciona esta tarea en Antigravity Desktop y muestra su estado."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task2": {
+    "Name": "Antigravity Sesi\u00f3n 2",
+    "Tooltip": "Selecciona esta tarea en Antigravity Desktop y muestra su estado."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task3": {
+    "Name": "Antigravity Sesi\u00f3n 3",
+    "Tooltip": "Selecciona esta tarea en Antigravity Desktop y muestra su estado."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task4": {
+    "Name": "Antigravity Sesi\u00f3n 4",
+    "Tooltip": "Selecciona esta tarea en Antigravity Desktop y muestra su estado."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task5": {
+    "Name": "Antigravity Sesi\u00f3n 5",
+    "Tooltip": "Selecciona esta tarea en Antigravity Desktop y muestra su estado."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.proceed": {
+    "Name": "Antigravity Aprobar",
+    "Tooltip": "Aprueba la \u00fanica solicitud pendiente visible de la tarea seleccionada."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.cancel": {
+    "Name": "Antigravity Detener",
+    "Tooltip": "Detiene la tarea seleccionada."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.attention": {
+    "Name": "Antigravity Alerta de Atenci\u00f3n",
+    "Tooltip": "Selecciona la siguiente tarea que requiere atenci\u00f3n."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.subagents": {
+    "Name": "Antigravity Subagentes",
+    "Tooltip": "Muestra actividad de subagentes inferida del historial; no cuenta procesos en tiempo real."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.plan": {
+    "Name": "Antigravity Ver Plan",
+    "Tooltip": "Abre el artefacto de la tarea seleccionada en el editor configurado."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.walkthrough": {
+    "Name": "Antigravity Ver Resumen",
+    "Tooltip": "Abre el artefacto de la tarea seleccionada en el editor configurado."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.usage": {
+    "Name": "Antigravity Uso / Cuota",
+    "Tooltip": "Muestra l\u00edmites verificados cuando existen; los dem\u00e1s valores son desconocidos."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.usage5h": {
+    "Name": "Antigravity Uso 5 Horas",
+    "Tooltip": "Muestra l\u00edmites verificados cuando existen; los dem\u00e1s valores son desconocidos."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.usageweekly": {
+    "Name": "Antigravity Uso Semanal",
+    "Tooltip": "Muestra l\u00edmites verificados cuando existen; los dem\u00e1s valores son desconocidos."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.new": {
+    "Name": "Antigravity Nueva Sesi\u00f3n",
+    "Tooltip": "Abre una nueva conversaci\u00f3n en el proyecto actual."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.navigate": {
+    "Name": "Antigravity \u00daltima Sesi\u00f3n & Scroll",
+    "Tooltip": "Pulsa para seleccionar la tarea reciente; gira para desplazar la conversaci\u00f3n seleccionada."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.hud": {
+    "Name": "Antigravity Estado HUD",
+    "Tooltip": "Muestra el estado observado de la tarea seleccionada."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.boost": {
+    "Name": "Antigravity /boost",
+    "Tooltip": "No disponible: esta versi\u00f3n no tiene un equivalente verificado."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.grillme": {
+    "Name": "Antigravity /grill-me",
+    "Tooltip": "No disponible: esta versi\u00f3n no tiene un equivalente verificado."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.goal": {
+    "Name": "Antigravity /goal",
+    "Tooltip": "No disponible: esta versi\u00f3n no tiene un equivalente verificado."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.tokens": {
+    "Name": "Antigravity Tokens",
+    "Tooltip": "Estima tokens del texto guardado; no mide facturaci\u00f3n ni ocupaci\u00f3n del contexto."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.approve": {
+    "Name": "Antigravity Aprobar",
+    "Tooltip": "Aprueba la \u00fanica solicitud pendiente visible de la tarea seleccionada."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.reject": {
+    "Name": "Antigravity Rechazar",
+    "Tooltip": "Rechaza la \u00fanica solicitud pendiente visible de la tarea seleccionada."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.stop": {
+    "Name": "Antigravity Detener",
+    "Tooltip": "Detiene la tarea seleccionada."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.pin": {
+    "Name": "Antigravity Fijar tarea",
+    "Tooltip": "Fija o desfija la tarea seleccionada."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.submit": {
+    "Name": "Antigravity Enviar",
+    "Tooltip": "Env\u00eda el texto actual; durante la ejecuci\u00f3n respeta la opci\u00f3n de entrega de Antigravity."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.mic": {
+    "Name": "Antigravity Micr\u00f3fono",
+    "Tooltip": "Inicia o detiene la grabaci\u00f3n de voz."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.model": {
+    "Name": "Antigravity Elegir modelo",
+    "Tooltip": "Abre las opciones de modelo de la tarea seleccionada."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.prompt_test": {
+    "Name": "Antigravity Probar y corregir",
+    "Tooltip": "Solicita pruebas y correcciones; conserva un borrador existente."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.prompt_review": {
+    "Name": "Antigravity Revisar cambios",
+    "Tooltip": "Solicita revisar los cambios; conserva un borrador existente."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.prompt_commit": {
+    "Name": "Antigravity Mensaje de commit",
+    "Tooltip": "Solicita un mensaje Conventional Commit; no ejecuta commit ni push."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.fork": {
+    "Name": "Antigravity Bifurcar tarea",
+    "Tooltip": "Bifurca desde la \u00faltima respuesta visible en el espacio actual, cuando se ofrece; requiere tarea detenida y ning\u00fan borrador."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.reasoning": {
+    "Name": "Antigravity Razonamiento",
+    "Tooltip": "Recorre las opciones de razonamiento del modelo actual; indica cuando no existen."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.task6": {
+    "Name": "Antigravity Sesi\u00f3n 6",
+    "Tooltip": "Selecciona esta tarea en Antigravity Desktop y muestra su estado."
+  },
+  "com.ulanzi.ulanzistudio.antigravity.steer": {
+    "Name": "Antigravity Enviar Mensaje en Cola Ahora",
+    "Tooltip": "Env\u00eda inmediatamente el \u00fanico mensaje habilitado en la cola expandida de la tarea seleccionada. Conserva el borrador. Si hay varios mensajes, selecciona en Antigravity."
+  }
+}

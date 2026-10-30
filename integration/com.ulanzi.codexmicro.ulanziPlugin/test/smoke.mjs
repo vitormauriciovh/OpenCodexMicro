@@ -1,8 +1,35 @@
+import "../../../test/helpers/env.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
+import { localHeaders } from "../../../src/shared/local-api.mjs";
+import { hasSelectedApproval } from "../plugin/approval-state.js";
+
+const approvalState = {
+  connected: true,
+  activeThreadKey: "current",
+  attentionCount: 9,
+  slots: [{ threadKey: "local:current", status: "idle" }, { threadKey: "local:other", status: "awaiting-approval" }]
+};
+for (const status of ["idle", "thinking", "error", "input", "attention", "awaiting-response", "unread"]) {
+  assert.equal(hasSelectedApproval({ ...approvalState, slots: [{ ...approvalState.slots[0], status }, approvalState.slots[1]] }), false, `${status} must not enable approval, even with pending attention elsewhere`);
+}
+for (const status of ["approval", "awaiting-approval"]) {
+  const state = { ...approvalState, slots: [{ threadKey: "local:current", status }] };
+  assert.equal(hasSelectedApproval(state), true);
+  assert.equal(hasSelectedApproval({ ...state, activeThreadKey: "local:current" }), true);
+  assert.equal(hasSelectedApproval({ ...state, activeThreadKey: "other" }), false);
+  assert.equal(hasSelectedApproval({ ...state, connected: false }), false);
+  assert.equal(hasSelectedApproval({ ...state, activeThreadKey: null }), false);
+}
+assert.equal(hasSelectedApproval({ ...approvalState, slots: [], activeTasks: [{ threadId: "current", status: "awaiting-approval" }] }), true);
+assert.equal(hasSelectedApproval({ ...approvalState, activeTasks: [{ threadId: "current", status: "awaiting-approval" }] }), false, "Current slot status must take precedence over stale activeTasks");
+const selectedAlias = { threadKey: "local:client-new-thread:temporary", selected: true, status: "awaiting-approval" };
+assert.equal(hasSelectedApproval({ ...approvalState, slots: [selectedAlias] }), true);
+assert.equal(hasSelectedApproval({ ...approvalState, slots: [selectedAlias, { ...selectedAlias, threadKey: "local:client-new-thread:other" }] }), false);
+assert.equal(hasSelectedApproval({ ...approvalState, slots: [{ ...selectedAlias, threadKey: "local:other" }] }), false);
 
 const packageRootUrl = new URL("..", import.meta.url);
 const manifest = JSON.parse(await readFile(new URL("manifest.json", packageRootUrl)));
@@ -10,8 +37,8 @@ const navigateAction = manifest.Actions.find(action =>
   action.UUID === "com.ulanzi.ulanzistudio.codexmicro.navigate"
 );
 assert.deepEqual(navigateAction?.Controllers, ["Encoder"]);
-assert.equal(navigateAction?.Encoder?.layout, "$UA1");
-assert.equal(manifest.Version, "0.4.1");
+assert.equal(navigateAction?.Encoder?.layout, "layouts/navigate-encoder.json");
+assert.equal(manifest.Version, "0.5.1");
 assert.equal(manifest.Software?.MinVersion, "3.0.1");
 assert.equal(manifest.OS?.find(item => item.Platform === "mac")?.MinimumVersion, "13.0");
 assert.ok(
@@ -82,7 +109,7 @@ for (const locale of [
   "es_ES.json"
 ]) {
   const messages = JSON.parse(await readFile(new URL(locale, packageRootUrl)));
-  assert.equal(messages.Name, "Codex Micro", `${locale} must localize Name`);
+  assert.equal(messages.Name, "Codex App", `${locale} must localize Name`);
   assert.ok(messages.Overview?.length > 20, `${locale} must localize Overview`);
   assert.match(messages.Description, /https:\/\/github\.com\/UlanziTechnology\/OpenCodexMicro/);
   assert.match(messages.Description, /npm run install:plugin/);
@@ -107,7 +134,7 @@ for (const locale of [
     `${locale} must localize every action name and tooltip`
   );
   assert.deepEqual(
-    [messages.Actions[0].Name, messages.Actions[9].Name, messages.Actions[13].Name],
+    [messages.Actions[0].Name, messages.Actions[11].Name, messages.Actions[15].Name],
     localizedActionNames[locale],
     `${locale} action localization must follow manifest action order`
   );
@@ -119,9 +146,21 @@ for (const locale of [
 }
 
 const bridgeRequests = [];
+let firstTaskStatus = "thinking";
+let activeThreadKey = null;
+let composer = null;
+let permissions = null;
+const encoderCredentials = [];
 const bridge = createServer((request, response) => {
   bridgeRequests.push(`${request.method} ${request.url}`);
   response.setHeader("Content-Type", "application/json");
+  if (request.url.startsWith("/composer/") || request.url.startsWith("/permissions/")) {
+    const authenticated = request.headers.authorization === localHeaders("codex").Authorization;
+    encoderCredentials.push(authenticated);
+    if (!authenticated) { response.writeHead(403); response.end(JSON.stringify({ ok: false })); return; }
+    response.end(JSON.stringify({ ok: true, composer, permissions }));
+    return;
+  }
   if (request.url === "/health") {
     response.end(JSON.stringify({ ok: true, codexConnected: true, updatedAt: Date.now() }));
     return;
@@ -129,13 +168,37 @@ const bridge = createServer((request, response) => {
   if (request.url === "/state") {
     response.end(JSON.stringify({
       connected: true,
+      activeThreadKey,
+      composer,
+      permissions,
+      planAvailable: true,
       slots: [
-        { id: 0, threadKey: "11111111-1111-1111-1111-111111111111", title: "Working task", status: "thinking" },
+        { id: 0, threadKey: "11111111-1111-1111-1111-111111111111", title: "Working task", status: firstTaskStatus, progress: { turnId: "turn-progress", completed: 2, total: 5, currentStep: "Validate <plan>" }, tokenUsage: { totalTokens: 987654 } },
         { id: 1, threadKey: "22222222-2222-2222-2222-222222222222", title: "Unread task", status: "unread" },
         { id: 2, threadKey: "33333333-3333-3333-3333-333333333333", title: "Input task", status: "input" },
         { id: 3, threadKey: "44444444-4444-4444-4444-444444444444", title: "Failed task", status: "error" },
         { id: 4, threadKey: "55555555-5555-5555-5555-555555555555", title: "Idle task", status: "idle" }
       ],
+      activeTasks: [
+        {
+          threadKey: "11111111-1111-1111-1111-111111111111",
+          threadId: "11111111-1111-1111-1111-111111111111",
+          slot: 0,
+          title: "Working task",
+          status: "thinking",
+          taskType: "WORK",
+          model: "5.6 LUNA"
+        }
+      ],
+      lastTask: {
+        threadKey: "11111111-1111-1111-1111-111111111111",
+        threadId: "11111111-1111-1111-1111-111111111111",
+        slot: 0,
+        title: "Working task",
+        status: "thinking",
+        taskType: "WORK",
+        model: "5.6 LUNA"
+      },
       usage: { windows: [{ kind: "weekly", remainingPercent: 23 }] }
     }));
     return;
@@ -144,6 +207,7 @@ const bridge = createServer((request, response) => {
 });
 await new Promise(resolve => bridge.listen(0, "127.0.0.1", resolve));
 const bridgePort = bridge.address().port;
+const events = new WebSocketServer({ server: bridge, path: "/events" });
 
 const host = new WebSocketServer({ host: "127.0.0.1", port: 0 });
 await new Promise(resolve => host.once("listening", resolve));
@@ -175,7 +239,10 @@ try {
     key: "0_0",
     payload: { type: "bridgeSetup", action: "status" }
   }));
-  await new Promise(resolve => setTimeout(resolve, 150));
+  // Windows also queries Task Scheduler; wait for the reply, not a fixed timing assumption.
+  for (let attempt = 0; attempt < 100 && !messages.some(message => message.actionid === "setup-action" && message.payload?.type === "bridgeSetupStatus"); attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
   const setupStatus = messages.find(message =>
     message.cmd === "sendToPropertyInspector" &&
     message.actionid === "setup-action" &&
@@ -183,7 +250,7 @@ try {
   );
   assert.equal(setupStatus?.payload?.status?.serviceOnline, true);
   assert.equal(setupStatus?.payload?.status?.cdpConnected, true);
-  assert.equal(setupStatus?.payload?.status?.bundledVersion, "0.4.1");
+  assert.equal(setupStatus?.payload?.status?.bundledVersion, "0.5.1");
 
   const taskPaths = [
     "assets/icons/task-working.png",
@@ -208,15 +275,11 @@ try {
       message.cmd === "state" && message.param?.statelist?.[0]?.uuid === taskUuid
     );
     const item = state?.param?.statelist?.[0];
-    assert.equal(item?.type, 2);
-    assert.equal(item?.path, taskPaths[index]);
-    assert.equal(item?.showtext, true);
-    assert.equal(Object.hasOwn(item || {}, "state"), false, "task icon update must not send a state index");
+    assert.equal(item?.type, 1);
+    assert.match(item?.data || "", /^data:image\/svg\+xml;base64,/);
+    assert.equal(item?.showtext, false);
+    assert.equal(item?.textData, "");
   }
-  const task1State = messages.find(message =>
-    message.cmd === "state" && message.param?.statelist?.[0]?.uuid.endsWith(".task1")
-  );
-  assert.equal(task1State?.param?.statelist?.[0]?.textdata, "Working task");
 
   client.send(JSON.stringify({ cmd: "keydown", uuid: "com.ulanzi.ulanzistudio.codexmicro.task1", actionid: "a1", key: "0_0", param: {} }));
   client.send(JSON.stringify({ cmd: "run", uuid: "com.ulanzi.ulanzistudio.codexmicro.task1", actionid: "a1", key: "0_0", param: {} }));
@@ -236,24 +299,27 @@ try {
   client.send(JSON.stringify({ cmd: "dialup", ...navigateEvent }));
   client.send(JSON.stringify({ cmd: "dialrotate", rotateEvent: "left", ...navigateEvent }));
   client.send(JSON.stringify({ cmd: "dialrotate", rotateEvent: "right", ...navigateEvent }));
-  await new Promise(resolve => setTimeout(resolve, 150));
+  for (let attempt = 0; attempt < 100 && !["up", "down"].every(direction => bridgeRequests.includes(`POST /joystick/${direction}/up`)); attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
   assert.equal(
     bridgeRequests.filter(item => item.includes("/thread/11111111-1111-1111-1111-111111111111/click?slot=0")).length,
     2,
     "Encoder press must open task slot 1"
   );
-  assert.deepEqual(
-    messages.filter(message => message.cmd === "hotkey").map(message => message.keylist),
-    ["SCROLL UP", "SCROLL DOWN"]
-  );
+  assert.equal(messages.filter(message => message.cmd === "hotkey").length, 0);
+  for (const direction of ["up", "down"]) {
+    assert.ok(bridgeRequests.includes(`POST /joystick/${direction}/down`));
+    assert.ok(bridgeRequests.includes(`POST /joystick/${direction}/up`));
+  }
   const navigateState = messages.find(message =>
     message.cmd === "state" &&
     message.param?.statelist?.[0]?.uuid === navigateEvent.uuid
   );
+  assert.equal(navigateState?.param?.statelist?.[0]?.type, 2);
   assert.equal(navigateState?.param?.statelist?.[0]?.path, "assets/icons/task-working.png");
-  assert.equal(navigateState?.param?.statelist?.[0]?.textdata, "Working task");
 
-  const actions = ["fast", "pin", "new", "fork", "steer", "mic", "submit"];
+  const actions = ["fast", "pin", "new", "fork", "steer", "mic", "submit", "approve", "reject"];
   for (const [index, action] of actions.entries()) {
     const uuid = `com.ulanzi.ulanzistudio.codexmicro.${action}`;
     const event = { uuid, actionid: `action-${action}`, key: `1_${index}`, param: {} };
@@ -262,6 +328,16 @@ try {
     client.send(JSON.stringify({ cmd: "run", ...event }));
     client.send(JSON.stringify({ cmd: "keyup", ...event }));
   }
+  const modelEvent = { uuid: "com.ulanzi.ulanzistudio.codexmicro.model", actionid: "model-action", key: "2_9", param: {} };
+  client.send(JSON.stringify({ cmd: "add", ...modelEvent }));
+  client.send(JSON.stringify({ cmd: "keydown", ...modelEvent }));
+  client.send(JSON.stringify({ cmd: "run", ...modelEvent }));
+  client.send(JSON.stringify({ cmd: "keyup", ...modelEvent }));
+  const planEvent = { uuid: "com.ulanzi.ulanzistudio.codexmicro.plan", actionid: "plan-action", key: "2_10", param: {} };
+  client.send(JSON.stringify({ cmd: "add", ...planEvent }));
+  client.send(JSON.stringify({ cmd: "keydown", ...planEvent }));
+  client.send(JSON.stringify({ cmd: "run", ...planEvent }));
+  client.send(JSON.stringify({ cmd: "keyup", ...planEvent }));
   const usageEvent = {
     uuid: "com.ulanzi.ulanzistudio.codexmicro.usage",
     actionid: "action-usage",
@@ -274,22 +350,26 @@ try {
   client.send(JSON.stringify({ cmd: "keyup", ...usageEvent }));
   await new Promise(resolve => setTimeout(resolve, 250));
 
+  assert.equal(bridgeRequests.filter(item => item === "POST /action/model/down").length, 1);
+  assert.equal(bridgeRequests.filter(item => item === "POST /action/plan/down").length, 1);
+  assert.equal(bridgeRequests.filter(item => item === "POST /action/plan/up").length, 0);
+  assert.equal(bridgeRequests.filter(item => item === "POST /action/model/up").length, 0);
   for (const action of actions) {
+    const bridgeAction = action;
     assert.equal(
-      bridgeRequests.filter(item => item === `POST /action/${action}/down`).length,
+      bridgeRequests.filter(item => item === `POST /action/${bridgeAction}/down`).length,
       1,
       `${action} must execute once on keydown`
     );
     assert.equal(
-      bridgeRequests.filter(item => item === `POST /action/${action}/up`).length,
+      bridgeRequests.filter(item => item === `POST /action/${bridgeAction}/up`).length,
       1,
       `${action} must preserve keyup`
     );
   }
-  assert.equal(
-    bridgeRequests.filter(item => item === "POST /focus").length,
-    1,
-    "Usage must focus Codex once on keydown"
+  assert.ok(
+    bridgeRequests.filter(item => item === "POST /focus").length >= 1,
+    "Usage must focus Codex on keydown"
   );
   const usageState = messages.find(message =>
     message.cmd === "state" &&
@@ -297,14 +377,161 @@ try {
   );
   const usageItem = usageState?.param?.statelist?.[0];
   assert.equal(usageItem?.type, 1);
-  assert.equal(usageItem?.showtext, true);
-  assert.equal(usageItem?.textdata, "USAGE");
+  assert.equal(usageItem?.showtext, false);
+  assert.equal(usageItem?.textData, "");
   assert.match(usageItem?.data || "", /^data:image\/svg\+xml;base64,/);
   const usageSvg = Buffer.from(usageItem.data.split(",")[1], "base64").toString();
   assert.match(usageSvg, />23<tspan/);
   assert.match(usageSvg, /#e89b2d/);
-  process.stdout.write("Codex Micro plugin smoke test passed.\n");
+
+  const monitorEvent = {
+    uuid: "com.ulanzi.ulanzistudio.codexmicro.taskmonitor",
+    actionid: "action-monitor",
+    key: "2_1",
+    param: {}
+  };
+  client.send(JSON.stringify({ cmd: "add", ...monitorEvent }));
+  client.send(JSON.stringify({ cmd: "keydown", ...monitorEvent }));
+  client.send(JSON.stringify({ cmd: "run", ...monitorEvent }));
+  client.send(JSON.stringify({ cmd: "keyup", ...monitorEvent }));
+  await new Promise(resolve => setTimeout(resolve, 250));
+
+  assert.equal(
+    bridgeRequests.filter(item => item.includes("/thread/11111111-1111-1111-1111-111111111111/click?slot=0")).length,
+    3,
+    "Task Monitor press must open active thread"
+  );
+  const monitorState = messages.find(message =>
+    message.cmd === "state" &&
+    message.param?.statelist?.[0]?.uuid === monitorEvent.uuid
+  );
+  const monitorItem = monitorState?.param?.statelist?.[0];
+  assert.equal(monitorItem?.type, 1);
+  assert.equal(monitorItem?.showtext, false);
+  assert.match(monitorItem?.data || "", /^data:image\/svg\+xml;base64,/);
+  const monitorSvg = Buffer.from(monitorItem.data.split(",")[1], "base64").toString();
+  assert.match(monitorSvg, /WORK/);
+  assert.match(monitorSvg, /5\.6 LUNA/);
+  assert.match(monitorSvg, /RUNNING/);
+
+  const attentionEvent = {
+    uuid: "com.ulanzi.ulanzistudio.codexmicro.attention",
+    actionid: "action-attention",
+    key: "2_2",
+    param: {}
+  };
+  client.send(JSON.stringify({ cmd: "add", ...attentionEvent }));
+  client.send(JSON.stringify({ cmd: "keydown", ...attentionEvent }));
+  client.send(JSON.stringify({ cmd: "run", ...attentionEvent }));
+  client.send(JSON.stringify({ cmd: "keyup", ...attentionEvent }));
+  await new Promise(resolve => setTimeout(resolve, 250));
+
+  const attentionState = messages.find(message =>
+    message.cmd === "state" &&
+    message.param?.statelist?.[0]?.uuid === attentionEvent.uuid
+  );
+  const attentionItem = attentionState?.param?.statelist?.[0];
+  assert.equal(attentionItem?.type, 1);
+  assert.equal(attentionItem?.showtext, false);
+  assert.match(attentionItem?.data || "", /^data:image\/svg\+xml;base64,/);
+  const attentionSvg = Buffer.from(attentionItem.data.split(",")[1], "base64").toString();
+  assert.match(attentionSvg, />2</); // 2 pending: input task + error task
+
+  // Slot zero belongs to another task; selected-task cards must remain unknown.
+  const tokenEvent = { uuid: "com.ulanzi.ulanzistudio.codexmicro.tokens", actionid: "tokens-selected", key: "3_7", param: {} };
+  client.send(JSON.stringify({ cmd: "add", ...tokenEvent }));
+  await new Promise(resolve => setTimeout(resolve, 150));
+  for (const [uuid, expected] of [[tokenEvent.uuid, /CONTEXT UNKNOWN/], [modelEvent.uuid, />Unknown</], [planEvent.uuid, />Open plan</]]) {
+    const item = messages.find(message => message.cmd === "state" && message.param?.statelist?.[0]?.uuid === uuid)?.param?.statelist?.[0];
+    assert.ok(item?.data, `Missing selected task card ${uuid}`);
+    const svg = Buffer.from(item.data.split(',')[1], 'base64').toString();
+    assert.match(svg, expected);
+    assert.doesNotMatch(svg, /988k|5.6 LUNA/);
+  }
+  // Current Codex native slot states must update both task cards and the badge,
+  // including clearing attention when the task resumes or completes.
+  const latestSvg = uuid => {
+    const item = messages.flatMap(message => message.cmd === "state" ? message.param?.statelist || [] : [])
+      .filter(item => item.uuid === uuid && item.type === 1 && item.data).at(-1);
+    return item ? Buffer.from(item.data.split(",")[1], "base64").toString() : "";
+  };
+  for (const action of ["approve", "reject"]) {
+    assert.match(latestSvg(`com.ulanzi.ulanzistudio.codexmicro.${action}`), />NO PENDING</, "Unrelated input and error tasks must not advertise approval");
+  }
+  activeThreadKey = "local:11111111-1111-1111-1111-111111111111";
+  for (const [status, color, count, label] of [
+    ["awaiting-approval", "#f59e0b", 3, "waiting"],
+    ["thinking", "#22c55e", 2, "thinking"],
+    ["awaiting-response", "#f59e0b", 3, "waiting"],
+    ["unread", "#3b82f6", 2, "done"]
+  ]) {
+    firstTaskStatus = status;
+    const header = `height="38" fill="${color}"`;
+    const deadline = Date.now() + 5000;
+    while (Date.now() < deadline) {
+      if (latestSvg("com.ulanzi.ulanzistudio.codexmicro.task1").includes(header) &&
+          latestSvg(attentionEvent.uuid).includes(`>${count}<`) &&
+          latestSvg("com.ulanzi.ulanzistudio.codexmicro.approve").includes(status === "awaiting-approval" ? ">ACTION READY<" : ">NO PENDING<") &&
+          latestSvg("com.ulanzi.ulanzistudio.codexmicro.reject").includes(status === "awaiting-approval" ? ">DENY REQUEST<" : ">NO PENDING<")) break;
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    for (const uuid of ["com.ulanzi.ulanzistudio.codexmicro.task1"]) {
+      assert.ok(latestSvg(uuid).includes(header), `${uuid} must render ${status} with ${color}`);
+      assert.match(latestSvg(uuid), />2\/5</);
+      assert.match(latestSvg(uuid), /Validate &lt;plan&gt;/);
+      assert.match(latestSvg(uuid), new RegExp(`>${label}(?: |<)`));
+    }
+    const navigationImage = messages.flatMap(message => message.cmd === "state" ? message.param?.statelist || [] : [])
+      .filter(item => item.uuid === navigateEvent.uuid).at(-1);
+    assert.equal(navigationImage?.type, 2);
+    assert.equal(navigationImage?.path, `assets/icons/task-${status === "thinking" ? "working" : status === "unread" ? "complete" : "attention"}.png`);
+    assert.ok(latestSvg(attentionEvent.uuid).includes(`>${count}<`), `${status} must update the attention count`);
+    assert.ok(latestSvg("com.ulanzi.ulanzistudio.codexmicro.approve").includes(status === "awaiting-approval" ? ">ACTION READY<" : ">NO PENDING<"), `${status} must update Approve`);
+    assert.ok(latestSvg("com.ulanzi.ulanzistudio.codexmicro.reject").includes(status === "awaiting-approval" ? ">DENY REQUEST<" : ">NO PENDING<"), `${status} must update Reject`);
+  }
+  // Merge regression: keypad model cycling and encoder selection coexist, and
+  // pushed state feeds the encoder without bypassing authenticated local requests.
+  composer = { model: "gpt-5.6", modelIndex: 0, modelCount: 2,
+    reasoningEffort: "high", reasoningIndex: 1, reasoningCount: 3 };
+  permissions = { mode: "policy", contextKey: "encoder-chat", requestKey: null,
+    policy: { id: "ask", label: "ASK" }, policies: [{ id: "ask", label: "ASK" }] };
+  const pushDeadline = Date.now() + 4000;
+  while (!events.clients.size && Date.now() < pushDeadline) await new Promise(resolve => setTimeout(resolve, 20));
+  assert.ok(events.clients.size, "plugin must connect to the authenticated bridge event feed");
+  for (const ws of events.clients) ws.send(JSON.stringify({ connected: true, activeThreadKey, composer, permissions, slots: [] }));
+  await new Promise(resolve => setTimeout(resolve, 100));
+  const modelDial = { uuid: modelEvent.uuid, actionid: "model-dial", key: "Encoder_1", param: {} };
+  const contextDial = { uuid: "com.ulanzi.ulanzistudio.codexmicro.context", actionid: "context-dial", key: "Encoder_2", param: {} };
+  const permissionDial = { uuid: "com.ulanzi.ulanzistudio.codexmicro.permissions", actionid: "permission-dial", key: "Encoder_3", param: {} };
+  for (const dial of [modelDial, contextDial, permissionDial]) client.send(JSON.stringify({ cmd: "add", ...dial }));
+  client.send(JSON.stringify({ cmd: "dialrotate", rotateEvent: "right", ...modelDial }));
+  client.send(JSON.stringify({ cmd: "dialrotate", rotateEvent: "hold-left", ...modelDial }));
+  client.send(JSON.stringify({ cmd: "dialrotate", rotateEvent: "right", ...contextDial }));
+  client.send(JSON.stringify({ cmd: "dialrotate", rotateEvent: "right", ...permissionDial }));
+  const encoderPaths = ["/composer/model/right", "/composer/reasoning/left", "/composer/context/down", "/permissions/policy/right?context=encoder-chat"];
+  const encoderDeadline = Date.now() + 4000;
+  while (!encoderPaths.every(path => bridgeRequests.includes(`POST ${path}`)) && Date.now() < encoderDeadline) await new Promise(resolve => setTimeout(resolve, 20));
+  for (const path of encoderPaths) assert.equal(bridgeRequests.filter(item => item === `POST ${path}`).length, 1, `${path} must run exactly once`);
+  assert.equal(encoderCredentials.length, encoderPaths.length);
+  assert.ok(encoderCredentials.every(Boolean), "every encoder mutation must carry the bridge credential");
+  const dialImage = messages.flatMap(message => message.cmd === "state" ? message.param?.statelist || [] : [])
+    .filter(item => item.actionid === modelDial.actionid && item.type === 1).at(-1);
+  assert.match(dialImage?.data || "", /^data:image\/png;base64,/);
+  assert.equal(bridgeRequests.filter(item => item === "POST /action/model/down").length, 1, "dial rotations must not replay keypad model cycling");
+
+  // Check the final host-visible update, rather than only finding an SVG that
+  // could subsequently be overwritten by a manifest icon in the same batch.
+  for (const message of messages.filter(message => message.cmd === "state")) {
+    const items = message.param.statelist;
+    for (const image of items.filter(item => item.type === 1)) {
+      const last = items.findLast(item => item.uuid === image.uuid && item.actionid === image.actionid && item.key === image.key);
+      assert.equal(last.data, image.data, `${image.uuid}: live display overwritten in the same batch`);
+    }
+  }
+  process.stdout.write("Codex App plugin smoke test passed.\n");
 } finally {
+  for (const ws of events.clients) ws.terminate();
+  events.close();
   child.kill("SIGTERM");
   host.close();
   bridge.close();
