@@ -181,6 +181,44 @@ const ENABLE_EXPRESSION = `(async () => {
   return { ready: clients.length > 0, clients: clients.length };
 })()`;
 
+// Resource timing can evict startup chunks in long-lived Codex windows. Follow
+// only local application entry chunks to discover lazy Micro dependencies.
+export async function discoverMicroAssets(urls, readText) {
+  const known = new Set(urls);
+  const queue = urls.filter((url) => /\/(?:index[^/]*|app-[^/]+)\.js$/.test(url));
+  const visited = new Set();
+  while (queue.length && visited.size < 16) {
+    const url = queue.shift();
+    if (visited.has(url)) continue;
+    visited.add(url);
+    try {
+      const source = await readText(url);
+      for (const match of source.matchAll(/(?:\.\/)?((?:app-(?:main|primary|initial|shared|runtime)|codex-micro-[\w-]+)-[\w-]+\.js)/g)) {
+        const dependency = new URL(match[1], url).href;
+        if (known.has(dependency)) continue;
+        known.add(dependency);
+        queue.push(dependency);
+      }
+      if ([...known].some((url) => url.includes('/codex-micro-slot-signals-'))) break;
+    } catch {}
+  }
+  return [...known];
+}
+
+export function initializeMicroSignals(signals) {
+  const isResolver = (value) => value && typeof value.resolve === 'function' &&
+    typeof value.createSubscriberAtom === 'function';
+  if (Object.values(signals).some(isResolver)) return;
+  // Rolldown exposes lazy module initializers alongside the live exports. Only
+  // invoke self-replacing initializer wrappers, never arbitrary exported actions.
+  for (const value of Object.values(signals)) {
+    if (typeof value === 'function' && value.length === 0 &&
+        /return\s*\(\s*[$\w]+\s*=\s*[$\w]+\(\s*\(\s*\(\s*\)\s*=>/.test(Function.prototype.toString.call(value))) {
+      value();
+    }
+  }
+}
+
 const SNAPSHOT_EXPRESSION = `(async () => {
   const startedAt = performance.now();
   const root = document.getElementById("root");
@@ -219,10 +257,17 @@ const SNAPSHOT_EXPRESSION = `(async () => {
   }
 
   if (!found) {
-    const urls = [...new Set([
+    let urls = [...new Set([
       ...[...document.querySelectorAll("link[href],script[src]")].map((el) => el.href || el.src),
       ...performance.getEntriesByType("resource").map((entry) => entry.name)
     ])].filter((url) => url.includes("/assets/") && url.endsWith(".js"));
+    if (!urls.some((url) => url.includes("/assets/codex-micro-slot-signals-"))) {
+      urls = await (${discoverMicroAssets.toString()})(urls, async (url) => {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Cannot read Codex application module');
+        return response.text();
+      });
+    }
     const slotSignalsUrl = urls.find((url) => url.includes("/assets/codex-micro-slot-signals-"));
     if (!slotSignalsUrl) throw new Error("Codex Micro slot signals are not loaded");
 
@@ -240,6 +285,7 @@ const SNAPSHOT_EXPRESSION = `(async () => {
     }
 
     const signals = await import(slotSignalsUrl);
+    (${initializeMicroSignals.toString()})(signals);
     const resolvers = Object.values(signals).filter((candidate) =>
       candidate && typeof candidate === "object" &&
       typeof candidate.resolve === "function" && typeof candidate.createSubscriberAtom === "function"
