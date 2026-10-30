@@ -132,6 +132,21 @@ timing freezes when execution ends and can lose locally observed history after a
 restart. Adapter-specific rendering and action contracts are in
 [AGENTS.md](AGENTS.md#adapter-contracts).
 
+### Codex App encoders and Bridge launcher
+
+The Codex App plugin includes Model & Reasoning, Context Navigator and Permission
+Pilot encoders. Model turns stop at either end; hold and turn to change reasoning.
+The model action also supports a keypad press to cycle models. Context Navigator
+opens the + / @ menu on the first turn, moves with subsequent turns, confirms on
+release, and closes on hold-and-turn. Permission Pilot changes the active chat's
+policy or selects ONCE / CHAT / DENY for its pending approval; a full-access
+confirmation remains tied to the chat and dialog that opened it.
+
+The Launch Codex Bridge key installs or repairs missing wrapper resources before
+launching. Launching the wrapper can restart Codex; save active work first. Update
+both the plugin and Bridge for the encoder endpoints. macOS Micro asset discovery
+also follows lazy application chunks when startup resources have been evicted.
+
 ### Capabilities and limits
 
 Matching action names do not guarantee equivalent behavior:

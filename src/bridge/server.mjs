@@ -26,6 +26,7 @@ let cached = {
 let rememberedLastTask = null;
 let refreshPromise = null;
 let nextReconnectAt = 0;
+let composerRevision = 0;
 let lastBroadcastDigest = "";
 
 const wss = new WebSocketServer({ noServer: true });
@@ -59,7 +60,11 @@ async function refresh(force = false) {
   if (!force && Date.now() < nextReconnectAt) return;
   refreshPromise = (async () => {
     try {
+      const revision = composerRevision;
       const snapshot = await client.snapshot();
+      // A snapshot started before a selection can finish after it. Preserve
+      // the acknowledged composer while still refreshing tasks and usage.
+      if (revision !== composerRevision) snapshot.composer = cached.composer;
       if (Array.isArray(snapshot.activeTasks) && snapshot.activeTasks.length > 0) {
         rememberedLastTask = snapshot.activeTasks[0];
       } else if (snapshot.lastTask) {
@@ -153,6 +158,49 @@ const server = createServer(secureHandler("codex", PORT, async (request, respons
   const action = request.method === "POST" && url.pathname.match(
     /^\/action\/(fast|approve|reject|pin|new|fork|mic|steer|submit|stop|model|reasoning|goal|subagents|plan)\/(down|up)$/
   );
+  const selection = request.method === "POST" && url.pathname.match(
+    /^\/composer\/(model|reasoning)\/(left|right)$/
+  );
+  const contextMenu = request.method === "POST" && url.pathname.match(
+    /^\/composer\/context\/(up|down|select|close)$/
+  );
+  const permission = request.method === "POST" && url.pathname.match(
+    /^\/permissions\/(policy\/(left|right)|approval\/(once|session|deny)|confirm|cancel)$/
+  );
+  if (permission) {
+    try {
+      const contextKey = url.searchParams.get("context");
+      if (!contextKey || contextKey.length > 2048) throw new Error("Missing permission context");
+      const command = ["confirm", "cancel"].includes(permission[1]) ?
+        { kind: permission[1], contextKey, confirmationKey: url.searchParams.get("request") } :
+        permission[2] ? { kind: "policy", direction: permission[2], contextKey } :
+        { kind: "approval", decision: permission[3], contextKey, requestKey: url.searchParams.get("request") };
+      const permissions = await client.controlPermissions(command);
+      return json(response, 200, { ok: true, permissions });
+    } catch (error) {
+      return json(response, 503, { ok: false, error: error.message });
+    }
+  }
+  if (contextMenu) {
+    try {
+      if (["up", "down"].includes(contextMenu[1])) await focusCodex();
+      const result = await client.navigateContextMenu(contextMenu[1]);
+      return json(response, 200, { ok: true, ...result });
+    } catch (error) {
+      return json(response, 503, { ok: false, error: error.message });
+    }
+  }
+  if (selection) {
+    try {
+      const composer = await client.adjustComposerSetting(selection[1], selection[2]);
+      composerRevision += 1;
+      cached = { ...cached, composer, updatedAt: Date.now() };
+      broadcastState();
+      return json(response, 200, { ok: true, composer });
+    } catch (error) {
+      return json(response, 503, { ok: false, error: error.message });
+    }
+  }
   if (action) {
     try {
       if (action[1] === "steer") {

@@ -2,7 +2,7 @@
   "Author": "OpenCodexMicro",
   "Name": "Codex App",
   "Overview": "Control Codex Desktop tasks and actions from Ulanzi D200 Series in Ulanzi Studio.",
-  "Description": "Turn Ulanzi D200 Series into a dedicated Codex Desktop control surface through Ulanzi Studio.\n\nFEATURES\n- View six recent Codex tasks with live status and open the exact selected task.\n- Use Fast, Usage, Pin, New, Fork, Steer, Mic, and Submit actions.\n- Use the Latest Task & Scroll Encoder action to open task 1 and scroll Codex.\n- Install, repair, launch, and check Codex Bridge from every Action setup page.\n- Keep communication local through Codex Bridge.app and loopback-only endpoints.\n\nINSTALLATION ENVIRONMENT\n- macOS 13 or later\n- Codex Desktop\n- Ulanzi Studio 3.0.1 or later\n- Ulanzi D200 Series connected in Ulanzi Studio\n- Node.js 20 or later only for manual repository setup\n\nLLM / AGENT INSTALLATION\nIn your Agent, enter:\nInstall the Ulanzi Studio plugin for me: https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation\n\nMANUAL INSTALLATION\n1. Clone https://github.com/UlanziTechnology/OpenCodexMicro and open the repository directory.\n2. Quit Ulanzi Studio.\n3. Run: npm install\n4. Run: npm run install:plugin\n5. Run: npm run setup\n6. Reopen Ulanzi Studio, quit Codex Desktop, and launch ~/Applications/Codex Bridge.app.\n7. Add the Codex App actions to your keys in Ulanzi Studio.\n8. Select any Action to check Bridge installation, service, and CDP status.\n\nIMPORTANT\nWhen using Codex App, always launch Codex through ~/Applications/Codex Bridge.app. Do not open Codex Desktop directly.\nLaunch command: open ~/Applications/Codex\\ Bridge.app",
+  "Description": "Turn Ulanzi D200 Series into a dedicated Codex Desktop control surface through Ulanzi Studio.\n\nFEATURES\n- View six recent Codex tasks with live status and open the exact selected task.\n- Show pending approvals and replies on task keys. Use Model & Reasoning Encoder to change the active composer's model or reasoning effort without wrapping.\n- Use Fast, Usage, Pin, New, Fork, Steer, Mic, and Submit actions.\n- Use the Latest Task & Scroll Encoder action to open task 1 and scroll Codex.\n- Install, repair, launch, and check Codex Bridge from every Action setup page.\n- Keep communication local through Codex Bridge.app and loopback-only endpoints.\n- Context Navigator: First turn opens the + / @ context menu. Turn left to move up and right to move down. Click and release to select; hold and turn either way to close. Clicking or holding and turning while the menu is closed does nothing.\n- Launch Codex Bridge: Press one key to launch Codex Bridge.app. If it is missing or incompletely installed, install/repair it automatically, then launch.\n\nINSTALLATION ENVIRONMENT\n- macOS 13 or later\n- Codex Desktop\n- Ulanzi Studio 3.0.1 or later\n- Ulanzi D200 Series connected in Ulanzi Studio\n- Node.js 20 or later only for manual repository setup\n\nLLM / AGENT INSTALLATION\nIn your Agent, enter:\nInstall the Ulanzi Studio plugin for me: https://github.com/UlanziTechnology/OpenCodexMicro#1-llm--agent-installation\n\nMANUAL INSTALLATION\n1. Clone https://github.com/UlanziTechnology/OpenCodexMicro and open the repository directory.\n2. Quit Ulanzi Studio.\n3. Run: npm install\n4. Run: npm run install:plugin\n5. Run: npm run setup\n6. Reopen Ulanzi Studio, quit Codex Desktop, and launch ~/Applications/Codex Bridge.app.\n7. Add the Codex Micro actions to your keys in Ulanzi Studio.\n8. Select any Action to check Bridge installation, service, and CDP status.\n\nIMPORTANT\nWhen using Codex Micro, always launch Codex through ~/Applications/Codex Bridge.app. Do not open Codex Desktop directly.\nLaunch command: open ~/Applications/Codex\\ Bridge.app",
   "Icon": "assets/icons/plugin.png",
   "Category": "AI",
   "CategoryIcon": "assets/icons/plugin.png",
@@ -11,7 +11,7 @@
     "assets/banners/codex-micro-banner-2.png",
     "assets/banners/codex-micro-banner-3.png"
   ],
-  "Version": "0.4.1",
+  "Version": "0.5.1",
   "UUID": "com.ulanzi.ulanzistudio.codexmicro",
   "Type": "JavaScript",
   "CodePath": "dist/app.js",
@@ -222,7 +222,7 @@
         "Encoder"
       ],
       "Encoder": {
-        "layout": "$UA1"
+        "layout": "layouts/navigate-encoder.json"
       },
       "DisableAutomaticStates": true,
       "States": [
@@ -522,19 +522,24 @@
       ]
     },
     {
-      "Name": "Codex Select Model",
-      "Icon": "assets/icons/fast.png",
+      "Name": "Model & Reasoning",
+      "Icon": "assets/icons/model.png",
       "PropertyInspectorPath": "property-inspector/setup.html",
       "UUID": "com.ulanzi.ulanzistudio.codexmicro.model",
-      "Tooltip": "Cycle to the next available model for the selected task. Wraps to the first model.",
+      "Tooltip": "Press a key to cycle models. Turn the dial to select a model without wrapping; hold and turn to adjust reasoning.",
       "Controllers": [
-        "Keypad"
+        "Keypad",
+        "Encoder"
       ],
+      "Encoder": {
+        "layout": "layouts/model-encoder.json"
+      },
+      "SupportedInMultiActions": false,
       "DisableAutomaticStates": true,
       "States": [
         {
           "Name": "Model",
-          "Image": "assets/icons/fast.png"
+          "Image": "assets/icons/model.png"
         }
       ]
     },
@@ -552,6 +557,66 @@
         {
           "Name": "Plan",
           "Image": "assets/icons/fast.png"
+        }
+      ]
+    },
+    {
+      "Name": "Context Navigator",
+      "Icon": "assets/icons/context.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.context",
+      "Tooltip": "First turn opens the + / @ context menu. Turn left to move up and right to move down. Click and release to select; hold and turn either way to close. Clicking or holding and turning while the menu is closed does nothing.",
+      "Controllers": [
+        "Encoder"
+      ],
+      "Encoder": {
+        "layout": "layouts/context-encoder.json"
+      },
+      "SupportedInMultiActions": false,
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Context",
+          "Image": "assets/icons/context.png"
+        }
+      ]
+    },
+    {
+      "Name": "Permission Pilot",
+      "Icon": "assets/icons/permissions.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.permissions",
+      "Tooltip": "Turn to change permissions. During approval choose ONCE / CHAT / DENY and press to submit. Starts at ONCE. For this dial's FULL confirmation, press to confirm or turn left to cancel.",
+      "Controllers": [
+        "Encoder"
+      ],
+      "Encoder": {
+        "layout": "layouts/permissions-encoder.json"
+      },
+      "SupportedInMultiActions": false,
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Permissions",
+          "Image": "assets/icons/permissions.png"
+        }
+      ]
+    },
+    {
+      "Name": "Launch Codex Bridge",
+      "Icon": "assets/icons/plugin.png",
+      "PropertyInspectorPath": "property-inspector/setup.html",
+      "UUID": "com.ulanzi.ulanzistudio.codexmicro.launch",
+      "Tooltip": "Launch Codex Bridge.app. If it is not installed, install or repair it first, then launch it.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "SupportedInMultiActions": false,
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Name": "Launch",
+          "Image": "assets/icons/plugin.png"
         }
       ]
     }

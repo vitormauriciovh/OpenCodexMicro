@@ -126,9 +126,31 @@
     {
       "Name": "Codex-Plan anzeigen",
       "Tooltip": "Öffnet den vorhandenen Plan der ausgewählten Aufgabe im Codex-Seitenbereich, sofern das native Bedienelement verfügbar ist."
+    },
+    {
+      "Name": "Kontext-Navigator",
+      "Tooltip": "Die erste Drehung öffnet das Kontextmenü (+ / @). Links nach oben und rechts nach unten navigieren. Zum Auswählen drücken und loslassen; gedrückt in eine Richtung drehen schließt das Menü. Bei geschlossenem Menü haben Klicken und gedrücktes Drehen keine Wirkung."
+    },
+    {
+      "Name": "Berechtigungen und Freigaben",
+      "Tooltip": "Drehen ändert die Berechtigungen des aktiven Chats (ASK / REVIEW / FULL). Bei einer Anfrage ONCE / CHAT / DENY durch Drehen wählen und per Druck ausführen. ONCE ist vorausgewählt. Nicht verfügbare Optionen werden übersprungen. Im durch diesen Drehregler geöffneten FULL-Dialog bestätigt ein Druck; Linksdrehen bricht ab und behält die vorige Richtlinie. Schließen oder Chatwechsel macht die Bestätigung ungültig."
+    },
+    {
+      "Name": "Codex Bridge starten",
+      "Tooltip": "Codex Bridge.app starten. Falls nicht installiert, zuerst installieren oder reparieren und anschließend starten."
     }
   ],
   "Localization": {
+    "LaunchBridgeHelp": "Drücken startet Codex Bridge.app. Bei fehlender oder unvollständiger Installation wird zuerst Installieren / Reparieren ausgeführt. Läuft Codex bereits, startet der Launcher es mit den Bridge-Startparametern neu.",
+    "PermissionEncoderTitle": "Berechtigungen und Freigaben",
+    "PermissionEncoderHelp": "Drehen ändert die Berechtigungen des aktiven Chats (ASK / REVIEW / FULL). Bei einer Anfrage ONCE / CHAT / DENY durch Drehen wählen und per Druck ausführen. ONCE ist vorausgewählt. Nicht verfügbare Optionen werden übersprungen. Im durch diesen Drehregler geöffneten FULL-Dialog bestätigt ein Druck; Linksdrehen bricht ab und behält die vorige Richtlinie. Schließen oder Chatwechsel macht die Bestätigung ungültig.",
+    "ContextEncoderTitle": "Kontext-Navigator",
+    "ContextEncoderHelp": "Die erste Drehung öffnet das Kontextmenü (+ / @). Links nach oben und rechts nach unten navigieren. Zum Auswählen drücken und loslassen; gedrückt in eine Richtung drehen schließt das Menü. Bei geschlossenem Menü haben Klicken und gedrücktes Drehen keine Wirkung.",
+    "AwaitingApproval": "Freigabe nötig",
+    "AwaitingResponse": "Antwort nötig",
+    "ModelUnavailable": "Modell nicht verfügbar",
+    "ModelEncoderTitle": "Modell & Denkintensität",
+    "ModelEncoderHelp": "Rechts geht es zum ersten Modell der Codex-Liste, links zum letzten. Gedrückt rechts/links drehen erhöht/verringert die Denkintensität. Beide Listen stoppen an ihren Enden. Die Anzeige zeigt Modellkurzname, Position und Intensitätsbalken; Drücken hebt den Denkmodus hervor, ohne die Auswahl zu ändern.",
     "BridgeSetup": "Codex Bridge einrichten",
     "BridgeSetupDescription": "Lokale Codex-Verbindung installieren, starten und prüfen.",
     "BridgeApp": "Codex Bridge.app",

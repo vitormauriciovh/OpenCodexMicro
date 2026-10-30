@@ -3932,20 +3932,20 @@ function contextPercent(usage) {
   if (!usage || typeof usage !== "object") return null;
   const direct = usage.usedPercent ?? usage.used_percent ?? usage.percentage ?? usage.percent;
   if (Number.isFinite(direct)) return Math.min(100, Math.max(0, Math.round(direct)));
-  const window = usage.modelContextWindow ?? usage.model_context_window ?? usage.contextWindow ?? usage.context_window;
+  const window2 = usage.modelContextWindow ?? usage.model_context_window ?? usage.contextWindow ?? usage.context_window;
   let tokens = usage.contextTokens ?? usage.context_tokens ?? usage.last?.totalTokens ?? usage.last?.total_tokens;
   if (tokens == null) {
     const input = usage.last?.inputTokens ?? usage.last?.input_tokens;
     const output = usage.last?.outputTokens ?? usage.last?.output_tokens;
     if (Number.isFinite(input) && Number.isFinite(output)) tokens = input + output;
   }
-  if (!Number.isFinite(window) || window <= 0 || !Number.isFinite(tokens) || tokens < 0) return null;
-  return Math.min(100, Math.max(0, Math.round(tokens / window * 100)));
+  if (!Number.isFinite(window2) || window2 <= 0 || !Number.isFinite(tokens) || tokens < 0) return null;
+  return Math.min(100, Math.max(0, Math.round(tokens / window2 * 100)));
 }
 
 // ../../src/bridge/model-picker.mjs
-function readNativeModelPicker(document) {
-  const triggers = [...document.querySelectorAll("button[data-codex-intelligence-trigger]")].filter((button) => button.offsetParent !== null && !button.closest('[inert], [hidden], [aria-hidden="true"], [role="dialog"], [aria-modal="true"]'));
+function readNativeModelPicker(document2) {
+  const triggers = [...document2.querySelectorAll("button[data-codex-intelligence-trigger]")].filter((button) => button.offsetParent !== null && !button.closest('[inert], [hidden], [aria-hidden="true"], [role="dialog"], [aria-modal="true"]'));
   if (triggers.length !== 1) throw new Error("No unique model selector is available for this task");
   const trigger = triggers[0];
   const key = Object.getOwnPropertyNames(trigger).find((key2) => key2.startsWith("__reactFiber$"));
@@ -4034,6 +4034,399 @@ function localThreadKey(value) {
   return `local:${validateThreadId(value)}`;
 }
 
+// ../../src/bridge/composer-control.mjs
+async function composerControl(kind = "read", direction) {
+  const trigger = [...document.querySelectorAll('[data-composer-navigation-target="reasoning"]')].find((element) => element.getClientRects().length > 0 && !element.closest(
+    '[data-app-shell-active-page="false"],[hidden],[inert],[aria-hidden="true"]'
+  ));
+  const picker = () => {
+    if (!trigger?.isConnected) return null;
+    const key = Object.getOwnPropertyNames(trigger).find((key2) => key2.startsWith("__reactFiber$"));
+    let fiber = trigger[key];
+    let root = fiber;
+    while (root?.return) root = root.return;
+    if (root?.stateNode?.current && root.stateNode.current !== root) fiber = fiber?.alternate;
+    for (let depth = 0; fiber && depth < 80; depth++, fiber = fiber.return) {
+      const props2 = fiber.memoizedProps;
+      if (Array.isArray(props2?.models) && typeof props2.onSelectModel === "function") return props2;
+    }
+    return null;
+  };
+  const props = picker();
+  if (!props) {
+    if (kind === "read") return null;
+    throw new Error("Codex model picker is not available");
+  }
+  const tier = (model2) => {
+    const name = `${model2.model} ${model2.displayName || ""}`.toLowerCase();
+    if (/nano/.test(name)) return 0;
+    if (/mini|luna/.test(name)) return 1;
+    if (/terra/.test(name)) return 2;
+    if (/pro|astra/.test(name)) return 4;
+    return 3;
+  };
+  const availableModels = (current2) => (current2.modelOptions ?? current2.models.map((model2) => ({ model: model2 }))).filter((option) => option.disabledReason == null && !option.model.hidden && option.model.model !== current2.lockedModelSlug).map((option) => option.model).reverse().sort((a, b) => {
+    const family = tier(a) - tier(b);
+    if (family) return family;
+    const version = (model2) => (model2.model.match(/\d+(?:\.\d+)*/) || ["0"])[0];
+    return version(a).localeCompare(version(b), "en", { numeric: true });
+  });
+  const efforts = (model2) => model2.supportedReasoningEfforts.map((item) => item.reasoningEffort);
+  const snapshot = (current2) => {
+    const models2 = availableModels(current2);
+    const model2 = current2.models.find((model3) => model3.model === current2.model);
+    const reasoningEffort = current2.reasoningEffort ?? model2?.defaultReasoningEffort;
+    const reasoning = model2 ? efforts(model2) : [];
+    return {
+      model: current2.model,
+      modelLabel: model2?.displayName ?? current2.model,
+      reasoningEffort,
+      modelIndex: models2.findIndex((model3) => model3.model === current2.model),
+      modelCount: models2.length,
+      reasoningIndex: reasoning.indexOf(reasoningEffort),
+      reasoningCount: reasoning.length
+    };
+  };
+  if (kind === "read") return snapshot(props);
+  if (!["model", "reasoning"].includes(kind) || !["left", "right"].includes(direction)) {
+    throw new Error("Invalid composer selection");
+  }
+  if ([...document.querySelectorAll("[data-codex-approval-surface]")].some((element) => element.getClientRects().length > 0 && !element.closest(
+    '[data-app-shell-active-page="false"],[hidden],[inert],[aria-hidden="true"]'
+  ))) throw new Error("Codex model selection is disabled during approval");
+  if (props.disabled || props.daybreak?.disabled || props.daybreak?.isSaving || trigger.matches(':disabled,[aria-disabled="true"],[data-disabled]') || (kind === "model" ? props.modelOptionsDisabled : props.reasoningEffortDisabled || props.showReasoningEffortControls === false)) {
+    throw new Error("Codex model selection is disabled");
+  }
+  const models = availableModels(props);
+  const current = models.find((model2) => model2.model === props.model);
+  if (!current) throw new Error("Current model is not in the available model list");
+  const currentEffort = snapshot(props).reasoningEffort;
+  const values = kind === "model" ? models.map((model2) => model2.model) : efforts(current);
+  const value = kind === "model" ? props.model : currentEffort;
+  const index = values.indexOf(value);
+  if (index < 0) throw new Error("Current selection is not in the available list");
+  const next = index + (direction === "left" ? -1 : 1);
+  if (next < 0 || next >= values.length) return { ...snapshot(props), changed: false };
+  const model = kind === "model" ? models[next] : current;
+  const effort = kind === "reasoning" ? values[next] : efforts(model).includes(currentEffort) ? currentEffort : model.defaultReasoningEffort;
+  if (!efforts(model).includes(effort)) throw new Error("Model has no supported reasoning effort");
+  if (props.onBeforeSelectModel?.(model.model) === false) {
+    throw new Error("Codex requires confirmation before selecting this model");
+  }
+  await props.onSelectModel(model.model, effort);
+  if (kind === "model") props.onSelectModelOption?.();
+  for (let attempt = 0; attempt < 40; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const updated = picker();
+    if (!updated) throw new Error("Codex composer changed during selection");
+    if (updated.model === model.model && updated.reasoningEffort === effort) {
+      return { ...snapshot(updated), changed: true };
+    }
+  }
+  throw new Error("Codex did not confirm the model selection");
+}
+function composerControlExpression(kind, direction) {
+  return `(${composerControl.toString()})(${JSON.stringify(kind)}, ${JSON.stringify(direction)})`;
+}
+
+// ../../src/bridge/permission-control.mjs
+async function permissionControl(command = { kind: "read" }) {
+  if (!command || !["read", "policy", "approval", "confirm", "cancel"].includes(command.kind) || command.kind === "policy" && !["left", "right"].includes(command.direction) || command.kind === "approval" && !["once", "session", "deny"].includes(command.decision)) {
+    throw new Error("Invalid permission command");
+  }
+  const visible = (element) => element?.isConnected && element.getClientRects().length > 0 && !element.closest('[data-app-shell-active-page="false"],[hidden],[inert],[aria-hidden="true"]');
+  const ancestors = (element) => {
+    const key = element && Object.getOwnPropertyNames(element).find((key2) => key2.startsWith("__reactFiber$"));
+    let fiber = element?.[key], root = fiber;
+    while (root?.return) root = root.return;
+    if (root?.stateNode?.current && root.stateNode.current !== root) fiber = fiber?.alternate;
+    const props = [];
+    for (let depth = 0; fiber && depth < 80; depth++, fiber = fiber.return) {
+      if (fiber.memoizedProps) props.push(fiber.memoizedProps);
+    }
+    return props;
+  };
+  const normalize = (value) => String(value ?? "").replace(/^local:/, "");
+  const identity = (props) => props.find((p) => typeof p.conversationId === "string" && p.conversationId)?.conversationId;
+  const roots = [...document.querySelectorAll("[data-codex-composer-root]")].filter(visible);
+  const active = document.querySelector('[data-app-action-sidebar-thread-active="true"],[data-app-action-sidebar-thread-id][aria-current="page"]');
+  const activeId = normalize(active?.getAttribute("data-app-action-sidebar-thread-id"));
+  const confirmationSymbol = Symbol.for("codex-micro-full-access-confirmation");
+  const pending = globalThis[confirmationSymbol];
+  const hasConfirmLabel = (value, depth = 0) => {
+    if (!value || depth > 8) return false;
+    if (Array.isArray(value)) return value.some((item) => hasConfirmLabel(item, depth + 1));
+    return value.props?.id === "composer.mode.agentMode.fullAccessConfirm.turnOnButton" || hasConfirmLabel(value.props?.children, depth + 1);
+  };
+  if (pending) {
+    if (!pending.button && Date.now() - pending.createdAt > 2e3 || !pending.composer.isConnected || normalize(identity(ancestors(pending.composer))) !== normalize(pending.conversationId) || activeId && pending.conversationId && activeId !== normalize(pending.conversationId)) {
+      delete globalThis[confirmationSymbol];
+    } else {
+      const matches = [...document.querySelectorAll('[role="dialog"] button[type="submit"],[role="alertdialog"] button[type="submit"]')].filter((button) => visible(button) && !button.matches(':disabled,[aria-disabled="true"]')).filter((button) => {
+        const props = ancestors(button);
+        return props.some((p) => hasConfirmLabel(p.children)) && props.some((p) => Object.hasOwn(p, "conversationId") && normalize(p.conversationId) === normalize(pending.conversationId) && typeof p.onConfirm === "function" && typeof p.onClose === "function");
+      });
+      if (matches.length === 1 && (!pending.button || pending.button === matches[0])) {
+        pending.button = matches[0];
+        const state = {
+          contextKey: pending.contextKey,
+          mode: "confirmation",
+          policy: null,
+          policies: [],
+          requestKey: null,
+          options: [],
+          confirmationRequired: true,
+          confirmationKey: pending.key
+        };
+        if (command.kind === "read") return state;
+        if (!["confirm", "cancel"].includes(command.kind) || command.contextKey !== pending.contextKey || command.confirmationKey !== pending.key) {
+          throw new Error("Review the Full access confirmation before pressing");
+        }
+        delete globalThis[confirmationSymbol];
+        if (command.kind === "cancel") {
+          const owner = ancestors(pending.button).find((p) => Object.hasOwn(p, "conversationId") && normalize(p.conversationId) === normalize(pending.conversationId) && typeof p.onConfirm === "function" && typeof p.onClose === "function");
+          owner.onClose();
+        } else pending.button.click();
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        return permissionControl({ kind: "read" });
+      }
+      if (pending.button || matches.length > 1) delete globalThis[confirmationSymbol];
+    }
+  }
+  if (["confirm", "cancel"].includes(command.kind)) throw new Error("Full access confirmation expired or changed");
+  const focused = document.activeElement?.closest("[data-codex-composer-root]");
+  const composer = roots.includes(focused) ? focused : roots.length === 1 ? roots[0] : roots.find((root) => normalize(identity(ancestors(root))) === activeId && activeId);
+  const composerProps = ancestors(composer);
+  const conversationId = identity(composerProps) ?? composer?.closest("[data-above-composer-conversation-id]")?.getAttribute("data-above-composer-conversation-id");
+  const hostId = composerProps.find((p) => typeof p.hostId === "string")?.hostId ?? "local";
+  const scopeKey = Symbol.for("codex-micro-permission-scopes");
+  const scopes = globalThis[scopeKey] ??= { roots: /* @__PURE__ */ new WeakMap(), next: 0 };
+  if (composer && !scopes.roots.has(composer)) scopes.roots.set(composer, ++scopes.next);
+  const contextKey = composer ? JSON.stringify([hostId, conversationId ?? null, scopes.roots.get(composer)]) : null;
+  const empty = { contextKey, mode: "unavailable", policy: null, policies: [], requestKey: null, options: [] };
+  if (!composer) {
+    if (command.kind !== "read") throw new Error("Active Codex composer is not available");
+    return empty;
+  }
+  if (command.kind !== "read" && command.contextKey !== contextKey) {
+    throw new Error("Codex conversation changed; review the current selection");
+  }
+  const surfaces = [...document.querySelectorAll("[data-codex-approval-surface]")].filter(visible).map((surface) => {
+    const props = ancestors(surface);
+    const owner = props.find((p) => p.conversationId != null && (p.pendingRequest != null || p.item?.approvalRequestId != null || p.requestId != null));
+    const actions = props.find((p) => typeof p.actions?.onApprove === "function" && typeof p.actions?.onDeny === "function")?.actions;
+    const request = owner?.pendingRequest ?? owner?.item;
+    const id = request?.requestId ?? request?.approvalRequestId ?? owner?.requestId;
+    return { surface, owner, actions, id, type: request?.type ?? request?.kind ?? "approval" };
+  });
+  if (surfaces.some((item) => !item.owner)) {
+    if (command.kind !== "read") throw new Error("Codex approval context is not available");
+    return empty;
+  }
+  const approvals = surfaces.filter((item) => conversationId && normalize(item.owner?.conversationId) === normalize(conversationId));
+  if (approvals.length) {
+    if (approvals.length !== 1 || !approvals[0].actions || !["string", "number"].includes(typeof approvals[0].id)) {
+      if (command.kind !== "read") throw new Error("Codex approval is ambiguous or unavailable");
+      return empty;
+    }
+    const { surface, owner, actions, id, type } = approvals[0];
+    if ([...document.querySelectorAll('[role="dialog"],[role="alertdialog"]')].some((dialog) => visible(dialog) && !dialog.contains(surface) && !surface.contains(dialog))) {
+      if (command.kind !== "read") throw new Error("Complete or cancel the Codex confirmation first");
+      return empty;
+    }
+    const requestKey = JSON.stringify([owner.hostId ?? hostId, conversationId, type, id]);
+    const enabled = !actions.disabled && !actions.isLoading;
+    const session = actions.scopedApproveAction;
+    const options2 = [
+      { id: "once", label: "ONCE", enabled: enabled && !actions.approveDisabled },
+      { id: "session", label: "CHAT", enabled: enabled && session?.label == null && typeof session?.onClick === "function" },
+      { id: "deny", label: "DENY", enabled }
+    ];
+    const state = { ...empty, mode: "approval", requestKey, options: options2 };
+    if (command.kind === "read") return state;
+    if (command.kind !== "approval" || command.requestKey !== requestKey) {
+      throw new Error("Codex approval changed; review the current request");
+    }
+    if (!options2.find((option) => option.id === command.decision)?.enabled) {
+      throw new Error("This approval option is not available");
+    }
+    const sentKey = Symbol.for("codex-micro-permission-sent");
+    const sent = globalThis[sentKey] ??= /* @__PURE__ */ new Set();
+    if (sent.has(requestKey)) throw new Error("Codex approval is already being submitted");
+    sent.add(requestKey);
+    if (sent.size > 128) sent.delete(sent.values().next().value);
+    try {
+      await { once: actions.onApprove, session: session?.onClick, deny: actions.onDeny }[command.decision]();
+    } catch (error) {
+      sent.delete(requestKey);
+      throw error;
+    }
+    return state;
+  }
+  if (command.kind === "approval") throw new Error("Codex approval is no longer available");
+  const trigger = [...composer.querySelectorAll('[data-composer-navigation-target="permissions"]')].find(visible);
+  if (!trigger) {
+    if (command.kind !== "read") throw new Error("Codex permissions picker is not available");
+    return empty;
+  }
+  const picker = () => {
+    const props = ancestors(trigger);
+    let selected2 = JSON.stringify(props.find((p) => p.selectedPermissionSelection != null)?.selectedPermissionSelection);
+    const options2 = /* @__PURE__ */ new Map();
+    const labels = {
+      "composer.permissionsDropdown.default.approvalOptionLabel": "ASK",
+      "composer.permissionsDropdown.guardianApproval.optionLabel": "REVIEW",
+      "composer.permissionsDropdown.fullAccess.optionLabel": "FULL",
+      "composer.permissionsDropdown.custom.optionLabel": "CUSTOM",
+      "workPreferences.composer.useWorkSettings": "CUSTOM",
+      "workPreferences.composer.fullAccess": "FULL"
+    };
+    const labelOf = (value, depth = 0) => {
+      if (!value || depth > 6) return null;
+      if (Array.isArray(value)) return value.map((item) => labelOf(item, depth + 1)).find(Boolean);
+      return labels[value.props?.id] ?? labelOf(value.props?.children, depth + 1);
+    };
+    const visit = (value, depth = 0) => {
+      if (!value || depth > 12) return;
+      if (Array.isArray(value)) {
+        value.forEach((item) => visit(item, depth + 1));
+        return;
+      }
+      const p = value.props;
+      if (!p) return;
+      if (p.selection?.permissionSelection && typeof p.selectPermission === "function") {
+        const selection = p.selection.permissionSelection;
+        const id = JSON.stringify(selection);
+        const label = selection.kind === "agent-mode" ? { auto: "ASK", granular: "ASK", "read-only": "ASK", "guardian-approvals": "REVIEW", "full-access": "FULL" }[selection.agentMode] : { custom: "CUSTOM", profile: "PROFILE", "server-default": "MANAGED" }[selection.kind];
+        if (label) options2.set(id, {
+          id,
+          label,
+          enabled: p.selection.disabledReason == null && selection.kind !== "server-default",
+          select: () => p.selectPermission(selection)
+        });
+        selected2 ??= JSON.stringify(p.selectedPermissionSelection);
+      } else if (typeof (p.onClick ?? p.onSelect) === "function" && ("LeftIcon" in p || "rightIconAsset" in p || "RightIcon" in p || typeof p.isActive === "boolean")) {
+        const label = labelOf(p.children) ?? (value.key != null && typeof p.children === "string" ? "PROFILE" : null);
+        if (label) {
+          const id = label === "PROFILE" ? `profile:${value.key}` : `menu:${label}`;
+          options2.set(id, {
+            id,
+            label,
+            enabled: !p.disabled,
+            select: () => (p.onClick ?? p.onSelect)()
+          });
+          if (p.rightIconAsset != null || p.RightIcon != null || p.isActive === true) selected2 = id;
+        }
+      }
+      visit(p.children, depth + 1);
+    };
+    const dropdown = props.find((p) => p.triggerButton && p.children);
+    if (dropdown) visit(dropdown.children);
+    return { selected: selected2, options: [...options2.values()] };
+  };
+  const snapshot = () => {
+    const { selected: selected2, options: options2 } = picker();
+    const clean = options2.map(({ id, label, enabled }) => ({ id, label, enabled }));
+    return {
+      ...empty,
+      mode: clean.length ? "policy" : "unavailable",
+      policies: clean,
+      policy: clean.find((option) => option.id === selected2) ?? null
+    };
+  };
+  if (command.kind === "read") return { ...snapshot(), confirmationRequired: [...document.querySelectorAll('[role="dialog"],[role="alertdialog"]')].some(visible) };
+  if (trigger.matches(':disabled,[aria-disabled="true"],[aria-busy="true"]')) {
+    throw new Error("Codex permission selection is disabled");
+  }
+  if ([...document.querySelectorAll('[role="dialog"],[role="alertdialog"]')].some(visible)) {
+    throw new Error("Complete or cancel the Codex confirmation first");
+  }
+  const { selected, options } = picker();
+  const allowed = options.filter((option) => option.enabled || option.id === selected);
+  const index = allowed.findIndex((option) => option.id === selected);
+  if (index < 0) throw new Error("Current Codex permission policy is not available");
+  const next = index + (command.direction === "left" ? -1 : 1);
+  if (next < 0 || next >= allowed.length) return snapshot();
+  if (!allowed[next].enabled) throw new Error("Codex permission policy is not selectable");
+  if (allowed[next].label === "FULL") {
+    globalThis[confirmationSymbol] = {
+      contextKey,
+      conversationId,
+      composer,
+      key: `${contextKey}:${Date.now()}:${++scopes.next}`,
+      createdAt: Date.now(),
+      button: null
+    };
+  }
+  await allowed[next].select();
+  for (let attempt = 0; attempt < 60; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    if (!composer.isConnected || identity(ancestors(composer)) !== identity(composerProps)) {
+      throw new Error("Codex conversation changed during permission selection");
+    }
+    if ([...document.querySelectorAll('[role="dialog"],[role="alertdialog"]')].some(visible)) {
+      return permissionControl({ kind: "read" });
+    }
+    const state = snapshot();
+    if (state.policy?.id === allowed[next].id) {
+      delete globalThis[confirmationSymbol];
+      return state;
+    }
+  }
+  throw new Error("Codex did not confirm the permission selection");
+}
+function permissionControlExpression(command) {
+  return `(${permissionControl.toString()})(${JSON.stringify(command)})`;
+}
+
+// ../../src/bridge/context-menu-control.mjs
+async function contextMenuControl(action) {
+  if (!["up", "down", "select", "close"].includes(action)) {
+    throw new Error("Invalid context menu action");
+  }
+  const visible = (element) => element?.isConnected && element.getClientRects().length > 0 && !element.closest('[data-app-shell-active-page="false"],[hidden],[inert],[aria-hidden="true"]');
+  const triggers = [...document.querySelectorAll(
+    '[data-codex-composer-root] [data-composer-navigation-target="add-context"][aria-expanded]'
+  )].filter(visible);
+  const trigger = triggers.find((element) => element.getAttribute("aria-expanded") === "true") ?? triggers.find((element) => element.closest("[data-codex-composer-root]").contains(document.activeElement)) ?? triggers[0];
+  const open = () => visible(trigger) && trigger.getAttribute("aria-expanded") === "true";
+  if (["select", "close"].includes(action) && !open()) return { open: false, handled: false };
+  if (!trigger || trigger.matches(':disabled,[aria-disabled="true"],[data-disabled]')) {
+    throw new Error("Codex context menu is not available");
+  }
+  const menu = () => open() && [...document.querySelectorAll(
+    "[data-composer-overlay-floating-ui] [data-mention-list-scroll-area]"
+  )].some(visible);
+  if (!open()) {
+    trigger.click();
+    for (let attempt = 0; attempt < 40; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      if (!visible(trigger)) break;
+      if (menu()) return { open: true, handled: true };
+    }
+    throw new Error("Codex did not open the context menu");
+  }
+  if (!menu()) return { open: Boolean(open()), handled: false };
+  const key = { up: "ArrowUp", down: "ArrowDown", select: "Enter", close: "Escape" }[action];
+  const event = new KeyboardEvent("keydown", { key, code: key, bubbles: true, cancelable: true });
+  if (action === "close") {
+    const editor = trigger.closest("[data-codex-composer-root]").querySelector("[data-codex-composer]");
+    if (!visible(editor)) throw new Error("Codex context menu editor is not available");
+    editor.dispatchEvent(event);
+    for (let attempt = 0; attempt < 40; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      if (!open()) return { open: false, handled: true };
+    }
+    throw new Error("Codex did not close the context menu");
+  }
+  window.dispatchEvent(event);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  return { open: Boolean(open()), handled: event.defaultPrevented };
+}
+function contextMenuControlExpression(action) {
+  return `(${contextMenuControl.toString()})(${JSON.stringify(action)})`;
+}
+
 // ../../src/bridge/task-attention.mjs
 function readNativeTaskAttention(source, slots) {
   const threadIds = /* @__PURE__ */ new Map();
@@ -4094,6 +4487,25 @@ var USAGE_REFRESH_MS = Math.max(
   15e3,
   Number(process.env.CODEX_KEYBOARD_USAGE_REFRESH_SECONDS || 600) * 1e3
 );
+async function resolveMicroBus({
+  cachedBus,
+  urls,
+  importNamespace
+}) {
+  const isBus = (candidate) => Boolean(
+    candidate && typeof candidate === "object" && candidate.handlers instanceof Map && (typeof candidate.dispatchHostMessage === "function" || typeof candidate.dispatchMessage === "function")
+  );
+  if (isBus(cachedBus)) return cachedBus;
+  for (const url of [...new Set(urls)].filter((candidate) => /vscode-api|codex-micro|app-initial/.test(candidate)).slice(0, 120)) {
+    try {
+      const namespace = await importNamespace(url);
+      const bus = Object.values(namespace).find(isBus);
+      if (bus) return bus;
+    } catch {
+    }
+  }
+  return null;
+}
 var DEVICE_STATE = {
   type: "codex-micro-device-state-changed",
   state: { status: "connected", error: null, battery: { percentage: 100, isCharging: true } }
@@ -4206,9 +4618,9 @@ function threadGuardExpression(threadId) {
       if (normalizeThread(actualThread) !== normalizeThread(expectedThread)) throw new Error('Codex task changed; refresh the deck and try again');
     }`;
 }
-function findNativePlanControl(document) {
+function findNativePlanControl(document2) {
   const labels = /* @__PURE__ */ new Set(["Open plan in side panel", "Abrir plano no painel lateral", "Plan im Seitenbereich \xF6ffnen", "Abrir plan en el panel lateral", "\u30B5\u30A4\u30C9\u30D1\u30CD\u30EB\u3067\u30D7\u30E9\u30F3\u3092\u958B\u304F", "\uC0AC\uC774\uB4DC \uD328\uB110\uC5D0\uC11C \uACC4\uD68D \uC5F4\uAE30", "\u5728\u4FA7\u8FB9\u9762\u677F\u4E2D\u6253\u5F00\u5957\u9910", "\u5728\u5074\u908A\u9762\u677F\u4E2D\u958B\u555F\u8A08\u5283", "\u5728\u5074\u908A\u9762\u677F\u958B\u555F\u65B9\u6848"]);
-  const matches = [...document.querySelectorAll("button[aria-label]")].filter((button) => button.offsetParent !== null && !button.disabled && button.getAttribute("aria-disabled") !== "true" && !button.closest?.('[role="dialog"], [aria-modal="true"], [inert], [aria-hidden="true"]') && labels.has(button.getAttribute("aria-label")));
+  const matches = [...document2.querySelectorAll("button[aria-label]")].filter((button) => button.offsetParent !== null && !button.disabled && button.getAttribute("aria-disabled") !== "true" && !button.closest?.('[role="dialog"], [aria-modal="true"], [inert], [aria-hidden="true"]') && labels.has(button.getAttribute("aria-label")));
   return matches.length === 1 ? matches[0] : null;
 }
 function rendererActionExpression(action, threadId) {
@@ -4369,23 +4781,51 @@ var ENABLE_EXPRESSION = `(async () => {
     ...[...document.querySelectorAll("link[href],script[src]")].map((el) => el.href || el.src),
     ...performance.getEntriesByType("resource").map((entry) => entry.name)
   ])].filter((url) => url.includes("/assets/") && url.endsWith(".js"));
-  for (const url of urls.filter((url) => /vscode-api|codex-micro|app-initial/.test(url)).slice(0, 120)) {
-    try {
-      const namespace = await import(url);
-      const bus = Object.values(namespace).find((candidate) =>
-        candidate && typeof candidate === "object" &&
-        candidate.handlers instanceof Map &&
-        (typeof candidate.dispatchHostMessage === "function" || typeof candidate.dispatchMessage === "function")
-      );
-      if (!bus) continue;
-      globalThis[Symbol.for("codex-keyboard-micro-bus")] = bus;
-      const dispatch = bus.dispatchHostMessage ?? bus.dispatchMessage;
-      dispatch.call(bus, ${JSON.stringify(DEVICE_STATE)});
-      return { ready: true, clients: clients.length };
-    } catch {}
+  const resolveMicroBus = ${resolveMicroBus.toString()};
+  const bus = await resolveMicroBus({
+    cachedBus: globalThis[Symbol.for("codex-keyboard-micro-bus")],
+    urls,
+    importNamespace: (url) => import(url)
+  });
+  if (bus) {
+    globalThis[Symbol.for("codex-keyboard-micro-bus")] = bus;
+    const dispatch = bus.dispatchHostMessage ?? bus.dispatchMessage;
+    dispatch.call(bus, ${JSON.stringify(DEVICE_STATE)});
+    return { ready: true, clients: clients.length };
   }
   return { ready: clients.length > 0, clients: clients.length };
 })()`;
+async function discoverMicroAssets(urls, readText) {
+  const known = new Set(urls);
+  const queue = urls.filter((url) => /\/(?:index[^/]*|app-[^/]+)\.js$/.test(url));
+  const visited = /* @__PURE__ */ new Set();
+  while (queue.length && visited.size < 16) {
+    const url = queue.shift();
+    if (visited.has(url)) continue;
+    visited.add(url);
+    try {
+      const source = await readText(url);
+      for (const match of source.matchAll(/(?:\.\/)?((?:app-(?:main|primary|initial|shared|runtime)|codex-micro-[\w-]+)-[\w-]+\.js)/g)) {
+        const dependency = new URL(match[1], url).href;
+        if (known.has(dependency)) continue;
+        known.add(dependency);
+        queue.push(dependency);
+      }
+      if ([...known].some((url2) => url2.includes("/codex-micro-slot-signals-"))) break;
+    } catch {
+    }
+  }
+  return [...known];
+}
+function initializeMicroSignals(signals) {
+  const isResolver = (value) => value && typeof value.resolve === "function" && typeof value.createSubscriberAtom === "function";
+  if (Object.values(signals).some(isResolver)) return;
+  for (const value of Object.values(signals)) {
+    if (typeof value === "function" && value.length === 0 && /return\s*\(\s*[$\w]+\s*=\s*[$\w]+\(\s*\(\s*\(\s*\)\s*=>/.test(Function.prototype.toString.call(value))) {
+      value();
+    }
+  }
+}
 var SNAPSHOT_EXPRESSION = `(async () => {
   const startedAt = performance.now();
   const root = document.getElementById("root");
@@ -4396,7 +4836,9 @@ var SNAPSHOT_EXPRESSION = `(async () => {
     Array.isArray(slots) && slots.length === 6 &&
     slots.every((slot, index) => slot?.id === index);
   const readSource = (source) => {
-    if (!source || source.root !== root || !source.node?.store) {
+    // A valid resolver may still refer to an old mount; periodically rediscover it.
+    if (!source || source.root !== root || !source.node?.store ||
+        !Number.isFinite(source.discoveredAt) || Date.now() - source.discoveredAt >= 2000) {
       throw new Error("Cached Codex Micro source is stale");
     }
     const slots = source.node.store.get(
@@ -4422,22 +4864,26 @@ var SNAPSHOT_EXPRESSION = `(async () => {
   }
 
   if (!found) {
-    const urls = [...new Set([
+    let urls = [...new Set([
       ...[...document.querySelectorAll("link[href],script[src]")].map((el) => el.href || el.src),
       ...performance.getEntriesByType("resource").map((entry) => entry.name)
     ])].filter((url) => url.includes("/assets/") && url.endsWith(".js"));
+    if (!urls.some((url) => url.includes("/assets/codex-micro-slot-signals-"))) {
+      urls = await (${discoverMicroAssets.toString()})(urls, async (url) => {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Cannot read Codex application module');
+        return response.text();
+      });
+    }
     const slotSignalsUrl = urls.find((url) => url.includes("/assets/codex-micro-slot-signals-"));
     if (!slotSignalsUrl) throw new Error("Codex Micro slot signals are not loaded");
 
-    const namespaces = [];
-    for (const url of urls) {
-      try { namespaces.push(await import(url)); } catch {}
-    }
-    const exportedValues = namespaces.flatMap((namespace) => Object.values(namespace));
-    const bus = exportedValues.find((candidate) =>
-      candidate && typeof candidate === "object" && candidate.handlers instanceof Map &&
-      (typeof candidate.dispatchHostMessage === "function" || typeof candidate.dispatchMessage === "function")
-    );
+    const resolveMicroBus = ${resolveMicroBus.toString()};
+    const bus = await resolveMicroBus({
+      cachedBus: globalThis[Symbol.for("codex-keyboard-micro-bus")],
+      urls,
+      importNamespace: (url) => import(url)
+    });
     if (bus) {
       globalThis[Symbol.for("codex-keyboard-micro-bus")] = bus;
       if ((bus.handlers.get("codex-micro-hid-event")?.size ?? 0) === 0) {
@@ -4446,6 +4892,7 @@ var SNAPSHOT_EXPRESSION = `(async () => {
     }
 
     const signals = await import(slotSignalsUrl);
+    (${initializeMicroSignals.toString()})(signals);
     const resolvers = Object.values(signals).filter((candidate) =>
       candidate && typeof candidate === "object" &&
       typeof candidate.resolve === "function" && typeof candidate.createSubscriberAtom === "function"
@@ -4478,6 +4925,7 @@ var SNAPSHOT_EXPRESSION = `(async () => {
                   node,
                   resolver,
                   contextMap: value,
+                  discoveredAt: Date.now(),
                   queryClients: [...queryClients]
                 };
                 globalThis[sourceKey] = source;
@@ -4727,7 +5175,7 @@ var SNAPSHOT_EXPRESSION = `(async () => {
   const tokenUsage = activeMeta?.latestTokenUsageInfo || activeMeta?.tokenUsageInfo || activeMeta?.tokenUsage || null;
   let modelPicker = null;
   try { modelPicker = (${readNativeModelPicker.toString()})(document).props; } catch {}
-  
+
   const detectLiveReasoningEffort = () => {
     if (modelPicker?.reasoningEffort) return modelPicker.reasoningEffort;
     const srEffort = document.querySelector("[class*='ModelPickerTriggerEffortLabel'] .sr-only")?.textContent?.trim()?.toLowerCase();
@@ -4743,6 +5191,8 @@ var SNAPSHOT_EXPRESSION = `(async () => {
 
   return {
     activeThreadKey,
+    composer: await (${composerControl.toString()})().catch(() => null),
+    permissions: await (${permissionControl.toString()})().catch(() => null),
     planAvailable: Boolean((${findNativePlanControl.toString()})(document)),
     model: modelPicker?.model || activeMeta?.latestModel || activeMeta?.latestThreadSettings?.model || activeMeta?.previousTurnModel || null,
     goalState: [...document.querySelectorAll('button')].some(b => b.offsetParent !== null && ['Pause goal', 'Pausar objetivo'].includes(b.getAttribute('aria-label'))) ? 'active'
@@ -4796,6 +5246,41 @@ var CodexCdpClient = class {
   nextId = 0;
   pending = /* @__PURE__ */ new Map();
   lastSnapshot = null;
+  contextMenuQueue = Promise.resolve();
+  permissionQueue = Promise.resolve();
+  /** @param {import('./permission-control.mjs').PermissionCommand} command */
+  controlPermissions(command) {
+    const control = async () => {
+      await this.connect();
+      return this.evaluate(permissionControlExpression(command));
+    };
+    const operation = this.permissionQueue.then(control, control);
+    this.permissionQueue = operation.catch(() => {
+    });
+    return operation;
+  }
+  /** @param {import('./context-menu-control.mjs').ContextMenuAction} action */
+  navigateContextMenu(action) {
+    const navigate = async () => {
+      await this.connect();
+      return this.evaluate(contextMenuControlExpression(action));
+    };
+    const operation = this.contextMenuQueue.then(navigate, navigate);
+    this.contextMenuQueue = operation.catch(() => {
+    });
+    return operation;
+  }
+  /** @param {'model'|'reasoning'} kind @param {'left'|'right'} direction */
+  adjustComposerSetting(kind, direction) {
+    const select = async () => {
+      await this.connect();
+      return this.evaluate(composerControlExpression(kind, direction));
+    };
+    const operation = this.modelActionQueue.then(select, select);
+    this.modelActionQueue = operation.catch(() => {
+    });
+    return operation;
+  }
   modelActionQueue = Promise.resolve();
   async connect() {
     if (this.socket?.readyState === wrapper_default.OPEN) return;
@@ -5056,6 +5541,7 @@ var cached = {
 var rememberedLastTask = null;
 var refreshPromise = null;
 var nextReconnectAt = 0;
+var composerRevision = 0;
 var lastBroadcastDigest = "";
 var wss = new import_websocket_server.default({ noServer: true });
 var wsClients = /* @__PURE__ */ new Set();
@@ -5090,7 +5576,9 @@ async function refresh(force = false) {
   if (!force && Date.now() < nextReconnectAt) return;
   refreshPromise = (async () => {
     try {
+      const revision = composerRevision;
       const snapshot = await client.snapshot();
+      if (revision !== composerRevision) snapshot.composer = cached.composer;
       if (Array.isArray(snapshot.activeTasks) && snapshot.activeTasks.length > 0) {
         rememberedLastTask = snapshot.activeTasks[0];
       } else if (snapshot.lastTask) {
@@ -5183,6 +5671,46 @@ var server = createServer(secureHandler("codex", PORT, async (request, response)
   const action = request.method === "POST" && url.pathname.match(
     /^\/action\/(fast|approve|reject|pin|new|fork|mic|steer|submit|stop|model|reasoning|goal|subagents|plan)\/(down|up)$/
   );
+  const selection = request.method === "POST" && url.pathname.match(
+    /^\/composer\/(model|reasoning)\/(left|right)$/
+  );
+  const contextMenu = request.method === "POST" && url.pathname.match(
+    /^\/composer\/context\/(up|down|select|close)$/
+  );
+  const permission = request.method === "POST" && url.pathname.match(
+    /^\/permissions\/(policy\/(left|right)|approval\/(once|session|deny)|confirm|cancel)$/
+  );
+  if (permission) {
+    try {
+      const contextKey = url.searchParams.get("context");
+      if (!contextKey || contextKey.length > 2048) throw new Error("Missing permission context");
+      const command = ["confirm", "cancel"].includes(permission[1]) ? { kind: permission[1], contextKey, confirmationKey: url.searchParams.get("request") } : permission[2] ? { kind: "policy", direction: permission[2], contextKey } : { kind: "approval", decision: permission[3], contextKey, requestKey: url.searchParams.get("request") };
+      const permissions = await client.controlPermissions(command);
+      return json2(response, 200, { ok: true, permissions });
+    } catch (error) {
+      return json2(response, 503, { ok: false, error: error.message });
+    }
+  }
+  if (contextMenu) {
+    try {
+      if (["up", "down"].includes(contextMenu[1])) await focusCodex();
+      const result = await client.navigateContextMenu(contextMenu[1]);
+      return json2(response, 200, { ok: true, ...result });
+    } catch (error) {
+      return json2(response, 503, { ok: false, error: error.message });
+    }
+  }
+  if (selection) {
+    try {
+      const composer = await client.adjustComposerSetting(selection[1], selection[2]);
+      composerRevision += 1;
+      cached = { ...cached, composer, updatedAt: Date.now() };
+      broadcastState();
+      return json2(response, 200, { ok: true, composer });
+    } catch (error) {
+      return json2(response, 503, { ok: false, error: error.message });
+    }
+  }
   if (action) {
     try {
       if (action[1] === "steer") {

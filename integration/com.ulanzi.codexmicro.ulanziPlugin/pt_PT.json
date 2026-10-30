@@ -126,9 +126,31 @@
     {
       "Name": "Ver plano Codex",
       "Tooltip": "Abre o plano existente da tarefa selecionada no painel lateral do Codex, quando o controlo nativo está disponível."
+    },
+    {
+      "Name": "Navegador de contexto",
+      "Tooltip": "A primeira rotação abre o menu de contexto (+ / @). Rode à esquerda para subir e à direita para descer. Prima e solte para selecionar; mantenha premido e rode em qualquer sentido para fechar. Com o menu fechado, clicar ou rodar com o botão premido não faz nada."
+    },
+    {
+      "Name": "Permissões e aprovações",
+      "Tooltip": "Rode para alterar a política de permissões da conversa ativa (ASK / REVIEW / FULL). Numa aprovação, rode para escolher ONCE / CHAT / DENY e prima para executar. ONCE é a seleção inicial. As opções indisponíveis são ignoradas. No diálogo FULL aberto por este botão rotativo, prima para confirmar ou rode para a esquerda para cancelar e manter a política anterior. Fechar ou mudar de conversa invalida a confirmação."
+    },
+    {
+      "Name": "Iniciar Codex Bridge",
+      "Tooltip": "Inicia o Codex Bridge.app. Se não estiver instalado, instala ou repara primeiro e inicia em seguida."
     }
   ],
   "Localization": {
+    "LaunchBridgeHelp": "Prima para iniciar o Codex Bridge.app. Se a instalação estiver em falta ou incompleta, executa primeiro Instalar / Reparar. Se o Codex já estiver em execução, o iniciador reinicia-o com os parâmetros do Bridge.",
+    "PermissionEncoderTitle": "Permissões e aprovações",
+    "PermissionEncoderHelp": "Rode para alterar a política de permissões da conversa ativa (ASK / REVIEW / FULL). Numa aprovação, rode para escolher ONCE / CHAT / DENY e prima para executar. ONCE é a seleção inicial. As opções indisponíveis são ignoradas. No diálogo FULL aberto por este botão rotativo, prima para confirmar ou rode para a esquerda para cancelar e manter a política anterior. Fechar ou mudar de conversa invalida a confirmação.",
+    "ContextEncoderTitle": "Navegador de contexto",
+    "ContextEncoderHelp": "A primeira rotação abre o menu de contexto (+ / @). Rode à esquerda para subir e à direita para descer. Prima e solte para selecionar; mantenha premido e rode em qualquer sentido para fechar. Com o menu fechado, clicar ou rodar com o botão premido não faz nada.",
+    "AwaitingApproval": "Aprovação pendente",
+    "AwaitingResponse": "Resposta pendente",
+    "ModelUnavailable": "Modelo indisponível",
+    "ModelEncoderTitle": "Modelo e raciocínio",
+    "ModelEncoderHelp": "Rodar à direita avança para o primeiro modelo da lista do Codex; à esquerda, para o último. Premir e rodar à direita/esquerda aumenta/reduz o esforço de raciocínio. As listas param nos extremos. O ecrã mostra modelo abreviado, posição e barras; premir apenas destaca o raciocínio sem alterar a seleção.",
     "BridgeSetup": "Configuração do Codex Bridge",
     "BridgeSetupDescription": "Instale, inicie e verifique a ligação local ao Codex.",
     "BridgeApp": "Codex Bridge.app",

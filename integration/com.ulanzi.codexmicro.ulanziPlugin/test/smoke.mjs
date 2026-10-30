@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
+import { localHeaders } from "../../../src/shared/local-api.mjs";
 import { hasSelectedApproval } from "../plugin/approval-state.js";
 
 const approvalState = {
@@ -36,8 +37,8 @@ const navigateAction = manifest.Actions.find(action =>
   action.UUID === "com.ulanzi.ulanzistudio.codexmicro.navigate"
 );
 assert.deepEqual(navigateAction?.Controllers, ["Encoder"]);
-assert.equal(navigateAction?.Encoder?.layout, "$UA1");
-assert.equal(manifest.Version, "0.4.1");
+assert.equal(navigateAction?.Encoder?.layout, "layouts/navigate-encoder.json");
+assert.equal(manifest.Version, "0.5.1");
 assert.equal(manifest.Software?.MinVersion, "3.0.1");
 assert.equal(manifest.OS?.find(item => item.Platform === "mac")?.MinimumVersion, "13.0");
 assert.ok(
@@ -147,9 +148,19 @@ for (const locale of [
 const bridgeRequests = [];
 let firstTaskStatus = "thinking";
 let activeThreadKey = null;
+let composer = null;
+let permissions = null;
+const encoderCredentials = [];
 const bridge = createServer((request, response) => {
   bridgeRequests.push(`${request.method} ${request.url}`);
   response.setHeader("Content-Type", "application/json");
+  if (request.url.startsWith("/composer/") || request.url.startsWith("/permissions/")) {
+    const authenticated = request.headers.authorization === localHeaders("codex").Authorization;
+    encoderCredentials.push(authenticated);
+    if (!authenticated) { response.writeHead(403); response.end(JSON.stringify({ ok: false })); return; }
+    response.end(JSON.stringify({ ok: true, composer, permissions }));
+    return;
+  }
   if (request.url === "/health") {
     response.end(JSON.stringify({ ok: true, codexConnected: true, updatedAt: Date.now() }));
     return;
@@ -158,6 +169,8 @@ const bridge = createServer((request, response) => {
     response.end(JSON.stringify({
       connected: true,
       activeThreadKey,
+      composer,
+      permissions,
       planAvailable: true,
       slots: [
         { id: 0, threadKey: "11111111-1111-1111-1111-111111111111", title: "Working task", status: firstTaskStatus, progress: { turnId: "turn-progress", completed: 2, total: 5, currentStep: "Validate <plan>" }, tokenUsage: { totalTokens: 987654 } },
@@ -194,6 +207,7 @@ const bridge = createServer((request, response) => {
 });
 await new Promise(resolve => bridge.listen(0, "127.0.0.1", resolve));
 const bridgePort = bridge.address().port;
+const events = new WebSocketServer({ server: bridge, path: "/events" });
 
 const host = new WebSocketServer({ host: "127.0.0.1", port: 0 });
 await new Promise(resolve => host.once("listening", resolve));
@@ -236,7 +250,7 @@ try {
   );
   assert.equal(setupStatus?.payload?.status?.serviceOnline, true);
   assert.equal(setupStatus?.payload?.status?.cdpConnected, true);
-  assert.equal(setupStatus?.payload?.status?.bundledVersion, "0.4.1");
+  assert.equal(setupStatus?.payload?.status?.bundledVersion, "0.5.1");
 
   const taskPaths = [
     "assets/icons/task-working.png",
@@ -302,8 +316,8 @@ try {
     message.cmd === "state" &&
     message.param?.statelist?.[0]?.uuid === navigateEvent.uuid
   );
-  assert.equal(navigateState?.param?.statelist?.[0]?.type, 1);
-  assert.match(navigateState?.param?.statelist?.[0]?.data || "", /^data:image\/svg\+xml;base64,/);
+  assert.equal(navigateState?.param?.statelist?.[0]?.type, 2);
+  assert.equal(navigateState?.param?.statelist?.[0]?.path, "assets/icons/task-working.png");
 
   const actions = ["fast", "pin", "new", "fork", "steer", "mic", "submit", "approve", "reject"];
   for (const [index, action] of actions.entries()) {
@@ -456,22 +470,55 @@ try {
     const deadline = Date.now() + 5000;
     while (Date.now() < deadline) {
       if (latestSvg("com.ulanzi.ulanzistudio.codexmicro.task1").includes(header) &&
-          latestSvg(navigateEvent.uuid).includes(header) &&
           latestSvg(attentionEvent.uuid).includes(`>${count}<`) &&
           latestSvg("com.ulanzi.ulanzistudio.codexmicro.approve").includes(status === "awaiting-approval" ? ">ACTION READY<" : ">NO PENDING<") &&
           latestSvg("com.ulanzi.ulanzistudio.codexmicro.reject").includes(status === "awaiting-approval" ? ">DENY REQUEST<" : ">NO PENDING<")) break;
       await new Promise(resolve => setTimeout(resolve, 100));
     }
-    for (const uuid of ["com.ulanzi.ulanzistudio.codexmicro.task1", navigateEvent.uuid]) {
+    for (const uuid of ["com.ulanzi.ulanzistudio.codexmicro.task1"]) {
       assert.ok(latestSvg(uuid).includes(header), `${uuid} must render ${status} with ${color}`);
       assert.match(latestSvg(uuid), />2\/5</);
       assert.match(latestSvg(uuid), /Validate &lt;plan&gt;/);
       assert.match(latestSvg(uuid), new RegExp(`>${label}(?: |<)`));
     }
+    const navigationImage = messages.flatMap(message => message.cmd === "state" ? message.param?.statelist || [] : [])
+      .filter(item => item.uuid === navigateEvent.uuid).at(-1);
+    assert.equal(navigationImage?.type, 2);
+    assert.equal(navigationImage?.path, `assets/icons/task-${status === "thinking" ? "working" : status === "unread" ? "complete" : "attention"}.png`);
     assert.ok(latestSvg(attentionEvent.uuid).includes(`>${count}<`), `${status} must update the attention count`);
     assert.ok(latestSvg("com.ulanzi.ulanzistudio.codexmicro.approve").includes(status === "awaiting-approval" ? ">ACTION READY<" : ">NO PENDING<"), `${status} must update Approve`);
     assert.ok(latestSvg("com.ulanzi.ulanzistudio.codexmicro.reject").includes(status === "awaiting-approval" ? ">DENY REQUEST<" : ">NO PENDING<"), `${status} must update Reject`);
   }
+  // Merge regression: keypad model cycling and encoder selection coexist, and
+  // pushed state feeds the encoder without bypassing authenticated local requests.
+  composer = { model: "gpt-5.6", modelIndex: 0, modelCount: 2,
+    reasoningEffort: "high", reasoningIndex: 1, reasoningCount: 3 };
+  permissions = { mode: "policy", contextKey: "encoder-chat", requestKey: null,
+    policy: { id: "ask", label: "ASK" }, policies: [{ id: "ask", label: "ASK" }] };
+  const pushDeadline = Date.now() + 4000;
+  while (!events.clients.size && Date.now() < pushDeadline) await new Promise(resolve => setTimeout(resolve, 20));
+  assert.ok(events.clients.size, "plugin must connect to the authenticated bridge event feed");
+  for (const ws of events.clients) ws.send(JSON.stringify({ connected: true, activeThreadKey, composer, permissions, slots: [] }));
+  await new Promise(resolve => setTimeout(resolve, 100));
+  const modelDial = { uuid: modelEvent.uuid, actionid: "model-dial", key: "Encoder_1", param: {} };
+  const contextDial = { uuid: "com.ulanzi.ulanzistudio.codexmicro.context", actionid: "context-dial", key: "Encoder_2", param: {} };
+  const permissionDial = { uuid: "com.ulanzi.ulanzistudio.codexmicro.permissions", actionid: "permission-dial", key: "Encoder_3", param: {} };
+  for (const dial of [modelDial, contextDial, permissionDial]) client.send(JSON.stringify({ cmd: "add", ...dial }));
+  client.send(JSON.stringify({ cmd: "dialrotate", rotateEvent: "right", ...modelDial }));
+  client.send(JSON.stringify({ cmd: "dialrotate", rotateEvent: "hold-left", ...modelDial }));
+  client.send(JSON.stringify({ cmd: "dialrotate", rotateEvent: "right", ...contextDial }));
+  client.send(JSON.stringify({ cmd: "dialrotate", rotateEvent: "right", ...permissionDial }));
+  const encoderPaths = ["/composer/model/right", "/composer/reasoning/left", "/composer/context/down", "/permissions/policy/right?context=encoder-chat"];
+  const encoderDeadline = Date.now() + 4000;
+  while (!encoderPaths.every(path => bridgeRequests.includes(`POST ${path}`)) && Date.now() < encoderDeadline) await new Promise(resolve => setTimeout(resolve, 20));
+  for (const path of encoderPaths) assert.equal(bridgeRequests.filter(item => item === `POST ${path}`).length, 1, `${path} must run exactly once`);
+  assert.equal(encoderCredentials.length, encoderPaths.length);
+  assert.ok(encoderCredentials.every(Boolean), "every encoder mutation must carry the bridge credential");
+  const dialImage = messages.flatMap(message => message.cmd === "state" ? message.param?.statelist || [] : [])
+    .filter(item => item.actionid === modelDial.actionid && item.type === 1).at(-1);
+  assert.match(dialImage?.data || "", /^data:image\/png;base64,/);
+  assert.equal(bridgeRequests.filter(item => item === "POST /action/model/down").length, 1, "dial rotations must not replay keypad model cycling");
+
   // Check the final host-visible update, rather than only finding an SVG that
   // could subsequently be overwritten by a manifest icon in the same batch.
   for (const message of messages.filter(message => message.cmd === "state")) {
@@ -483,6 +530,8 @@ try {
   }
   process.stdout.write("Codex App plugin smoke test passed.\n");
 } finally {
+  for (const ws of events.clients) ws.terminate();
+  events.close();
   child.kill("SIGTERM");
   host.close();
   bridge.close();

@@ -8,16 +8,21 @@ import WebSocket from "ws";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { createBridgeInstaller } from "./bridge-installer.js";
+import { modelEncoderPng } from "./model-display.js";
+import { permissionEncoderPng } from "./permission-display.js";
 import { hasSelectedApproval } from "./approval-state.js";
 
 const PLUGIN_UUID = "com.ulanzi.ulanzistudio.codexmicro";
 const BRIDGE_URL = process.env.CODEX_BRIDGE_URL || "http://127.0.0.1:17373";
 const requestLocal = localClient("codex", BRIDGE_URL);
-const [address = "127.0.0.1", port = "3906"] = process.argv.slice(2);
+const [address = "127.0.0.1", port = "3906", language = "en-US"] = process.argv.slice(2);
 const HOST_URL = `ws://${address}:${port}`;
 const instances = new Map();
 const PLUGIN_ROOT = resolve(dirname(resolve(process.argv[1])), "..");
 const MANIFEST = JSON.parse(readFileSync(resolve(PLUGIN_ROOT, "manifest.json"), "utf8"));
+const locale = /^zh[-_](HK|TW)/i.test(language) ? "zh_HK" : /^zh/i.test(language) ? "zh_CN" :
+  ({ de: "de_DE", es: "es_ES", ja: "ja_JP", ko: "ko_KR", pt: "pt_PT" })[language.split(/[-_]/)[0]] || "en";
+const TEXT = JSON.parse(readFileSync(resolve(PLUGIN_ROOT, `${locale}.json`), "utf8")).Localization;
 const bridgeSetup = createBridgeInstaller({
   pluginRoot: PLUGIN_ROOT,
   bridgeUrl: BRIDGE_URL,
@@ -27,6 +32,7 @@ const USAGE_BASE64 = readFileSync(
   resolve(PLUGIN_ROOT, "assets/icons/usage-base.png")
 ).toString("base64");
 const ACTION_LABELS = Object.freeze({
+  launch: "BRIDGE",
   fast: "FAST",
   usage: "USAGE",
   usage5h: "5H USAGE",
@@ -34,6 +40,8 @@ const ACTION_LABELS = Object.freeze({
   pin: "PIN",
   new: "NEW",
   navigate: "LATEST",
+  context: "CONTEXT",
+  permissions: "PERMISSIONS",
   fork: "FORK",
   steer: "STEER",
   mic: "MIC",
@@ -63,10 +71,99 @@ const TASK_ICON_PATHS = Object.freeze({
 
 let socket;
 let reconnectTimer;
-let pollTimer;
 let pollInFlight = false;
 let latestState = null;
 let setupOperation = null;
+let modelSelectionQueue = Promise.resolve();
+let contextMenuQueue = Promise.resolve();
+let modelSelectionsPending = 0;
+let composerRevision = 0;
+let permissionQueue = Promise.resolve();
+let permissionRevision = 0;
+let permissionOperationsPending = 0;
+const composerMemory = new Map();
+const composerKey = state => state?.activeThreadKey ? String(state.activeThreadKey).replace(/^local:/, "") :
+  state?.permissions?.contextKey ?? null;
+
+function setPermissionDisplay(instance) {
+  const state = latestState?.connected ? latestState.permissions : null;
+  const identity = `${state?.contextKey}:${state?.requestKey}`;
+  if (instance.permissionIdentity !== identity) {
+    instance.permissionIdentity = identity;
+    instance.permissionChoice = "once";
+    instance.permissionSubmitted = false;
+  }
+  const digest = JSON.stringify(["permissions", state, instance.permissionChoice, instance.permissionSubmitted, latestState?.connected]);
+  if (!instance.active || instance.lastDisplay === digest) return;
+  instance.lastDisplay = digest;
+  if (!instance.iconLayoutReady) {
+    send({ cmd: "setFeedbackLayout", uuid: instance.uuid, actionid: instance.actionid,
+      key: instance.key, layout: "layouts/permissions-encoder.json" });
+    instance.iconLayoutReady = true;
+  }
+  send({ cmd: "state", uuid: instance.uuid, actionid: instance.actionid, key: instance.key,
+    param: { statelist: [{ uuid: instance.uuid, actionid: instance.actionid, key: instance.key,
+      type: 1, data: permissionEncoderPng(state, instance.permissionChoice, instance.permissionSubmitted,
+        Boolean(latestState?.connected)), showtext: false, textData: "" }] } });
+}
+
+/** Each invocation is tied to the state actually shown, not a future approval. */
+async function invokePermissionEncoder(instance, message) {
+  if (!instance.active || message.cmd === "dialup") return;
+  const rotation = String(message.rotateEvent || "").replace("—", "-");
+  if (message.cmd === "dialrotate" && !["left", "right"].includes(rotation)) return;
+  const state = latestState?.connected && latestState.permissions;
+  if (!state?.contextKey) throw new Error("Codex permissions are not available");
+  let path;
+  if (state.mode === "confirmation") {
+    if (permissionOperationsPending > 0) return;
+    const action = message.cmd === "dialdown" ? "confirm" :
+      message.cmd === "dialrotate" && rotation === "left" ? "cancel" : null;
+    if (!action) return;
+    path = `/permissions/${action}?context=${encodeURIComponent(state.contextKey)}&request=${encodeURIComponent(state.confirmationKey)}`;
+  } else if (state.mode === "approval") {
+    if (instance.permissionSubmitted) return;
+    if (message.cmd === "dialrotate" && ["left", "right"].includes(rotation)) {
+      const choices = state.options.filter(option => option.enabled);
+      const current = choices.findIndex(option => option.id === instance.permissionChoice);
+      const next = Math.max(0, Math.min(choices.length - 1, current + (rotation === "left" ? -1 : 1)));
+      if (choices[next]) instance.permissionChoice = choices[next].id;
+      setPermissionDisplay(instance);
+      return;
+    }
+    if (message.cmd !== "dialdown") return;
+    const choice = instance.permissionChoice || "once";
+    if (!state.options.some(option => option.id === choice && option.enabled)) {
+      throw new Error("This approval option is not available");
+    }
+    instance.permissionSubmitted = true;
+    setPermissionDisplay(instance);
+    path = `/permissions/approval/${choice}?context=${encodeURIComponent(state.contextKey)}&request=${encodeURIComponent(state.requestKey)}`;
+  } else {
+    if (message.cmd !== "dialrotate" || !["left", "right"].includes(rotation)) return;
+    if (state.mode !== "policy") throw new Error("Codex permission policy is not available");
+    path = `/permissions/policy/${rotation}?context=${encodeURIComponent(state.contextKey)}`;
+  }
+  permissionOperationsPending++;
+  const control = async () => {
+    try {
+      const result = await bridgeRequest(path, "POST", 5000);
+      permissionRevision++;
+      if (latestState?.permissions?.contextKey === state.contextKey &&
+          latestState.permissions.requestKey === state.requestKey) latestState.permissions = result.permissions;
+    } catch (error) {
+      if (instance.permissionIdentity === `${state.contextKey}:${state.requestKey}`) instance.permissionSubmitted = false;
+      throw error;
+    } finally {
+      permissionOperationsPending--;
+      renderAll();
+    }
+  };
+  const operation = permissionQueue.then(control, control);
+  permissionQueue = operation.catch(() => {});
+  await operation;
+}
+
 let taskMonitorIndex = 0;
 let lastTaskMonitorRotation = Date.now();
 let lastKnownTask = null;
@@ -287,7 +384,7 @@ async function handleBridgeSetupMessage(message) {
     await sendBridgeSetupStatus(message);
     return;
   }
-  if (!["install", "launch", "uninstall"].includes(action)) {
+  if (!["install", "launch", "start", "uninstall"].includes(action)) {
     await sendBridgeSetupStatus(message, { error: `Unknown setup action: ${action}` });
     return;
   }
@@ -297,14 +394,16 @@ async function handleBridgeSetupMessage(message) {
   }
 
   setupOperation = action;
-  await sendBridgeSetupStatus(message);
+  renderAll();
   let result = null;
   let failure = null;
   try {
+    await sendBridgeSetupStatus(message);
     if (action === "install") await bridgeSetup.install();
     if (action === "launch") await bridgeSetup.launch();
+    if (action === "start") await bridgeSetup.start();
     if (action === "uninstall") await bridgeSetup.uninstall();
-    result = action;
+    result = action === "start" ? "launch" : action;
   } catch (error) {
     failure = error.message;
     send({
@@ -315,8 +414,10 @@ async function handleBridgeSetupMessage(message) {
       level: "error",
       message: `Codex Bridge ${action} failed: ${error.message}`
     });
+    send({ cmd: "showAlert", uuid: message.uuid, actionid: message.actionid, key: message.key });
   } finally {
     setupOperation = null;
+    renderAll();
   }
   await sendBridgeSetupStatus(message, { result, error: failure });
 }
@@ -340,6 +441,73 @@ function taskIconPath(status) {
 function shortTitle(value) {
   const title = String(value || "Untitled").replace(/\s+/g, " ").trim();
   return title.length > 18 ? `${title.slice(0, 17)}…` : title;
+}
+
+function taskTitle(task) {
+  const status = String(task.status || "").toLowerCase();
+  const label = ["awaiting-approval", "approval"].includes(status) ? TEXT.AwaitingApproval :
+    ["awaiting-response", "input", "waiting_input", "needs_input"].includes(status) ? TEXT.AwaitingResponse : null;
+  return label ? `${label} · ${shortTitle(task.title)}` : shortTitle(task.title);
+}
+
+function isEncoderInstance(instance) {
+  return /^Encoder_/i.test(String(instance.key)) || instance.controller === "Encoder";
+}
+
+function setModelDisplay(instance) {
+  const composer = latestState?.connected ? latestState.composer : null;
+  const mode = instance.modelHeld && latestState?.composerAvailable !== false ? "reasoning" : "model";
+  const digest = JSON.stringify([Boolean(latestState?.connected), composer, mode]);
+  if (!instance.active || instance.lastDisplay === digest) return;
+  instance.lastDisplay = digest;
+  if (!instance.modelLayoutReady) {
+    send({
+      cmd: "setFeedbackLayout", uuid: instance.uuid, actionid: instance.actionid,
+      key: instance.key, layout: "layouts/model-encoder.json"
+    });
+    instance.modelLayoutReady = true;
+  }
+  // Use the normal state image pipeline instead of a custom pixmap data URL.
+  // Ulanzi Studio decodes this PNG, stores it in the outgoing ZIP's Images/
+  // directory, and the Encoder layout's `icon` item then points at that file.
+  send({
+    cmd: "state",
+    uuid: instance.uuid,
+    actionid: instance.actionid,
+    key: instance.key,
+    param: {
+      statelist: [{
+        uuid: instance.uuid,
+        actionid: instance.actionid,
+        key: instance.key,
+        type: 1,
+        data: modelEncoderPng(composer, mode, Boolean(latestState?.connected)),
+        showtext: false
+      }]
+    }
+  });
+}
+
+function setEncoderIcon(instance, path) {
+  const digest = `encoder-icon:${path}`;
+  if (!instance.active || instance.lastDisplay === digest) return;
+  instance.lastDisplay = digest;
+  if (!instance.iconLayoutReady) {
+    send({
+      cmd: "setFeedbackLayout", uuid: instance.uuid, actionid: instance.actionid,
+      key: instance.key, layout: `layouts/${actionName(instance.uuid)}-encoder.json`
+    });
+    instance.iconLayoutReady = true;
+  }
+  send({
+    cmd: "state", uuid: instance.uuid, actionid: instance.actionid, key: instance.key,
+    param: {
+      statelist: [{
+        uuid: instance.uuid, actionid: instance.actionid, key: instance.key,
+        type: 2, path, showtext: false, textData: ""
+      }]
+    }
+  });
 }
 
 function setDisplay(instance, state, text) {
@@ -511,14 +679,14 @@ function taskCardIconData({
     <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="${isWorking ? '#16a34a' : isAttention ? '#d97706' : isError ? '#ef4444' : '#262c36'}" stroke-width="2"/>
     <text x="12" y="24" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="900" fill="#ffffff" letter-spacing="0.8">${escapeXml(headerLeft)}</text>
     <text x="184" y="24" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="13" font-weight="700" fill="rgba(255,255,255,0.95)" letter-spacing="0.3">${selected ? "● " : ""}${escapeXml(headerRight)}</text>
-    
+
     <text x="98" y="70" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="${titleFontSize}" font-weight="800" fill="#ffffff" letter-spacing="0.4">${escapeXml(titleDisplay)}</text>
     <text x="98" y="92" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="14" font-weight="700" fill="${subColor}" letter-spacing="0.3">${escapeXml(subText)}</text>
-    
+
     ${taskProgressMarkup(progress, { running: isWorking, color: subColor })}
     <text x="12" y="162" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#f59e0b" letter-spacing="0.2">${escapeXml(modelDisplay)}</text>
     <text x="184" y="162" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-size="12" font-weight="700" fill="#94a3b8" letter-spacing="0.2">ctx ${validPct === null ? "—" : `${validPct}%`}</text>
-    
+
     <rect x="12" y="172" width="172" height="7" rx="3.5" fill="#21262d"/>
     ${barWidth > 0 ? `<rect x="12" y="172" width="${barWidth}" height="7" rx="3.5" fill="${barColor}"/>` : ""}
   </svg>`;
@@ -587,7 +755,7 @@ function singleUsageIconData({
     </defs>
     <rect width="196" height="196" rx="24" fill="#13161a"/>
     <rect x="1" y="1" width="194" height="194" rx="23" fill="none" stroke="#262c36" stroke-width="2"/>
-    
+
     <!-- Top Badge -->
     <g transform="translate(98, 28)">
       <rect x="-58" y="-14" width="116" height="28" rx="14" fill="#1e242c" stroke="#303844" stroke-width="1.2"/>
@@ -1383,6 +1551,27 @@ function renderInstance(instance) {
   const slot = taskSlot(instance.uuid);
   if (slot === null) {
     const action = actionName(instance.uuid);
+    if (action === "launch") {
+      setDisplay(instance, 0, setupOperation ? "…" : ACTION_LABELS.launch);
+      return;
+    }
+    if (action === "permissions") {
+      setPermissionDisplay(instance);
+      return;
+    }
+    if (action === "model" && isEncoderInstance(instance)) {
+      setModelDisplay(instance);
+      return;
+    }
+    if (action === "context") {
+      setEncoderIcon(instance, "assets/icons/context.png");
+      return;
+    }
+    if (action === "navigate") {
+      const task = latestState?.connected ? latestState.slots?.[0] : null;
+      setEncoderIcon(instance, task?.threadKey ? taskIconPath(task.status) : TASK_ICON_PATHS.idle);
+      return;
+    }
     if (action === "plan") {
       sendSvgState(instance, textCard("PLAN", latestState?.planAvailable ? "Open plan" : "Unavailable", "Selected task side panel", Boolean(latestState?.connected)));
       return;
@@ -1440,43 +1629,6 @@ function renderInstance(instance) {
       setPromptDisplay(instance, action);
       return;
     }
-    if (action === "navigate") {
-      if (!latestState?.connected) {
-        sendSvgState(instance, taskCardIconData({
-          headerLeft: "CODEX",
-          headerRight: "Latest",
-          connected: false
-        }));
-        return;
-      }
-      const task = latestState.slots?.[0];
-      if (!task?.threadKey) {
-        sendSvgState(instance, taskCardIconData({
-          headerLeft: "CODEX",
-          headerRight: "Latest",
-          connected: true,
-          empty: true
-        }));
-        return;
-      }
-      const elapsed = formatElapsed(taskTimers.elapsed(task.threadKey));
-      const ctxPct = getTaskContextPercent(task);
-      const model = task.rawModel || task.model || "default";
-      sendSvgState(instance, taskCardIconData({
-        headerLeft: "CODEX",
-        headerRight: "Latest",
-        title: task.title || "Untitled",
-        status: task.status || "idle",
-        elapsed,
-        model,
-        ctxPct,
-        progress: task.progress,
-        selected: Boolean(task.selected),
-        connected: true,
-        empty: false
-      }));
-      return;
-    }
     if (!latestState?.connected) {
       setDisplay(instance, 0, "Bridge Offline");
       return;
@@ -1525,10 +1677,12 @@ function renderAll() {
 }
 
 async function bridgeRequest(path, method = "GET", body = null) {
+  const timeout = typeof body === "number" ? body : 12000;
+  if (typeof body === "number") body = null;
   if (method === "POST" && (path.startsWith("/action/") || path === "/prompt" || path.startsWith("/joystick/"))) {
     body = { threadId: latestState?.activeThreadKey ?? null, ...body };
   }
-  return requestLocal(path, { method, ...(body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}) });
+  return requestLocal(path, { method, signal: AbortSignal.timeout(timeout), ...(body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}) });
 }
 
 async function openTaskSlot(slot) {
@@ -1537,15 +1691,44 @@ async function openTaskSlot(slot) {
   await bridgeRequest(`/thread/${encodeURIComponent(task.threadKey)}/click?slot=${slot}`, "POST");
 }
 
-const feed = bridgeFeed({ component: "codex", url: BRIDGE_URL, poll: pollBridge, onState: state => { latestState = state; updateTaskRunningTimes(latestState?.slots, latestState?.activeTasks); renderAll(); } });
+function acceptBridgeState(state, revision = composerRevision, permissionsRevision = permissionRevision) {
+  const key = composerKey(state);
+  state.composerAvailable = Boolean(state.connected && state.composer?.model &&
+    state.permissions?.mode !== "approval" && !state.permissions?.confirmationRequired);
+  if (latestState?.connected && state.connected &&
+      (permissionOperationsPending > 0 || permissionsRevision !== permissionRevision) &&
+      latestState.permissions?.contextKey === state.permissions?.contextKey &&
+      latestState.permissions?.requestKey === state.permissions?.requestKey) {
+    state.permissions = latestState.permissions;
+  }
+  // Requests already in flight must not restore the pre-selection composer.
+  if (latestState?.connected && state.connected &&
+      (modelSelectionsPending > 0 || revision !== composerRevision) && key === composerKey(latestState)) {
+    state.composer = latestState.composer;
+  }
+  if (key && state.connected) {
+    if (state.composer?.model && state.composerAvailable) {
+      composerMemory.delete(key);
+      composerMemory.set(key, state.composer);
+      if (composerMemory.size > 50) composerMemory.delete(composerMemory.keys().next().value);
+    } else if (!state.composer) state.composer = composerMemory.get(key) ?? null;
+  }
+  latestState = state;
+  updateTaskRunningTimes(latestState?.slots, latestState?.activeTasks);
+}
+
+const feed = bridgeFeed({ component: "codex", url: BRIDGE_URL, poll: pollBridge,
+  onState: state => { acceptBridgeState(state); renderAll(); } });
 function connectBridgeWs() { feed.start(); }
 
 async function pollBridge() {
   if (pollInFlight) return;
   pollInFlight = true;
+  const revision = composerRevision;
+  const permissionsRevision = permissionRevision;
   try {
-    latestState = await bridgeRequest("/state");
-    updateTaskRunningTimes(latestState?.slots, latestState?.activeTasks);
+    const state = await bridgeRequest("/state");
+    acceptBridgeState(state, revision, permissionsRevision);
   } catch (error) {
     latestState = { connected: false, error: error.message, slots: [] };
   } finally {
@@ -1564,6 +1747,10 @@ async function invoke(instance, pressed) {
     }
     const action = actionName(instance.uuid);
     if (!action) throw new Error(`Unknown Codex action: ${instance.uuid}`);
+    if (action === "launch") {
+      if (pressed) await handleBridgeSetupMessage({ ...instance, payload: { action: "start" } });
+      return;
+    }
     if (action === "usage" || action === "usage5h" || action === "usageweekly") {
       if (pressed) await bridgeRequest("/focus", "POST");
       return;
@@ -1660,6 +1847,74 @@ async function invoke(instance, pressed) {
 
 async function invokeEncoder(instance, message) {
   try {
+    if (actionName(instance.uuid) === "permissions") {
+      await invokePermissionEncoder(instance, message);
+      return;
+    }
+    if (actionName(instance.uuid) === "context") {
+      if (message.cmd === "dialdown") {
+        instance.contextPress = "pressed";
+        return;
+      }
+      const rotation = String(message.rotateEvent || "").replace("—", "-");
+      let action = null;
+      if (message.cmd === "dialup") {
+        // Defer confirmation until release so a held rotation can cancel first.
+        if (instance.contextPress === "pressed") action = "select";
+        instance.contextPress = null;
+      } else if (message.cmd === "dialrotate") {
+        action = ({ left: "up", right: "down", "hold-left": "close", "hold-right": "close" })[rotation];
+        if (action === "close") instance.contextPress = "rotated";
+      }
+      if (!action) return;
+      // Serialize opening, movement, and confirmation, including across dials.
+      const navigate = () => bridgeRequest(`/composer/context/${action}`, "POST", 5000);
+      const operation = contextMenuQueue.then(navigate, navigate);
+      contextMenuQueue = operation.catch(() => {});
+      await operation;
+      return;
+    }
+    if (actionName(instance.uuid) === "model") {
+      if (!latestState?.connected || latestState.composerAvailable === false) {
+        instance.modelHeld = false;
+        renderInstance(instance);
+        return;
+      }
+      if (message.cmd === "dialdown" || message.cmd === "dialup") {
+        instance.modelHeld = message.cmd === "dialdown";
+        renderInstance(instance);
+        return;
+      }
+      if (message.cmd !== "dialrotate") return;
+      const rotation = String(message.rotateEvent || "").replace("—", "-");
+      if (!["left", "right", "hold-left", "hold-right"].includes(rotation)) return;
+      // Each rotation describes its own press state; a missed release must not
+      // leave ordinary rotations stuck in reasoning mode.
+      const kind = rotation.startsWith("hold-") ? "reasoning" : "model";
+      instance.modelHeld = kind === "reasoning";
+      renderInstance(instance);
+      const direction = rotation.endsWith("left") ? "left" : "right";
+      const selectionKey = composerKey(latestState);
+      modelSelectionsPending += 1;
+      const select = async () => {
+        try {
+          if (latestState?.composerAvailable === false || composerKey(latestState) !== selectionKey) return;
+          const result = await bridgeRequest(`/composer/${kind}/${direction}`, "POST", 5000);
+          composerRevision += 1;
+          if (latestState && composerKey(latestState) === selectionKey) {
+            latestState.composer = result.composer;
+            if (selectionKey) composerMemory.set(selectionKey, result.composer);
+          }
+          renderAll();
+        } finally {
+          modelSelectionsPending -= 1;
+        }
+      };
+      const operation = modelSelectionQueue.then(select, select);
+      modelSelectionQueue = operation.catch(() => {});
+      await operation;
+      return;
+    }
     if (message.cmd === "dialdown") {
       await openTaskSlot(0);
       return;
@@ -1695,6 +1950,11 @@ function addInstance(message) {
     actionid: message.actionid,
     key: message.key,
     active: true,
+    controller: message.controller,
+    modelHeld: false,
+    modelLayoutReady: false,
+    iconLayoutReady: false,
+    contextPress: null,
     lastDisplay: null
   };
   instance.active = true;
@@ -1718,8 +1978,12 @@ function handleMessage(raw) {
   if (message.cmd === "setactive") {
     const instance = instances.get(contextOf(message)) || addInstance(message);
     instance.active = Boolean(message.active);
+    instance.contextPress = null;
     if (instance.active) {
       instance.lastDisplay = null;
+      instance.modelHeld = false;
+      instance.modelLayoutReady = false;
+      instance.iconLayoutReady = false;
       renderInstance(instance);
     }
     ack(message);
@@ -1743,7 +2007,7 @@ function handleMessage(raw) {
   }
   if (["dialdown", "dialup", "dialrotate"].includes(message.cmd)) {
     const instance = instances.get(contextOf(message)) || addInstance(message);
-    if (actionName(instance.uuid) === "navigate") void invokeEncoder(instance, message);
+    if (["navigate", "model", "context", "permissions"].includes(actionName(instance.uuid))) void invokeEncoder(instance, message);
     ack(message);
     return;
   }
@@ -1761,6 +2025,13 @@ function connect() {
   hostSocket.on("open", () => {
     if (socket !== hostSocket) return;
     send({ code: 0, cmd: "connected", uuid: PLUGIN_UUID });
+    for (const instance of instances.values()) {
+      instance.lastDisplay = null;
+      instance.modelHeld = false;
+      instance.modelLayoutReady = false;
+      instance.iconLayoutReady = false;
+      instance.contextPress = null;
+    }
     invalidateDisplays(instances);
     renderAll();
     connectBridgeWs();

@@ -161,3 +161,31 @@ test('current picker can report the model without a separate reasoning callback'
   assert.throws(() => cycleNativeModelPicker(f, 'reasoning'), /disabled/);
   assert.deepEqual(f.calls, []);
 });
+
+
+test('keypad and encoder model changes share one queue and recover after a failed change', async () => {
+  const client = new CodexCdpClient();
+  const order = [];
+  let unblock;
+  client.connect = async () => {};
+  client.dispatchRendererAction = async () => {
+    order.push('key:start');
+    await new Promise(resolve => { unblock = resolve; });
+    order.push('key:end');
+  };
+  let evaluations = 0;
+  client.evaluate = async () => {
+    order.push('dial');
+    if (++evaluations === 1) throw new Error('picker unavailable');
+    return { model: 'next' };
+  };
+  const key = client.dispatchNamedAction('model', true, threadId);
+  const dial = client.adjustComposerSetting('model', 'right');
+  const failed = assert.rejects(dial, /picker unavailable/);
+  const next = client.adjustComposerSetting('reasoning', 'left');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(order, ['key:start']);
+  unblock();
+  await Promise.all([key, failed, next]);
+  assert.deepEqual(order, ['key:start', 'key:end', 'dial', 'dial']);
+});
